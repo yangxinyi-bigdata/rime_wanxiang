@@ -1,0 +1,33 @@
+# Build files
+build/
+
+# User databases
+*.userdb/
+zc.userdb/
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Binary files
+*.bin
+*.db
+*.prism.bin
+*.reverse.bin
+*.table.bin
+
+# Ignore specific generated files
+wanxiang-lts-zh-predict.db
+*.gram
