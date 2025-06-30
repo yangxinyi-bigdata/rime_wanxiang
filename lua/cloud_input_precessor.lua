@@ -77,11 +77,20 @@ function cloud_input_precessor.func(key, env)
 
         logger:info("当前按键: " .. key:repr())
 
-        -- -- 如果按键的值是Up 和 Down,则不进行处理
-        -- if key:repr() == "Up" or key:repr() == "Down" then  -- or key:repr() == "space" 
-        --     logger:info("按键为上下键或空格键, 不进行处理")
-        --     return kNoop
-        -- end
+        -- 定义需要跳过处理的按键
+        local skip_keys = {
+            ["Up"] = true,
+            ["Down"] = true,
+            ["space"] = true,
+            ["1"] = true, ["2"] = true, ["3"] = true, ["4"] = true, ["5"] = true,
+            ["6"] = true, ["7"] = true, ["8"] = true, ["9"] = true, ["0"] = true
+        }
+        -- 如果按键需要跳过,则不进行处理
+        local key_repr = key:repr()
+        if skip_keys[key_repr] then
+            logger:info("按键为上下键、空格键或数字键, 不进行处理")
+            return kNoop
+        end
 
         -- 检查当前是否正在组词状态（即用户正在输入但还未确认）
         local is_composing = context:is_composing()

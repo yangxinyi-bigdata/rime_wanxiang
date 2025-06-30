@@ -5,10 +5,12 @@ local http = require("simplehttp")
 http.TIMEOUT = 0.5
 -- 引入日志工具模块
 local logger_module = require("logger")
+-- 引入文本切分模块
+local text_splitter = require("text_splitter")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("baidu_filter", {
-    enabled = false  -- 可以通过这里控制日志开关
+    enabled = true  -- 启用日志以便测试
 })
 -- local http = require("simplehttp")
 -- http.TIMEOUT = 0.5
@@ -107,6 +109,27 @@ local function double_pinyin_to_full_pinyin(input)
    end
 end
 
+-- 获取云输入结果的函数（同步调用）
+local function get_cloud_result(pinyin_text)
+   if pinyin_text == "" then return "" end
+   
+   local full_pinyin = double_pinyin_to_full_pinyin(pinyin_text)
+   logger:info("片段 '" .. pinyin_text .. "' 转换后的全拼: " .. full_pinyin)
+   
+   local url = make_url(full_pinyin, 0, 5)
+   local reply = http.request(url)
+   local parse_success, baidu_response = pcall(json.decode, reply)
+   
+   if parse_success and baidu_response.status == "T" and baidu_response.result and baidu_response.result[1] and baidu_response.result[1][1] then
+      local result = baidu_response.result[1][1][1]
+      logger:info("片段 '" .. pinyin_text .. "' 云输入结果: " .. result)
+      return result
+   else
+      logger:info("片段 '" .. pinyin_text .. "' 云输入无结果，保持原样")
+      return pinyin_text
+   end
+end
+
 function translator.func(translation, env)
     local engine = env.engine
     local context = engine.context
@@ -122,9 +145,9 @@ function translator.func(translation, env)
       segment = composition:back()
       if segment then
          -- logger:info("当前cloud_translate_prompt状态: ".. tostring(context:get_option("cloud_translate_prompt")))
-         local prompt_text = "▶ 回车AI转换"
+         local prompt_text = "     ▶ 回车AI转换"
          if context:get_property("cloud_translate_flag") == "1" then
-            logger:info("云输入法转换提示已启用")
+            -- logger:info("云输入法转换提示已启用")
             if segment.prompt ~= prompt_text then
                -- 使用更醒目的格式，添加视觉分隔符
                -- segment.prompt = "[     🤖 回车AI转换]"
@@ -156,68 +179,144 @@ function translator.func(translation, env)
    context:set_option("cloud_translate", false)  -- 重置选项，避免重复触发
    end
 
-   -- 将双拼转换成全拼
-   local full_pinyin = double_pinyin_to_full_pinyin(input)
-   logger:info("转换后的全拼: " .. full_pinyin)
-   -- 如果input当中存在标点符号,则对input进行切分处理,以标点符号为边界
-   local url = make_url(full_pinyin, 0, 5)
    
-   logger:info("构建的百度云输入法API请求URL: " .. url)
-   -- 发送HTTP请求获取云端候选词
-   -- local reply = http_get(url) -- curl的方法
-   local reply = http.request(url)
-   -- 安全解析JSON响应数据
-   local parse_success, baidu_response = pcall(json.decode, reply)
-   -- 检查响应状态和结果是否有效
-   if baidu_response.status == "T" and baidu_response.result and baidu_response.result[1] then
+   -- 检查输入是否包含标点符号或反引号
+   local has_punctuation = input:match("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-`'\"']") ~= nil
+   
+   if not has_punctuation then
+      -- 纯英文字母输入，使用原来的方式直接调用百度云接口
+      logger:info("检测到纯英文字母输入，使用传统百度云处理方式")
+      
+      local full_pinyin = double_pinyin_to_full_pinyin(input)
+      logger:info("输入 '" .. input .. "' 转换后的全拼: " .. full_pinyin)
+      
+      local url = make_url(full_pinyin, 0, 5)
+      local reply = http.request(url)
+      local parse_success, baidu_response = pcall(json.decode, reply)
+      
+      if parse_success and baidu_response.status == "T" and baidu_response.result and baidu_response.result[1] then
          -- 先保存第一个原始候选词
-      local first_original_cand = nil
-      local original_preedit = ""
-      
-      -- 获取第一个原始候选词
-      for cand in translation:iter() do
-         first_original_cand = cand
-         original_preedit = cand.preedit
+         local first_original_cand = nil
+         local original_preedit = ""
          
-         break
+         for cand in translation:iter() do
+            first_original_cand = cand
+            original_preedit = cand.preedit
+            break
+         end
+         
+         -- 添加百度云候选词
+         for candidate_index, candidate_data in ipairs(baidu_response.result[1]) do
+            logger:info("添加百度云候选词: " .. candidate_data[1])
+            local cloud_candidate = Candidate("sentence", segment.start, segment._end, candidate_data[1], "   [百度云]")
+            cloud_candidate.preedit = original_preedit
+            yield(cloud_candidate)
+         end
+         
+         -- 输出原始候选词
+         if first_original_cand then
+            yield(first_original_cand)
+         end
+         
+         for cand in translation:iter() do
+            yield(cand)
+         end
+      else
+         logger:info("百度云接口无结果，输出原始候选词")
+         for cand in translation:iter() do
+            yield(cand)
+         end
+      end
+   else
+      -- 包含标点符号或反引号，使用智能切分处理
+      logger:info("检测到标点符号或反引号，使用智能切分处理方式")
+
+      -- 切分并处理输入（添加错误捕获）
+      local segments = {}
+      local final_result = ""
+      
+      local success, result = pcall(function()
+         return text_splitter.split_and_convert_input(input)
+      end)
+      
+      if success and result then
+         segments = result
+         logger:info("成功运行切分函数，获得 " .. #segments .. " 个片段")
+         for i, seg in ipairs(segments) do
+            logger:info(string.format("片段 %d: type=%s, content='%s'", i, seg.type, seg.content))
+         end
+      else
+         logger:error("切分函数运行失败: " .. tostring(result))
+         logger:info("降级到原始处理方式")
+         -- 降级处理：将整个输入当作纯文本处理
+         segments = {{type = "text", content = input}}
       end
       
-      -- 遍历百度返回的候选词列表
-      for candidate_index, candidate_data in ipairs(baidu_response.result[1]) do
-         -- 创建候选词对象
-         -- candidate_data[1]: 汉字文本
-         -- candidate_data[2]: 拼音长度
-         -- 当前有候选词,还有env,context上下文这里是想要提交一个候选词, 候选词对应录入拼音片段的哪一部分,如何获取呢? 
-         -- 应该对应的是整个片段吧? 也就是^ 这个符号前边的所有片段,也就是segment
-         logger:info("处理候选词: " .. candidate_data[1] .. ", 拼音长度: " .. candidate_data[2] .. ", 拼音: " .. candidate_data[3].pinyin)
-         local candidate = Candidate("sentence", segment.start, segment._end, candidate_data[1], "   [百度云]")
+      -- 处理每个片段（添加错误捕获）
+      for i, segment in ipairs(segments) do
+         local segment_success, segment_result = pcall(function()
+            if segment.type == "text" then
+               -- 文本片段：进行双拼转换和云输入
+               logger:info(string.format("处理文本片段 %d: '%s'", i, segment.content))
+               return get_cloud_result(segment.content)
+            elseif segment.type == "punct" then
+               -- 标点符号：直接添加
+               logger:info(string.format("处理标点片段 %d: '%s'", i, segment.content))
+               return segment.content
+            elseif segment.type == "backtick" then
+               -- 反引号内容：不处理，直接添加
+               logger:info(string.format("处理反引号片段 %d: '%s'", i, segment.content))
+               return segment.content
+            else
+               logger:info(string.format("未知片段类型 %d: type=%s, content='%s'", i, segment.type, segment.content))
+               return segment.content
+            end
+         end)
          
-         -- 检查拼音是否匹配输入的前缀
-         logger:info("检查拼音前缀匹配: " .. candidate_data[3].pinyin)
-
-         -- "小酸瓜和小黄瓜的故事" "xiao'suan'gua'he'xiao'huang'gua'de'gu'shi" 32个字母,但原来input中的字母数量并不是
-         -- 这行代码是要干什么?  从总的输入字母当中切片出候选词对应的部分? 但在双拼和全拼的关系中这个代码不对了
-         -- 这部分应该是为了生成对应的preedit, 当我按下回车的时候,获得了返回结果,那么我是希望一个什么样的preedit呢? 
-         -- 是返回的双拼,还是现在的全拼内容? 如果是双拼,双拼在哪里,应该在原来的input当中, input当中还需要每两个字符添加一个空格,才能和原来的效果一致.
-         -- 如果是全拼,就直接填充上去就可以. 但如果不是把整个input发送出去进行转换呢? 
- 
-         -- 使用原始候选词的 preedit
+         if segment_success and segment_result then
+            final_result = final_result .. segment_result
+            logger:info(string.format("片段 %d 处理成功，结果: '%s'", i, segment_result))
+         else
+            logger:error(string.format("片段 %d 处理失败: %s", i, tostring(segment_result)))
+            -- 失败时使用原始内容
+            final_result = final_result .. (segment.content or "")
+         end
+      end
+      
+      logger:info("智能切分最终结果: " .. final_result)
+      
+      -- 检查是否有智能合成结果
+      if final_result ~= "" then
+         -- 先保存第一个原始候选词
+         local first_original_cand = nil
+         local original_preedit = ""
+         
+         for cand in translation:iter() do
+            first_original_cand = cand
+            original_preedit = cand.preedit
+            break
+         end
+         
+         -- 创建智能合成候选词
+         logger:info("创建智能合成候选词: " .. final_result)
+         local candidate = Candidate("sentence", segment.start, segment._end, final_result, "   [智能合成]")
          candidate.preedit = original_preedit
-         yield(candidate)  -- 输出云候选词
-      end
-
-      -- 输出第一个原始候选词
-      if first_original_cand then
-         yield(first_original_cand)
-      end
-
-      for cand in translation:iter() do
-         yield(cand)  -- 输出原有候选词
-      end
-
-   else -- 百度云没有相应正确结果,则直接输出原有候选词
-      for cand in translation:iter() do
-         yield(cand)  -- 输出原有候选词
+         yield(candidate)
+         
+         -- 输出原始候选词
+         if first_original_cand then
+            yield(first_original_cand)
+         end
+         
+         for cand in translation:iter() do
+            yield(cand)
+         end
+      else
+         -- 没有智能合成结果，输出原有候选词
+         logger:info("没有智能合成结果，输出原始候选词")
+         for cand in translation:iter() do
+            yield(cand)
+         end
       end
    end
 end
