@@ -102,7 +102,7 @@ local function double_pinyin_to_full_pinyin(input)
    if success then
       return result
    else
-      logger:error("双拼转全拼失败: " .. tostring(result))
+      logger:error("双拼转全拼失败:  " .. tostring(result))
       return input  -- 出错时返回原始输入
    end
 end
