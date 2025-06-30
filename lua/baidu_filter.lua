@@ -34,6 +34,7 @@ end
 local translator = {}
 
 local ziranma_mapping_config = {}  -- 自然码映射表
+local backtick_delimiter = ""  -- 反引号分隔符
 
 function translator.init(env)
    -- 初始化时清空日志文件
@@ -43,6 +44,10 @@ function translator.init(env)
    local config = env.engine.schema.config
    -- 加载自然码映射表
    ziranma_mapping_config = config:get_map("speller/ziranma_to_quanpin")
+   
+   -- 读取反引号分隔符配置
+   backtick_delimiter = config:get_string("translator/backtick_delimiter") or ""
+   logger:info("反引号分隔符设置: '" .. backtick_delimiter .. "'")
 
    -- if ziranma_mapping_config then
    --    logger:info("开始打印自然码映射表...")
@@ -208,7 +213,7 @@ function translator.func(translation, env)
          -- 添加百度云候选词
          for candidate_index, candidate_data in ipairs(baidu_response.result[1]) do
             logger:info("添加百度云候选词: " .. candidate_data[1])
-            local cloud_candidate = Candidate("sentence", segment.start, segment._end, candidate_data[1], "   [百度云]")
+            local cloud_candidate = Candidate("sentence", segment.start, segment._end, candidate_data[1], "   [云输入]")
             cloud_candidate.preedit = original_preedit
             yield(cloud_candidate)
          end
@@ -236,7 +241,7 @@ function translator.func(translation, env)
       local final_result = ""
       
       local success, result = pcall(function()
-         return text_splitter.split_and_convert_input(input)
+         return text_splitter.split_and_convert_input_with_log_and_delimiter(input, logger, backtick_delimiter)
       end)
       
       if success and result then
@@ -299,7 +304,7 @@ function translator.func(translation, env)
          
          -- 创建智能合成候选词
          logger:info("创建智能合成候选词: " .. final_result)
-         local candidate = Candidate("sentence", segment.start, segment._end, final_result, "   [智能合成]")
+         local candidate = Candidate("sentence", segment.start, segment._end, final_result, "   [云输入]")
          candidate.preedit = original_preedit
          yield(candidate)
          

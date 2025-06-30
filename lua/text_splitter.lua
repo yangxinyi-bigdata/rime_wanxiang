@@ -5,8 +5,13 @@ local text_splitter = {}
 
 -- 智能切分输入并转换双拼到全拼
 function text_splitter.split_and_convert_input(input)
-    -- 可选：如果需要日志记录，可以传入logger参数
-    -- 这里简化版本，不依赖log模块
+    -- 使用默认空分隔符的版本
+    return text_splitter.split_and_convert_input_with_delimiter(input, "")
+end
+
+-- 带分隔符的智能切分函数
+function text_splitter.split_and_convert_input_with_delimiter(input, delimiter)
+    delimiter = delimiter or ""  -- 默认无分隔符
     
     -- 先处理反引号 - 支持多对反引号
     -- nihk`hello`wode`dream3`keyi 应该处理成：nihk + `hello` + wode + `dream3` + keyi
@@ -46,7 +51,14 @@ function text_splitter.split_and_convert_input(input)
                 table.insert(segments, {type = "text", content = current_segment})
                 current_segment = ""
             end
-            table.insert(segments, {type = "backtick", content = input:sub(i + 1)})  -- 反引号后的所有内容
+            
+            -- 对于未配对的反引号，包装其内容
+            local remaining_content = input:sub(i + 1)
+            if delimiter ~= "" and remaining_content ~= "" then
+                table.insert(segments, {type = "backtick", content = delimiter .. remaining_content .. delimiter})
+            else
+                table.insert(segments, {type = "backtick", content = remaining_content})
+            end
             break
         elseif char == "`" then
             -- 不是最后一个未配对的反引号
@@ -60,8 +72,12 @@ function text_splitter.split_and_convert_input(input)
                 in_backtick = true
                 backtick_content = ""
             else
-                -- 结束反引号内容
-                table.insert(segments, {type = "backtick", content = backtick_content})  -- 类型=反引号
+                -- 结束反引号内容，添加分隔符
+                if delimiter ~= "" and backtick_content ~= "" then
+                    table.insert(segments, {type = "backtick", content = delimiter .. backtick_content .. delimiter})
+                else
+                    table.insert(segments, {type = "backtick", content = backtick_content})
+                end
                 in_backtick = false
                 backtick_content = ""
             end
@@ -83,8 +99,12 @@ function text_splitter.split_and_convert_input(input)
     
     -- 处理最后一个片段
     if in_backtick then
-        -- 未闭合的反引号内容
-        table.insert(segments, {type = "backtick", content = backtick_content})
+        -- 未闭合的反引号内容，添加分隔符
+        if delimiter ~= "" and backtick_content ~= "" then
+            table.insert(segments, {type = "backtick", content = delimiter .. backtick_content .. delimiter})
+        else
+            table.insert(segments, {type = "backtick", content = backtick_content})
+        end
     elseif current_segment ~= "" then
         table.insert(segments, {type = "text", content = current_segment})
     end
@@ -99,6 +119,24 @@ function text_splitter.split_and_convert_input_with_log(input, logger)
     end
     
     local segments = text_splitter.split_and_convert_input(input)
+    
+    if logger then
+        logger:info("切分结果:")
+        for i, seg in ipairs(segments) do
+            logger:info(string.format("  片段%d: 类型=%s, 内容='%s'", i, seg.type, seg.content))
+        end
+    end
+    
+    return segments
+end
+
+-- 带日志记录和分隔符的版本
+function text_splitter.split_and_convert_input_with_log_and_delimiter(input, logger, delimiter)
+    if logger then
+        logger:info("开始处理输入: " .. input .. "，分隔符: '" .. (delimiter or "") .. "'")
+    end
+    
+    local segments = text_splitter.split_and_convert_input_with_delimiter(input, delimiter)
     
     if logger then
         logger:info("切分结果:")
