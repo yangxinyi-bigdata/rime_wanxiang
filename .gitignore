@@ -31,3 +31,9 @@ Thumbs.db
 # Ignore specific generated files
 wanxiang-lts-zh-predict.db
 *.gram
+
+# Input statistics file (user-specific data)
+lua/input_stats.lua
+
+# Sync directory (contains user-specific sync data)
+sync/cd9f2e79-5379-43b5-9b04-12b23e1cd55d/

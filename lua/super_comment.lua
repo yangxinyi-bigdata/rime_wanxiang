@@ -269,6 +269,12 @@ function ZH.func(input, env)
 
     for cand in input:iter() do
         index = index + 1
+
+        -- -- 豁免百度云候选词
+        -- if cand.type == "baidu_cloud" then
+        --     yield(cand)
+        --     goto continue
+        -- end
         if should_skip_candidate_comment then
             yield(cand)
             goto continue

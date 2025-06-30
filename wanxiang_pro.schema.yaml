@@ -2,7 +2,7 @@
 # encoding: utf-8
 #############DIY你想要的方案组合,试试搭配一个自然码+墨奇辅助的方案吧！###########################
 set_shuru_schema:              #配置此项就是选择什么输入法,同时拆分反查和中英文混输也将匹配该输入方案
-  __include: 自然码             #可选解码规则有   自然码, 自然龙, 汉心龙, 小鹤双拼, 搜狗双拼, 微软双拼, 智能ABC, 紫光双拼， 国标双拼， 龙三 选择一个填入
+  __include: 自然码             #可选解码规则有   全拼,自然码, 自然龙, 汉心龙, 小鹤双拼, 搜狗双拼, 微软双拼, 智能ABC, 紫光双拼， 国标双拼， 龙三 选择一个填入
 set_fuzhu_schema:              #配置此项就是选择什么输入法,同时拆分反查和中英文混输也将匹配该输入方案
   __include: 间接辅助           #可选解码规则有:  直接辅助, 间接辅助  选择一个填入
 set_cn_en:                     #中英混输
@@ -44,6 +44,7 @@ switches:
     reset: 1
   - name: full_shape                   #全角、半角字符输出
     states: [ 半, 全 ]
+    reset: 0
   - name: emoji                        #候选出现emoji滤镜，会显示在相应的候选后面，万象侧重于tips提示，避免候选被占用，因此默认为reset: 0，归属opencc emoji滤镜
     states: [ 🙃, 😄 ]
   - name: chinese_english              #候选进入翻译模式滤镜，会显示在相应的候选后面，万象侧重于tips提示，避免候选被占用，快捷键配套ctrl+e,归属opencc 翻译滤镜
@@ -71,14 +72,15 @@ switches:
 # 输入引擎
 engine:
   processors:
+    - lua_processor@*cloud_input_precessor #触发云输入法快捷键
     - predictor                            #联想处理器，与predictor顶层配置配合
-    # - chord_composer                       #并击处理器，与置顶参数：是否启用并击，选项配合使用
-    #- lua_processor@*select_character     #以词定字，默认左中括号上屏一个词的前一个字，右中括号上屏一个词的后一个字
+    # - chord_composer                     #并击处理器，与置顶参数：是否启用并击，选项配合使用
+    - lua_processor@*select_character     #以词定字，默认左中括号上屏一个词的前一个字，右中括号上屏一个词的后一个字
     - lua_processor@*super_sequence*P      #手动排序，高亮候选 ctrl+j左移动 ctrl+k 右移动 ctrl+0 移除位移
     - lua_processor@*tone_fallback         #声调辅助回退，当你输入声调数字错误时，继续输入正确的而不用回退删除
     - lua_processor@*quick_symbol_text     #快符引导以及重复上屏，配合quick_symbol_text顶层配置清单定义扩展按键
     - lua_processor@*super_tips*S          #超级提示模块：表情、简码、翻译、化学式、等等靠你想象
-    # - lua_processor@*limit_repeated        #用于限制最大候选长度以及最大重复输入声母编码长度，避免性能异常
+    # # - lua_processor@*limit_repeated        #用于限制最大候选长度以及最大重复输入声母编码长度，避免性能异常
     - lua_processor@*backspace_limit       #防止连续 Backspace 在编码为空时删除已上屏内容
     - lua_processor@*userdb_sync_delete    #危险操作：通过输入 /del 触发,用于清理自定义同步目录下txt用户词典里被标记c<0的词条，操作步骤：必须先同步、再执行/del、再去部署刷新状态、再去同步回收词典，完成动作。
     - ascii_composer                       #处理英文模式及中英文切换
@@ -90,6 +92,8 @@ engine:
     - selector                             #选字处理器，处理数字选字键〔可以换成别的哦〕、上、下候选定位、换页
     - navigator                            #处理输入栏内的光标移动
     - express_editor                       #编辑器，处理空格、回车上屏、回退键
+    # - lua_processor@*print_info_precessor  #打印信息处理器，处理按键打印信息，主要用于调试
+
   segmentors:
     - ascii_segmentor                      #标识英文段落〔譬如在英文模式下〕字母直接上屛
     - matcher                              #配合 recognizer 标识符合特定规则的段落，如网址、反查等，加上特定 tag
@@ -117,6 +121,7 @@ engine:
     - script_translator@user_dict_set      #自造词之使用词汇入口
     - script_translator@add_user_dict      #自造词之制造词汇入口
     - lua_translator@*force_gc             #暴力 GC 降低内存
+    # - lua_translator@*baidu_translator_curl # 百度云输入结果获取
   filters:
     - lua_filter@*chars_filter                      #字符集过滤
     - lua_filter@*super_sequence*F                  #手动排序放在assist_sort 后面，高亮候选 ctrl+j左移动 ctrl+k 右移动 ctrl+0 移除位移
@@ -132,6 +137,8 @@ engine:
     - lua_filter@*super_tips*M                      #超级提示模块：表情、简码、翻译、化学式、等等靠你想象
     - lua_filter@*super_comment                     #超级注释模块，支持错词提示、辅助码显示，部件组字读音注释，支持个性化配置和关闭相应的功能，详情搜索super_comment进行详细配置
     - lua_filter@*text_formatting                   #给自定义用户词扩展一个换行:\n, 制表符：\t, 回车符：\r, 空格：\s
+    - lua_filter@*baidu_filter                      #百度云输入法API调用，支持百度云输入法的候选词获取     
+    - lua_filter@*punct_eng_chinese_filter          # 将候选项当中的英文标点转换为中文标点 
     - uniquifier                                    #去重
 
 predictor:
@@ -226,7 +233,7 @@ translator:
   comment_format: {comment}  #将注释以词典字符串形式完全暴露，通过super_comment.lua完全接管，灵活配置。
   preedit_format:     #影响到输入框的显示和“Shift+回车”上屏的字符，交给super_preedit处理
     __patch:
-      - 自然码渲染   # 引用
+      # - 自然码渲染   # 引用
 
 
 # 自定义短语
@@ -434,6 +441,9 @@ speller:
   # initials 定义仅作为始码的按键，排除 ` 让单个的 ` 可以直接上屏
   initials: zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA
   delimiter: " '"  # 第一位<空格>是拼音之间的分隔符；第二位<'>表示可以手动输入单引号来分割拼音。
+  # 引入自然码映射表
+  ziranma_to_quanpin:
+    __include: shangpin_dicts/ziranma_mapping:/ziranma_to_quanpin
   algebra:
     __patch:
       - set_shuru_schema     #拼音转双拼码
