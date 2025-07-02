@@ -40,7 +40,7 @@ switches:
     states: [ 中, 英 ]
     reset: 0
   - name: ascii_punct                  # 中英标点
-    states: [ ¥, $ ]
+    states: [ 。, . ]
     reset: 1
   - name: full_shape                   #全角、半角字符输出
     states: [ 半, 全 ]
@@ -95,14 +95,18 @@ engine:
     # - lua_processor@*print_info_precessor  #打印信息处理器，处理按键打印信息，主要用于调试
 
   segmentors:
+    # - lua_segmentor@*debug_segmentor     #添加调试分词器
     - ascii_segmentor                      #标识英文段落〔譬如在英文模式下〕字母直接上屛
     - matcher                              #配合 recognizer 标识符合特定规则的段落，如网址、反查等，加上特定 tag
     - abc_segmentor                        #标识常规的文字段落，加上 abc 这个 tag
     - affix_segmentor@radical_lookup       #部件拆字自定义 tag
     - affix_segmentor@reverse_stroke       #笔画反查自定义 tag
     - affix_segmentor@add_user_dict        #自造词加词 tag
+    - lua_segmentor@*debug_segmentor_advance     #添加调试分词器
+    # - lua_segmentor@*debug_segmentor    #添加调试分词器
     - punct_segmentor                      #标识符号段落〔键入标点符号用〕加上 punct 这个 tag
     - fallback_segmentor                   #标识其他未标识段落，必须放在最后帮助tag模式切换后回退重新处理
+
   translators:
     - predict_translator                   #预测候选的生成器
     - punct_translator                     #配合 punct_segmentor 转换标点符号
@@ -138,7 +142,7 @@ engine:
     - lua_filter@*super_comment                     #超级注释模块，支持错词提示、辅助码显示，部件组字读音注释，支持个性化配置和关闭相应的功能，详情搜索super_comment进行详细配置
     - lua_filter@*text_formatting                   #给自定义用户词扩展一个换行:\n, 制表符：\t, 回车符：\r, 空格：\s
     - lua_filter@*baidu_filter                      #百度云输入法API调用，支持百度云输入法的候选词获取     
-    - lua_filter@*punct_eng_chinese_filter          # 将候选项当中的英文标点转换为中文标点 
+    # - lua_filter@*punct_eng_chinese_filter          # 将候选项当中的英文标点转换为中文标点 
     - uniquifier                                    #去重
 
 predictor:

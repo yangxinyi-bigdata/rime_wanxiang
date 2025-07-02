@@ -9,6 +9,8 @@ config_version: '2024-08-05'
 # 方案列表
 schema_list:
   - schema: wanxiang_pro
+  - schema: wanxiang_radical
+  - schema: wanxiang_en
 
 
 # 菜单

@@ -1,0 +1,14 @@
+# Rime dictionary with wildcard patterns
+# encoding: utf-8
+---
+name: wildcard_patterns
+version: "1.0"
+sort: by_weight
+...
+abcSTAR	ABC开头匹配	100
+abcSTAR	ABC系列	90
+STARxyz	以XYZ结尾	100
+STARxyz	XYZ后缀	90
+aSTARz	A到Z	100
+北京STAR	北京市	100
+STAR大学	某某大学	100
