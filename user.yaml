@@ -1,11 +1,11 @@
 var:
-  last_build_time: 1751428010
+  last_build_time: 1751524838
   option:
     ascii_punct: false
     chinese_english: false
     emoji: false
     fuzhu_hint: false
-    super_tips: true
+    super_tips: false
     tone_hint: false
   previously_selected_schema: wanxiang_pro
   schema_access_time:

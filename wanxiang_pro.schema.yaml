@@ -2,7 +2,7 @@
 # encoding: utf-8
 #############DIY你想要的方案组合,试试搭配一个自然码+墨奇辅助的方案吧！###########################
 set_shuru_schema:              #配置此项就是选择什么输入法,同时拆分反查和中英文混输也将匹配该输入方案
-  __include: 自然码             #可选解码规则有   全拼,自然码, 自然龙, 汉心龙, 小鹤双拼, 搜狗双拼, 微软双拼, 智能ABC, 紫光双拼， 国标双拼， 龙三 选择一个填入
+  __include:  自然码            #可选解码规则有   全拼,自然码, 自然龙, 汉心龙, 小鹤双拼, 搜狗双拼, 微软双拼, 智能ABC, 紫光双拼， 国标双拼， 龙三 选择一个填入
 set_fuzhu_schema:              #配置此项就是选择什么输入法,同时拆分反查和中英文混输也将匹配该输入方案
   __include: 间接辅助           #可选解码规则有:  直接辅助, 间接辅助  选择一个填入
 set_cn_en:                     #中英混输
@@ -102,12 +102,14 @@ engine:
     - affix_segmentor@radical_lookup       #部件拆字自定义 tag
     - affix_segmentor@reverse_stroke       #笔画反查自定义 tag
     - affix_segmentor@add_user_dict        #自造词加词 tag
-    - lua_segmentor@*debug_segmentor_advance     #添加调试分词器
-    # - lua_segmentor@*debug_segmentor    #添加调试分词器
+    # - lua_segmentor@*debug_segmentor_advance     #添加调试分词器
     - punct_segmentor                      #标识符号段落〔键入标点符号用〕加上 punct 这个 tag
+    - lua_segmentor@*debug_segmentor2  #添加调试分词器
     - fallback_segmentor                   #标识其他未标识段落，必须放在最后帮助tag模式切换后回退重新处理
 
   translators:
+    - lua_translator@*debug_translator     #调试翻译器，打印输入、分词、环境等信息
+    - lua_translator@*script_backtick_translator # 反引号翻译器，对于带有反引号内的内容单独处理
     - predict_translator                   #预测候选的生成器
     - punct_translator                     #配合 punct_segmentor 转换标点符号
     - script_translator                    #脚本翻译器，用于拼音、粤拼等基于音节表的输入方案
@@ -142,7 +144,7 @@ engine:
     - lua_filter@*super_comment                     #超级注释模块，支持错词提示、辅助码显示，部件组字读音注释，支持个性化配置和关闭相应的功能，详情搜索super_comment进行详细配置
     - lua_filter@*text_formatting                   #给自定义用户词扩展一个换行:\n, 制表符：\t, 回车符：\r, 空格：\s
     - lua_filter@*baidu_filter                      #百度云输入法API调用，支持百度云输入法的候选词获取     
-    # - lua_filter@*punct_eng_chinese_filter          # 将候选项当中的英文标点转换为中文标点 
+    - lua_filter@*punct_eng_chinese_filter          # 将候选项当中的英文标点转换为中文标点 
     - uniquifier                                    #去重
 
 predictor:
@@ -316,7 +318,7 @@ radical_lookup:
   tag: radical_lookup
   dictionary: wanxiang_radical
   enable_user_dict: false
-  prefix: "`"  # 反查前缀（反查时前缀会消失影响打英文所以设定为两个字母，或可改成一个非字母符号），与 recognizer/patterns/radical_lookup 匹配
+  prefix: "&"  # 反查前缀（反查时前缀会消失影响打英文所以设定为两个字母，或可改成一个非字母符号），与 recognizer/patterns/radical_lookup 匹配
   tips: "〔反查：部件|笔画〕"
   extra_tags:
     - reverse_stroke
@@ -343,8 +345,8 @@ recognizer:
   import_preset: default  # 从 default.yaml 继承通用的
   patterns:  # 再增加方案专有的：
     punct: "^/([0-9]|10|[A-Za-z]+)$"    # 响应 symbols.yaml 的 symbols
-    radical_lookup: "^`[A-Za-z]*$"        # 响应部件拆字与笔画的反查，与 radical_lookup/prefix 匹配
-    add_user_dict: "^``[A-Za-z/`']*$"      #自造词
+    radical_lookup: "^&[A-Za-z]*$"        # 响应部件拆字与笔画的反查，与 radical_lookup/prefix 匹配
+    add_user_dict: "^&&[A-Za-z/&&']*$"      #自造词
     unicode: "^U[a-f0-9]+"              # 脚本将自动获取第 2 个字符 U 作为触发前缀，响应 lua_translator@unicode，输出 Unicode 字符
     number: "^R[0-9]+[.]?[0-9]*"        # 脚本将自动获取第 2 个字符 R 作为触发前缀，响应 lua_translator@number_translator，数字金额大写
     gregorian_to_lunar: "^N[0-9]{1,8}"  # 脚本将自动获取第 2 个字符 N 作为触发前缀，响应 lua_translator@lunar，公历转农历，输入 N20240115 得到「二〇二三年腊月初五」
@@ -444,7 +446,7 @@ speller:
   # 如果不想让什么标点直接上屏，可以加在 alphabet，或者编辑标点符号为两个及以上的映射
   alphabet: zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA`,.?!-;:'"()<>[]{}@#$%^&*+=_/\|~，7890  # <> 加入 ` 作为辅码引导符 # ，。“”：；『』【】（）
   # initials 定义仅作为始码的按键，排除 ` 让单个的 ` 可以直接上屏
-  initials: zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA
+  initials: zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA`
   delimiter: " '"  # 第一位<空格>是拼音之间的分隔符；第二位<'>表示可以手动输入单引号来分割拼音。
   # 引入自然码映射表
   ziranma_to_quanpin:
@@ -1308,7 +1310,7 @@ add_user_dict:
   enable_user_dict: true
   encode_commit_history: false # 是否对已上屛词自动成词〔仅 table_translator 有效〕  
   comment_format:
-  prefix: "``"
+  prefix: "&&"
   tips: "〔开始造词〕"
 
 #语法模型

@@ -254,13 +254,13 @@ function translator.func(translation, env)
          logger:error("切分函数运行失败: " .. tostring(result))
          logger:info("降级到原始处理方式")
          -- 降级处理：将整个输入当作纯文本处理
-         segments = {{type = "text", content = input}}
+         segments = {{type = "abc", content = input}}
       end
       
       -- 处理每个片段（添加错误捕获）
       for i, segment in ipairs(segments) do
          local segment_success, segment_result = pcall(function()
-            if segment.type == "text" then
+            if segment.type == "abc" then
                -- 文本片段：进行双拼转换和云输入
                logger:info(string.format("处理文本片段 %d: '%s'", i, segment.content))
                return get_cloud_result(segment.content)
