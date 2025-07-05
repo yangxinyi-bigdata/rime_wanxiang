@@ -35,7 +35,7 @@ local function test_delimiter(input, delimiter, description)
     logger:info(string.format("分隔符: '%s'", delimiter))
     
     -- 使用带分隔符的切分函数
-    local segments = text_splitter.split_and_convert_input_with_log_and_delimiter(input, logger, delimiter)
+    local segments = text_splitter.split_and_convert_input_with_log_and_delimiter(input, logger, delimiter, delimiter)
     
     -- 模拟处理每个片段
     local final_result = ""

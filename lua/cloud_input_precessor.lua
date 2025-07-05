@@ -1,9 +1,12 @@
 -- 引入日志工具模块
 local logger_module = require("logger")
+-- 引入文本切分模块
+-- local text_splitter = require("text_splitter")
+local debug_utils = require("debug_utils")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("cloud_input_precessor", {
-    enabled = false  -- 可以通过这里控制日志开关
+    enabled = true  -- 可以通过这里控制日志开关
 })
 
 local cloud_input_precessor = {}
@@ -26,31 +29,6 @@ end
 -- 检测输入中文的长度
 
 
--- 检测是否包含标点符号
-local function has_punctuation(text)
-    if not text or text == "" then
-        return false
-    end
-
-    -- 简单检查是否包含常见标点符号
-    local has_punct = false
-    
-    -- 检查中文标点
-    if string.find(text, "[,。！？；：（）【】《》、]") then
-        has_punct = true
-    end
-    
-    -- 检查英文标点
-    if string.find(text, "[,.!?;:()%[%]<>/_=+*&^%%$#@~`|\\-]") then
-        has_punct = true
-    end
-
-    logger:info("has_punct: " .. tostring(has_punct))
-
-    return has_punct
-
-end
-
 -- 按键处理器函数
 -- 负责监听按键事件,判断是否应该触发翻译器
 function cloud_input_precessor.func(key, env)
@@ -65,6 +43,7 @@ function cloud_input_precessor.func(key, env)
         local engine = env.engine        
         local context = engine.context
         local input = context.input
+        local segmentation = context.composition:toSegmentation()
         
         -- 读取配置中的常规输入字符内容
         -- local config = engine.schema.config
@@ -75,7 +54,64 @@ function cloud_input_precessor.func(key, env)
             error("按键对象为空")
         end
 
+        -- 如果输入的按键是一个反引号,则判断这个反引号是不是一个和前边的反引号配对的闭合单引号
+        -- 如果是则直接将当前第一个候选项上屏.
+        logger:info("")
+        logger:info("=== 开始分析lua/cloud_input_precessor.lua ===")
         logger:info("当前按键: " .. key:repr())
+        logger:info("当前input: " .. input)
+        -- 首先打印seg的信息
+        -- 使用debug_utils打印Segmentation信息
+        debug_utils.print_segmentation_info(segmentation, logger)
+
+
+        -- 最后输入的这个按键还没有来得及进入input中,所以不包含最后一个按键
+        -- 这里应该做什么来着？如果直接上屏就会导致没有内容了,直接结束输入.
+        -- 首先查看segment,和候选项
+        -- 对input切片出当前剩余的部分 `haha`woke
+        local current_start = segmentation:get_current_start_position()
+        local current_end = segmentation:get_current_end_position()
+        local segmente_input = input:sub(current_start + 1, current_end)
+        logger:info("segmente_input: " .. segmente_input)
+        -- 已经上屏的部分也会被影响吗?  这里的input是所有的,包含已经上屏确认的部分,应该提取出剩余的
+        if #segmente_input >= 3 and segmente_input:sub(1, 1) == "`" and segmente_input:sub(-2, -2) == "`" then
+            if context:confirm_current_selection() then
+                logger:info("确认当前选择成功")
+            else
+                logger:error("确认当前选择失败")
+            end
+        end
+
+        -- 这里segmentation.input获取到的应该是上一轮结束之后, 当前的segmentation.input
+        -- 
+        -- local segmentation_input = segmentation.input
+        -- logger:info("segmentation_input: " .. segmentation_input)
+        -- 检查反引号的数量是否为奇数(说明有未闭合的反引号)
+        local _, backtick_count = segmente_input:gsub("`", "")
+        if backtick_count % 2 == 1 then
+            logger:info("检测到奇数个反引号,存在未闭合情况: " .. segmente_input .. " (反引号数量: " .. backtick_count .. ")")
+            -- 定义需要转换为普通字符的按键
+            local handle_keys = {
+                ["space"] = " ",  -- 空格转为空格字符
+                ["1"] = "1", ["2"] = "2", ["3"] = "3", ["4"] = "4", ["5"] = "5",
+                ["6"] = "6", ["7"] = "7", ["8"] = "8", ["9"] = "9", ["0"] = "0"
+            }   
+            local key_repr = key:repr()
+            if handle_keys[key_repr] then
+                logger:info("处于反引号状态，将按键转为普通字符: " .. key_repr)
+                
+                -- 将按键对应的字符添加到输入中
+                local char_to_add = handle_keys[key_repr]
+                -- 如果添加英文字母没有影响,但是
+                context:push_input(char_to_add)
+                
+                -- 返回 kAccepted 表示我们已经处理了这个按键
+                return kAccepted
+            end
+        end
+        
+        logger:info("=== 结束分析lua/cloud_input_precessor.lua ===")
+        logger:info("")
 
         -- 定义需要跳过处理的按键
         local skip_keys = {
@@ -92,19 +128,21 @@ function cloud_input_precessor.func(key, env)
             return kNoop
         end
 
+        -- 这部分代码时检测输入的字符长度，通过检测中间有几个分隔符实现
         -- 检查当前是否正在组词状态（即用户正在输入但还未确认）
         local is_composing = context:is_composing()
         local preedit = context:get_preedit()
         local preedit_text = preedit.text
-         -- 移除光标符号和后续的prompt内容
+        -- 移除光标符号和后续的prompt内容
         local clean_text = preedit_text:gsub("‸.*$", "")  -- 从光标符号开始删除到结尾
         logger:info("当前预编辑文本: " .. clean_text)
         local _, count = string.gsub(clean_text, delimiter, delimiter)
         logger:info("当前输入内容分隔符数量: " .. count)
-        local has_punct = has_punctuation(input)
+        -- local has_punct = has_punctuation(input)
 
-        if is_composing and (has_punct or count>=4) then
-            logger:info("当前正在组词状态,检测到标点符号或分隔符数量达到4,触发云输入提示")
+        -- 触发状态改成,当数如字符超过4个,或者有标点且超过2个:
+        if is_composing and count>=3 then
+            logger:info("当前正在组词状态,检测到分隔符数量达到3,触发云输入提示")
             -- 只在值真正需要改变时才设置
              -- 先获取当前选项的值，避免不必要的更新
             logger:info("当前云输入提示标志: " .. context:get_property("cloud_translate_flag"))

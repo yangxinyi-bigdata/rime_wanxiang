@@ -34,7 +34,9 @@ end
 local translator = {}
 
 local ziranma_mapping_config = {}  -- 自然码映射表
-local backtick_delimiter = ""  -- 反引号分隔符
+local backtick_delimiter_before = ""  -- 反引号分隔符
+local backtick_delimiter_after = ""
+local replace_punct_enabled = false
 
 function translator.init(env)
    -- 初始化时清空日志文件
@@ -46,8 +48,11 @@ function translator.init(env)
    ziranma_mapping_config = config:get_map("speller/ziranma_to_quanpin")
    
    -- 读取反引号分隔符配置
-   backtick_delimiter = config:get_string("translator/backtick_delimiter") or ""
-   logger:info("反引号分隔符设置: '" .. backtick_delimiter .. "'")
+    backtick_delimiter_before = config:get_string("translator/backtick_delimiter_before") or ""
+    backtick_delimiter_after = config:get_string("translator/backtick_delimiter_after") or ""
+
+    replace_punct_enabled = config:get_string("translator/replace_punct_enabled") or false
+    -- logger:info("反引号分隔符设置: '" .. backtick_delimiter_before .. "' '" .. backtick_delimiter_after .. "'")
 
    -- if ziranma_mapping_config then
    --    logger:info("开始打印自然码映射表...")
@@ -184,7 +189,7 @@ function translator.func(translation, env)
    context:set_option("cloud_translate", false)  -- 重置选项，避免重复触发
    end
 
-   
+
    -- 检查输入是否包含标点符号或反引号
    local has_punctuation = input:match("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-`'\"']") ~= nil
    
@@ -241,7 +246,8 @@ function translator.func(translation, env)
       local final_result = ""
       
       local success, result = pcall(function()
-         return text_splitter.split_and_convert_input_with_log_and_delimiter(input, logger, backtick_delimiter)
+         -- 是否替换中文标点符号
+         return text_splitter.split_and_convert_input_with_log_and_delimiter(input, logger, backtick_delimiter_before, backtick_delimiter_after, replace_punct_enabled)
       end)
       
       if success and result then

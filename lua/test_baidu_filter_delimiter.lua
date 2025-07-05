@@ -21,7 +21,7 @@ local function test_baidu_filter_delimiter_logic(input, delimiter)
     local final_result = ""
     
     local success, result = pcall(function()
-        return text_splitter.split_and_convert_input_with_log_and_delimiter(input, logger, delimiter)
+        return text_splitter.split_and_convert_input_with_log_and_delimiter(input, logger, delimiter, delimiter)
     end)
     
     if success and result and type(result) == "table" then
