@@ -23,6 +23,7 @@ function cloud_input_precessor.init(env)
     --  fixed 设置一个变量
     -- context:set_property只能设置字符串类型
     env.engine.context:set_property("cloud_translate_flag", "0")
+    env.engine.context:set_property("backtick_prompt", "0")
 
 end
 
@@ -43,6 +44,12 @@ function cloud_input_precessor.func(key, env)
         local engine = env.engine        
         local context = engine.context
         local input = context.input
+
+        if #input == 1 then
+            logger:info("input为1, 不判断直接退出")
+            return kNoop
+        end
+
         local segmentation = context.composition:toSegmentation()
         
         -- 读取配置中的常规输入字符内容
@@ -87,14 +94,120 @@ function cloud_input_precessor.func(key, env)
         -- local segmentation_input = segmentation.input
         -- logger:info("segmentation_input: " .. segmentation_input)
         -- 检查反引号的数量是否为奇数(说明有未闭合的反引号)
+
+        -- 如果当前输入的就是反引号,会有一个延迟,单独判断一下.
+        -- 如果输入的是反引号,那么segmente_input是前边的内容, 
+        -- 这就有两种情况, 一种是 wo` 一种是wo`ok`
+        -- 如果是前边的情况, segmente_input为 input, 后面的情况 segmente_input为 wo`ok
+        -- 
+        if key:repr() == "grave" then
+            -- segmente_input 后面追加一个反引号字符
+            segmente_input = segmente_input .. "`"
+            logger:info("检测到反引号输入，segmente_input 更新为: " .. segmente_input)
+        end
         local _, backtick_count = segmente_input:gsub("`", "")
-        if backtick_count % 2 == 1 then
+        if backtick_count % 2 == 1  then
             logger:info("检测到奇数个反引号,存在未闭合情况: " .. segmente_input .. " (反引号数量: " .. backtick_count .. ")")
+            -- 只在值真正需要改变时才设置
+             -- 先获取当前选项的值，避免不必要的更新
+            logger:info("当前云输入提示标志: " .. context:get_property("backtick_prompt"))
+
+            if context:get_property("backtick_prompt") == "0" then
+                logger:info("backtick_prompt提示标志为 0, 设置为 1")
+                context:set_property("backtick_prompt", "1")
+                logger:info("backtick_prompt 已设置为 1")
+            end
+            
             -- 定义需要转换为普通字符的按键
             local handle_keys = {
                 ["space"] = " ",  -- 空格转为空格字符
+                -- 数字键
                 ["1"] = "1", ["2"] = "2", ["3"] = "3", ["4"] = "4", ["5"] = "5",
-                ["6"] = "6", ["7"] = "7", ["8"] = "8", ["9"] = "9", ["0"] = "0"
+                ["6"] = "6", ["7"] = "7", ["8"] = "8", ["9"] = "9", ["0"] = "0",
+                -- 数字键的Shift版本（符号）
+                ["Shift+1"] = "!",        -- !
+                ["Shift+2"] = "@",        -- @
+                ["Shift+3"] = "#",        -- #
+                ["Shift+4"] = "$",        -- $
+                ["Shift+5"] = "%",        -- %
+                ["Shift+6"] = "^",        -- ^
+                ["Shift+7"] = "&",        -- &
+                ["Shift+8"] = "*",        -- *
+                ["Shift+9"] = "(",        -- (
+                ["Shift+0"] = ")",        -- )
+                
+                -- 标点符号（不需要Shift）
+                ["period"] = ".",         -- 句号
+                ["comma"] = ",",          -- 逗号
+                ["semicolon"] = ";",      -- 分号
+                ["apostrophe"] = "'",     -- 单引号/撇号
+                ["bracketleft"] = "[",    -- 左方括号
+                ["bracketright"] = "]",   -- 右方括号
+                ["hyphen"] = "-",         -- 连字符
+                ["equal"] = "=",          -- 等号
+                ["slash"] = "/",          -- 斜杠
+                ["backslash"] = "\\",     -- 反斜杠
+                ["grave"] = "`",          -- 反引号
+                
+                -- 标点符号的Shift版本
+                ["Shift+period"] = ">",   -- >
+                ["Shift+comma"] = "<",    -- <
+                ["Shift+semicolon"] = ":", -- :
+                ["Shift+apostrophe"] = "\"", -- "
+                ["Shift+bracketleft"] = "{", -- {
+                ["Shift+bracketright"] = "}", -- }
+                ["Shift+hyphen"] = "_",   -- _
+                ["Shift+equal"] = "+",    -- +
+                ["Shift+slash"] = "?",    -- ?
+                ["Shift+backslash"] = "|", -- |
+                ["Shift+grave"] = "~",    -- ~
+                
+                -- 直接映射的符号键
+                ["colon"] = ":",          -- 冒号
+                ["question"] = "?",       -- 问号
+                ["exclam"] = "!",         -- 感叹号
+                ["quotedbl"] = "\"",      -- 双引号
+                ["parenleft"] = "(",      -- 左圆括号
+                ["parenright"] = ")",     -- 右圆括号
+                ["braceleft"] = "{",      -- 左花括号
+                ["braceright"] = "}",     -- 右花括号
+                ["underscore"] = "_",     -- 下划线
+                ["plus"] = "+",           -- 加号
+                ["asterisk"] = "*",       -- 星号
+                ["at"] = "@",             -- @ 符号
+                ["numbersign"] = "#",     -- # 号
+                ["dollar"] = "$",         -- 美元符号
+                ["percent"] = "%",        -- 百分号
+                ["ampersand"] = "&",      -- & 符号
+                ["less"] = "<",           -- 小于号
+                ["greater"] = ">",        -- 大于号
+                ["asciitilde"] = "~",     -- 波浪号
+                ["asciicircum"] = "^",    -- 插入符号
+                ["bar"] = "|",            -- 竖线
+                
+                -- 为这些符号键也添加Shift版本（以防万一）
+                ["Shift+colon"] = ":",
+                ["Shift+question"] = "?",
+                ["Shift+exclam"] = "!",
+                ["Shift+quotedbl"] = "\"",
+                ["Shift+parenleft"] = "(",
+                ["Shift+parenright"] = ")",
+                ["Shift+braceleft"] = "{",
+                ["Shift+braceright"] = "}",
+                ["Shift+underscore"] = "_",
+                ["Shift+plus"] = "+",
+                ["Shift+asterisk"] = "*",
+                ["Shift+at"] = "@",
+                ["Shift+numbersign"] = "#",
+                ["Shift+dollar"] = "$",
+                ["Shift+percent"] = "%",
+                ["Shift+ampersand"] = "&",
+                ["Shift+less"] = "<",
+                ["Shift+greater"] = ">",
+                ["Shift+asciitilde"] = "~",
+                ["Shift+asciicircum"] = "^",
+                ["Shift+bar"] = "|",
+                
             }   
             local key_repr = key:repr()
             if handle_keys[key_repr] then
@@ -107,6 +220,14 @@ function cloud_input_precessor.func(key, env)
                 
                 -- 返回 kAccepted 表示我们已经处理了这个按键
                 return kAccepted
+            end
+
+        else
+            -- 如果不在组词状态或没有达到触发条件,则重置提示选项
+            logger:info("当前不在反引号当中backtick提示已重置")
+            if context:get_property("backtick_prompt") == "1" then
+                context:set_property("backtick_prompt", "0")
+                logger:info("backtick_prompt 已设置为 0")
             end
         end
         

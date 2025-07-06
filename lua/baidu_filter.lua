@@ -155,25 +155,29 @@ function translator.func(translation, env)
       segment = composition:back()
       if segment then
          -- logger:info("当前cloud_translate_prompt状态: ".. tostring(context:get_option("cloud_translate_prompt")))
-         local prompt_text = "     ▶ 回车AI转换"
-         if context:get_property("cloud_translate_flag") == "1" then
-            -- logger:info("云输入法转换提示已启用")
-            if segment.prompt ~= prompt_text then
-               -- 使用更醒目的格式，添加视觉分隔符
-               -- segment.prompt = "[     🤖 回车AI转换]"
-               -- 备选格式（可以根据需要切换）:
-               segment.prompt = prompt_text
-               -- segment.prompt = "     🤖 回车AI转换"
-               -- segment.prompt = "    [AI] 回车转换"
-               -- segment.prompt = " → AI转换"
-               -- segment.prompt = " ⚡ AI转换"
-               -- logger:info("通过segmentation成功设置prompt")
+         
+         -- 定义两种提示文本
+         local cloud_prompt_text = "     ▶ 回车AI转换"
+         local backtick_prompt_text = "     ▶ 反引号模式"
+         
+         -- 获取两个状态
+         local backtick_prompt = context:get_property("backtick_prompt")
+         local cloud_translate_flag = context:get_property("cloud_translate_flag")
+         
+         -- 判断显示哪个提示（backtick_prompt 优先级更高）
+         if backtick_prompt == "1" then
+            -- backtick_prompt 优先级最高
+            if segment.prompt ~= backtick_prompt_text then
+               segment.prompt = backtick_prompt_text
+               logger:info("设置反引号提示: " .. backtick_prompt_text)
             end
-               
-         else
-            if segment.prompt == prompt_text then
-               segment.prompt = ""
+         elseif cloud_translate_flag == "1" then
+            -- 只有在 backtick_prompt 为 0 时才显示 cloud_translate_flag 的提示
+            if segment.prompt ~= cloud_prompt_text then
+               segment.prompt = cloud_prompt_text
+               logger:info("设置云输入提示: " .. cloud_prompt_text)
             end
+
          end
       end
 

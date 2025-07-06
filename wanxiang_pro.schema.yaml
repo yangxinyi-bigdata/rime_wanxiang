@@ -98,12 +98,12 @@ engine:
     - ascii_segmentor                      #标识英文段落〔譬如在英文模式下〕字母直接上屛
     - matcher                              #配合 recognizer 标识符合特定规则的段落，如网址、反查等，加上特定 tag
     - abc_segmentor                        #标识常规的文字段落，加上 abc 这个 tag
+    - lua_segmentor@*backtick_segment      #添加反引号分词器
     - affix_segmentor@radical_lookup       #部件拆字自定义 tag
     - affix_segmentor@reverse_stroke       #笔画反查自定义 tag
     - affix_segmentor@add_user_dict        #自造词加词 tag
     - punct_segmentor                      #标识符号段落〔键入标点符号用〕加上 punct 这个 tag
-    # - lua_segmentor@*debug_segmentor2      #添加调试分词器
-    - lua_segmentor@*backtick_segment       #添加反引号分词器
+    - lua_segmentor@*debug_segmentor2      #添加调试分词器
     - fallback_segmentor                   #标识其他未标识段落，必须放在最后帮助tag模式切换后回退重新处理
 
   translators:
@@ -128,6 +128,7 @@ engine:
     - lua_translator@*force_gc             #暴力 GC 降低内存
     # - lua_translator@*baidu_translator_curl # 百度云输入结果获取
   filters:
+    # - lua_filter@*debug_filter
     - lua_filter@*chars_filter                      #字符集过滤
     - lua_filter@*super_sequence*F                  #手动排序放在assist_sort 后面，高亮候选 ctrl+j左移动 ctrl+k 右移动 ctrl+0 移除位移
     - lua_filter@*autocap_filter                    #英文自动大写，当输入一个大写那么候选首字母大写，当输入两个大写那么候选全为大写
@@ -1296,7 +1297,7 @@ user_dict_set:
     - xform/8/2/
     - xform/9/3/
     - xform/0/4/
-  enable_user_dict: true
+  enable_user_dict: true 
   user_dict: zc
 
 

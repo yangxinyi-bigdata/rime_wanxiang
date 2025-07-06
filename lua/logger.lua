@@ -63,6 +63,11 @@ function logger.create(module_name, config)
             return
         end
         
+        -- 如果message是nil，替换成空字符串
+        if message == nil then
+            message = ""
+        end
+        
         level = level or "INFO"
         local timestamp = os.date(self.timestamp_format)
         local log_message = string.format("[%s] [%s] [%s] %s\n", 

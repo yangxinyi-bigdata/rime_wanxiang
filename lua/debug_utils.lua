@@ -82,11 +82,12 @@ function debug_utils.print_segment_info(seg, logger)
     end
 end
 
--- 打印Translation的详细信息
+-- 打印Translation的详细信息（用于一般调试，会消耗translation）
+-- 注意：这个函数会消耗translation，如果在filter中使用需要返回候选词列表
 function debug_utils.print_translation_info(translation, logger)
     if not translation then
         logger:info("Translation is nil")
-        return
+        return {}
     end
     
     logger:info("=== Translation 对象信息 ===")
@@ -94,30 +95,33 @@ function debug_utils.print_translation_info(translation, logger)
     
     -- 统计候选项数量
     local count = 0
-    local candidates = {}
+    local all_candidates = {}
     
     -- 收集候选项信息
     for cand in translation:iter() do
         count = count + 1
-        table.insert(candidates, cand)
+        table.insert(all_candidates, cand)
         
-        -- 限制收集数量避免日志过长
-        if count >= 10 then
-            break
+        -- 限制日志记录数量避免日志过长
+        if count > 10 then
+            -- 继续收集但不记录到日志
         end
     end
     
-    logger:info("候选项数量: " .. count .. (count >= 10 and " (显示前10个)" or ""))
+    logger:info("候选项数量: " .. count .. (count > 10 and " (显示前10个详细信息)" or ""))
     
-    -- 打印候选项详细信息
-    if #candidates > 0 then
+    -- 打印前10个候选项详细信息
+    if #all_candidates > 0 then
         logger:info("")
         logger:info("=== 候选项详细信息 ===")
-        for i, cand in ipairs(candidates) do
-            debug_utils.print_candidate_info(cand, i, logger)
+        for i = 1, math.min(#all_candidates, 10) do
+            debug_utils.print_candidate_info(all_candidates[i], i, logger)
             logger:info("")
         end
     end
+    
+    -- 返回所有候选词
+    return all_candidates
 end
 
 -- 打印Environment信息
@@ -173,8 +177,34 @@ function debug_utils.print_env_info(env, logger)
     -- 检查名字空间中的变量
     logger:info("Name space variables:")
     if env.name_space then
-        for k, v in pairs(env.name_space) do
-            logger:info("  " .. tostring(k) .. ": " .. tostring(type(v)))
+        logger:info("env.name_space 存在，类型: " .. type(env.name_space))
+        
+        -- 添加错误捕获
+        local success, error_msg = pcall(function()
+            if type(env.name_space) == "table" then
+                logger:info("遍历打印 name_space 表中的内容:")
+                local count = 0
+                for k, v in pairs(env.name_space) do
+                    logger:info("  " .. tostring(k) .. ": " .. tostring(type(v)))
+                    count = count + 1
+                    -- 限制输出数量，避免日志过长
+                    if count >= 20 then
+                        logger:info("  ... (显示前20项)")
+                        break
+                    end
+                end
+                if count == 0 then
+                    logger:info("  name_space 表为空")
+                end
+            elseif type(env.name_space) == "string" then
+                logger:info("name_space 是字符串: '" .. env.name_space .. "'")
+            else
+                logger:info("name_space 是 " .. type(env.name_space) .. " 类型，值: " .. tostring(env.name_space))
+            end
+        end)
+        
+        if not success then
+            logger:info("处理 name_space 时发生错误: " .. tostring(error_msg))
         end
     else
         logger:info("  name_space is nil")
@@ -223,6 +253,53 @@ function debug_utils.print_segmentation_info(segmentation, logger)
         logger:info("没有segments")
     end
 
+end
+
+-- 打印Translation的详细信息（专门用于filter调试）
+-- 注意：这个函数会消耗translation，需要返回收集到的候选词列表
+function debug_utils.print_translation_detailed(translation, logger)
+    if not translation then
+        logger:info("Translation is nil")
+        return {}
+    end
+    
+    logger:info("=== Translation 详细调试信息 ===")
+    logger:info("exhausted: " .. tostring(translation.exhausted))
+    
+    -- 统计候选项数量和详细信息
+    local count = 0
+    local all_candidates = {}  -- 存储所有候选词，用于重新yield
+    
+    -- 收集所有候选项信息
+    for cand in translation:iter() do
+        count = count + 1
+        table.insert(all_candidates, cand)  -- 保存原始候选词对象
+    end
+    
+    logger:info("候选项总数: " .. count)
+    
+    -- 打印前15个候选项的详细信息
+    if #all_candidates > 0 then
+        logger:info()
+        logger:info("=== 候选项详细列表（前15个）===")
+        for i = 1, math.min(#all_candidates, 5) do
+            local cand = all_candidates[i]
+            logger:info(string.format("候选项 %d:", i))
+            logger:info("  type: " .. tostring(cand.type or "nil"))
+            logger:info("  start: " .. tostring(cand.start or "nil"))
+            logger:info("  _end: " .. tostring(cand._end or "nil"))
+            logger:info("  text: '" .. (cand.text or "") .. "'")
+            logger:info("  comment: '" .. (cand.comment or "") .. "'")
+            logger:info("  preedit: '" .. (cand.preedit or "") .. "'")
+            logger:info("  quality: " .. tostring(cand.quality or "nil"))
+            logger:info()
+        end
+    else
+        logger:info("没有候选项")
+    end
+    
+    -- 返回所有候选词，让调用者重新yield
+    return all_candidates
 end
 
 return debug_utils

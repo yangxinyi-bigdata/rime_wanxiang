@@ -71,61 +71,164 @@ function script_backtick_translator.init(env)
 
     -- 创建script_translator组件
     env.script_translator = Component.Translator(engine, "translator", "script_translator")
+    env.user_dict_set_translator = Component.Translator(engine, "user_dict_set", "script_translator")
+
     if env.script_translator then
         logger:info("成功创建script_translator组件")
     else
         logger:error("创建script_translator组件失败")
     end
     
+    if env.user_dict_set_translator then
+        logger:info("成功创建user_dict_set_translator组件")
+    else
+        logger:error("创建user_dict_set_translator组件失败")
+    end
+    
     logger:info("脚本反引号翻译器初始化完成")
 
     -- 监听选词事件
-    engine.context.select_notifier:connect(backtick_before)
+    -- engine.context.select_notifier:connect(backtick_before)
 
 end
 
 
 
--- 使用script_translator获取多个候选词，返回完整的Candidate列表
-local function get_candidates(input, seg, env, max_count)
-    if not env.script_translator then
-        logger:error("script_translator未初始化")
+-- 使用两个translator获取多个候选词，返回完整的Candidate列表
+local function get_candidates(input, seg, env, max_count, allow_fallback)
+    if not env.script_translator or not env.user_dict_set_translator then
+        logger:error("script_translator 或 user_dict_set_translator未初始化")
         return {}
     end
+
+    logger:info()
+    logger:info("开始使用get_candidates获取候选词, 最大候选词数max_count: " .. max_count .. ", 允许长度不足补全: " .. tostring(allow_fallback))
+    logger:info("查询两个translator，输入: " .. input .. ", 最大候选词数: " .. max_count)
     
-    logger:info("查询script_translator，输入: " .. input .. ", 最大候选词数: " .. max_count)
+    local valid_candidates = {}  -- 存储长度匹配的候选词
+    local fallback_candidates = {}  -- 存储长度最长的候选词作为备选
+    local segment_length = #input  -- segment的长度就是input的长度
     
-    local success, translation = pcall(function()
-        -- 将seg标签改成abc
+    -- 先尝试从 script_translator 获取候选词
+    logger:info("尝试从 script_translator 获取候选词...")
+    local success1, translation1 = pcall(function()
         return env.script_translator:query(input, seg)
     end)
     
-    if not success then
-        logger:error("调用script_translator失败: " .. tostring(translation))
-        return {}
-    end
-    
-    local candidates = {}
-    if translation then
-        local count = 0
-        -- 获取指定数量的候选词
-        for cand in translation:iter() do
-            if count >= max_count then
+    if success1 and translation1 then
+        local count1 = 0
+        for cand in translation1:iter() do
+            count1 = count1 + 1
+            local cand_length = cand._end - cand.start
+            logger:info(string.format("script_translator候选词 %d: '%s', 长度: %d, segment长度: %d", 
+                count1, cand.text, cand_length, segment_length))
+            
+            if cand_length == segment_length then
+                table.insert(valid_candidates, cand)
+                logger:info(string.format("script_translator候选词长度匹配，添加: '%s'", cand.text))
+                
+                -- 如果已经找到足够的候选词，直接返回
+                if #valid_candidates >= max_count then
+                    logger:info("从script_translator已获取足够数量的候选词，直接返回")
+                    return valid_candidates, false  -- 返回是否使用了fallback
+                end
+            else
+                -- 只有允许fallback时才收集备选候选词
+                if allow_fallback then
+                    table.insert(fallback_candidates, {cand = cand, length = cand_length})
+                    logger:info(string.format("script_translator候选词长度不匹配，添加到备选列表: '%s'", cand.text))
+                else
+                    logger:info(string.format("script_translator候选词长度不匹配，不允许fallback，跳过: '%s'", cand.text))
+                end
+            end
+            
+            -- 限制遍历数量，只遍历前max_count个
+            if count1 >= max_count then
+                logger:info("script_translator已遍历" .. max_count .. "个候选词，停止遍历")
                 break
             end
-            table.insert(candidates, cand)
-            logger:info("candidates中插入一个cand")
-            count = count + 1
+        end
+    else
+        logger:error("调用script_translator失败: " .. tostring(translation1))
+    end
+    
+    -- 如果第一个translator的候选词不足，尝试从 user_dict_set_translator 获取
+    if #valid_candidates < max_count and env.user_dict_set_translator then
+        logger:info("script_translator候选词不足，尝试从 user_dict_set_translator 获取...")
+        local success2, translation2 = pcall(function()
+            return env.user_dict_set_translator:query(input, seg)
+        end)
+        
+        if success2 and translation2 then
+            local count2 = 0
+            for cand in translation2:iter() do
+                count2 = count2 + 1
+                local cand_length = cand._end - cand.start
+                logger:info(string.format("user_dict_set_translator候选词 %d: '%s', 长度: %d, segment长度: %d", 
+                    count2, cand.text, cand_length, segment_length))
+                
+                if cand_length == segment_length then
+                    table.insert(valid_candidates, cand)
+                    logger:info(string.format("user_dict_set_translator候选词长度匹配，添加: '%s'", cand.text))
+                    
+                    -- 如果已经找到足够的候选词，停止
+                    if #valid_candidates >= max_count then
+                        logger:info("已获取足够数量的候选词，停止获取")
+                        break
+                    end
+                else
+                    -- 只有允许fallback时才收集备选候选词
+                    if allow_fallback then
+                        table.insert(fallback_candidates, {cand = cand, length = cand_length})
+                        logger:info(string.format("user_dict_set_translator候选词长度不匹配，添加到备选列表: '%s'", cand.text))
+                    else
+                        logger:info(string.format("user_dict_set_translator候选词长度不匹配，不允许fallback，跳过: '%s'", cand.text))
+                    end
+                end
+                
+                -- 限制遍历数量，只遍历前max_count个
+                if count2 >= max_count then
+                    logger:info("user_dict_set_translator已遍历" .. max_count .. "个候选词，停止遍历")
+                    break
+                end
+            end
+        else
+            logger:error("调用user_dict_set_translator失败: " .. tostring(translation2))
+        end
+    elseif not env.user_dict_set_translator then
+        logger:info("user_dict_set_translator未初始化")
+    end
+    
+    local used_fallback = false
+    
+    -- 如果没有长度匹配的候选词，且允许fallback，使用长度最长的备选方案
+    if #valid_candidates == 0 and #fallback_candidates > 0 and allow_fallback then
+        logger:info("没有长度匹配的候选词，使用长度最长的备选方案")
+        used_fallback = true
+        
+        -- 按长度降序排序
+        table.sort(fallback_candidates, function(a, b)
+            return a.length > b.length
+        end)
+        
+        -- 选择长度最长的max_count个候选词
+        for i = 1, math.min(#fallback_candidates, max_count) do
+            table.insert(valid_candidates, fallback_candidates[i].cand)
+            logger:info(string.format("使用备选候选词 %d: '%s', 长度: %d", 
+                i, fallback_candidates[i].cand.text, fallback_candidates[i].length))
         end
     end
     
-    if #candidates == 0 then
-        logger:info("未获取到候选词，返回空列表")
+    if #valid_candidates == 0 then
+        logger:info("未获取到任何候选词，返回空列表")
     else
-        logger:info("共获取到 " .. #candidates .. " 个候选词")
+        logger:info("共获取到 " .. #valid_candidates .. " 个候选词" .. (used_fallback and " (使用了fallback)" or ""))
+        for i, cand in ipairs(valid_candidates) do
+            logger:info(string.format("最终候选词 %d: '%s'", i, cand.text))
+        end
     end
-    
-    return candidates
+    logger:info() 
+    return valid_candidates, used_fallback
 end
 
 function script_backtick_translator.func(input, seg, env)
@@ -143,6 +246,7 @@ function script_backtick_translator.func(input, seg, env)
 
     -- 检查输入是否包含反引号标签
     if not seg:has_tag("backtick") then
+        logger:info("没有包含backtick标签，不处理")
         return
     end
     logger:info("含有backtick标签, 进入反引号translator")
@@ -159,7 +263,7 @@ function script_backtick_translator.func(input, seg, env)
         logger:error("切分失败或无结果")
         return
     end
-    
+
     -- 检查第一个片段是否为backtick类型，若是则直接commit_text并返回
     if segments[1].type == "backtick" then
         -- 还要考虑新的可能性: 如果是只有一个反引号开头，如何判断
@@ -182,64 +286,150 @@ function script_backtick_translator.func(input, seg, env)
         return
     end
 
-    -- 处理每个片段
-    local final_result = ""
-    local final_preedit = ""
+    -- 处理每个片段，收集每个片段的候选词
+    local segment_candidates = {}  -- 存储每个片段的候选词列表
+    local used_fallback = false  -- 记录是否使用了fallback
+    local fallback_length_diff = 0  -- 记录fallback导致的长度差异
+
     for i, segment in ipairs(segments) do
-        local segment_text = ""
-        local segment_preedit = ""
+        local candidates_for_segment = {}
+        
         if segment.type == "abc" then
-            -- 文本片段：使用script_translator翻译
+            -- 文本片段：使用两个translator翻译
             logger:info(string.format("处理文本片段 %d: '%s'", i, segment.content))
-            -- 获取第一个候选词进行拼接
-            local candidates = get_candidates(segment.content, seg, env, 5)
+            
+            -- 判断是否允许使用fallback：只有最后一个segment且类型为abc时允许
+            local is_last_segment = (i == #segments)
+            local allow_fallback = is_last_segment
+            logger:info(string.format("片段 %d, 是否最后一个: %s, 允许fallback: %s", i, tostring(is_last_segment), tostring(allow_fallback)))
+            
+            local candidates, segment_used_fallback = get_candidates(segment.content, seg, env, 2, allow_fallback)
+            logger:info("get_candidates返回segment_used_fallback: " ..tostring(segment_used_fallback))
+            
+            -- 如果当前segment使用了fallback，更新全局fallback状态
+            if segment_used_fallback then
+                used_fallback = true
+                logger:info("used_fallback: " ..tostring(used_fallback))
+                -- 计算长度差异（最长候选词长度 - segment长度）
+
+                -- 这个地方整个长度计算是错误的: 应该是长度 segment.length 大于 候选词长度, 
+                -- 对于整个分词例如 nihkdd 没有找到完整的候选词,只匹配了 nihk, 因此候选词的长度更低
+                if #candidates > 0 then
+                    local cand = candidates[1]
+                    local cand_length = cand._end - cand.start
+                    fallback_length_diff = #segment.content - cand_length
+                    logger:info(string.format("使用fallback，fallback_length_diff差异: %d", fallback_length_diff))
+                end
+            end
             
             -- 遍历candidates并打印属性值
-            logger:info("获取到 " .. #candidates .. " 个candidates，开始遍历:")
+            logger:info("获取到 " .. #candidates .. " 个候选词" .. (segment_used_fallback and " (使用了fallback)" or "") .. ":")
             for index, cand in ipairs(candidates) do
-                debug_utils.print_candidate_info(cand, index, logger)
+                logger:info(string.format("候选词 %d: '%s'", index, cand.text))
+                
+                -- 由于get_candidates已经完成长度检查，直接添加到候选列表
+                table.insert(candidates_for_segment, {
+                    text = cand.text,
+                    preedit = cand.preedit or segment.content
+                })
+                logger:info(string.format("候选词 %d 已添加到segment候选列表", index))
             end
             
-            if #candidates > 0 then
-                segment_text = candidates[1].text
-                segment_preedit = candidates[1].preedit
-            else
-                segment_text = segment.content
-                segment_preedit = segment.content
-            end
+            -- -- 如果没有匹配的候选词，使用原内容
+            -- if #candidates_for_segment == 0 then
+            --     table.insert(candidates_for_segment, {
+            --         text = segment.content,
+            --         preedit = segment.content
+            --     })
+            --     logger:info("没有匹配的候选词，使用原内容")
+            -- end
+            
         elseif segment.type == "backtick" then
-            -- 反引号内容：text是处理后的内容（包含分隔符），preedit是原始的带反引号内容
+            -- 反引号内容：固定一个候选项
             logger:info(string.format("处理反引号片段 %d: '%s'", i, segment.content))
-            segment_text = segment.content  -- 处理后的内容（包含分隔符）
-            segment_preedit = segment.original or segment.content  -- 原始带反引号的内容
+            table.insert(candidates_for_segment, {
+                text = segment.content,
+                preedit = segment.original or segment.content
+            })
+            
         else
             -- 其他类型：保持原样
             logger:info(string.format("处理其他类型片段 %d: type=%s, content='%s'", i, segment.type, segment.content))
-            segment_text = segment.content
-            segment_preedit = segment.content
+            table.insert(candidates_for_segment, {
+                text = segment.content,
+                preedit = segment.content
+            })
         end
-        final_result = final_result .. segment_text
-        final_preedit = final_preedit .. segment_preedit
-        logger:info(string.format("片段 %d 处理结果: text='%s', preedit='%s'", i, segment_text, segment_preedit))
+        
+        segment_candidates[i] = candidates_for_segment
+        logger:info(string.format("片段 %d 收集到 %d 个候选项", i, #candidates_for_segment))
     end
-
-    logger:info("最终拼接结果: text='" .. final_result .. "', preedit='" .. final_preedit .. "'")
-
-    -- 如果最终结果与原输入不同，则输出候选词
-    if final_result ~= input and final_result ~= "" then
-        local candidate = Candidate("sentence", seg.start, seg._end, final_result, "   [脚本翻译]")
-        -- 使用拼接后的preedit
-        candidate.preedit = final_preedit
-        yield(candidate)
-        logger:info("输出候选词: text='" .. final_result .. "', preedit='" .. final_preedit .. "'")
-    else
-        logger:info("结果与原输入相同或为空，不输出候选词")
+    
+    -- 生成所有可能的组合
+    local function generate_combinations(segment_lists, current_combination, current_index, all_combinations)
+        if current_index > #segment_lists then
+            -- 达到末尾，保存当前组合
+            table.insert(all_combinations, current_combination)
+            return
+        end
+        
+        -- 遍历当前片段的所有候选词
+        for _, candidate in ipairs(segment_lists[current_index]) do
+            local new_combination = {}
+            -- 复制当前组合
+            for j = 1, #current_combination do
+                new_combination[j] = current_combination[j]
+            end
+            -- 添加新的候选词
+            table.insert(new_combination, candidate)
+            
+            -- 递归处理下一个片段
+            generate_combinations(segment_lists, new_combination, current_index + 1, all_combinations)
+        end
     end
-
-
-    -- 接下来输出第一段abc部分的候选词内容
-
-
+    
+    local all_combinations = {}
+    generate_combinations(segment_candidates, {}, 1, all_combinations)
+    
+    logger:info("共生成 " .. #all_combinations .. " 个组合")
+    
+    -- 输出每个组合作为候选词，最多输出4个
+    local output_count = 0
+    local max_output = 4
+    
+    for combo_index, combination in ipairs(all_combinations) do
+        if output_count >= max_output then
+            logger:info("已达到最大输出数量限制 " .. max_output .. "，停止输出")
+            break
+        end
+        
+        local final_text = ""
+        local final_preedit = ""
+        
+        for _, segment_cand in ipairs(combination) do
+            final_text = final_text .. segment_cand.text
+            final_preedit = final_preedit .. segment_cand.preedit
+        end
+        
+        logger:info(string.format("组合 %d: text='%s', preedit='%s'", combo_index, final_text, final_preedit))
+        
+        -- 如果最终结果与原输入不同，则输出候选词
+        if final_text ~= input and final_text ~= "" then
+            -- 如果使用了fallback，需要调整候选词的结束位置
+            local candidate_end = seg._end
+            logger:info("used_fallback的值: " .. tostring(used_fallback) .. "  fallback_length_diff的值: " .. tostring(fallback_length_diff))
+            if used_fallback and fallback_length_diff > 0 then
+                logger:info(string.format("使用了fallback，调整候选词结束位置: %d -> %d (差异: %d)", seg._end, candidate_end, fallback_length_diff))
+                candidate_end = seg._end - fallback_length_diff
+            end
+            
+            local candidate = Candidate("sentence", seg.start, candidate_end, final_text, string.format("   [组合%d]", combo_index))
+            candidate.preedit = final_preedit
+            yield(candidate)
+            output_count = output_count + 1
+            logger:info(string.format("输出组合候选词 %d: text='%s', preedit='%s' (第%d个输出), end=%d", combo_index, final_text, final_preedit, output_count, candidate_end))
+        end
+    end
 
 end
 
