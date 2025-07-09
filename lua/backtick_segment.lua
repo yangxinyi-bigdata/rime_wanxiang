@@ -6,7 +6,7 @@ local debug_utils = require("debug_utils")
 
 -- 创建日志记录器
 local logger = logger_module.create("backtick_segment", {
-    enabled = true
+    enabled = false
 })
 
 local segmentor = {}

@@ -17,7 +17,11 @@ function logger.create(module_name, config)
     -- 合并配置
     local log_config = {}
     for k, v in pairs(default_config) do
-        log_config[k] = config[k] or v
+        if config[k] ~= nil then
+            log_config[k] = config[k]
+        else
+            log_config[k] = v
+        end
     end
     
     -- 生成日志文件路径
@@ -58,6 +62,30 @@ function logger.create(module_name, config)
     
     -- 写入日志函数
     function log_instance:write(message, level)
+        -- -- 打印log_instance中的属性值到日志文件: 
+        -- -- 为了避免无限递归，先检查是否已经在记录属性
+        -- if not self._logging_properties then
+        --     self._logging_properties = true
+            
+        --     -- 写入属性到日志文件
+        --     local properties_info = string.format("log_instance属性: enabled=%s, module_name=%s, log_file_path=%s, timestamp_format=%s",
+        --         tostring(self.enabled), tostring(self.module_name), 
+        --         tostring(self.log_file_path), tostring(self.timestamp_format))
+            
+        --     -- 直接写入文件，避免递归调用
+        --     local timestamp = os.date(self.timestamp_format)
+        --     local property_log_message = string.format("[%s] [DEBUG] [%s] %s\n", 
+        --         timestamp, self.module_name, properties_info)
+            
+        --     local file = io.open(self.log_file_path, "a")
+        --     if file then
+        --         file:write(property_log_message)
+        --         file:close()
+        --     end
+            
+        --     self._logging_properties = false
+        -- end
+        
         -- 如果日志功能未开启，直接返回
         if not self.enabled then
             return

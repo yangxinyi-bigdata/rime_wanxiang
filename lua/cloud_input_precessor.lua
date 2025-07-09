@@ -6,7 +6,7 @@ local debug_utils = require("debug_utils")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("cloud_input_precessor", {
-    enabled = true  -- 可以通过这里控制日志开关
+    enabled = false  -- 可以通过这里控制日志开关
 })
 
 local cloud_input_precessor = {}

@@ -8,7 +8,7 @@ local debug_utils = require("debug_utils")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("script_backtick_translator", {
-    enabled = true  -- 启用日志以便调试
+    enabled = false  -- 启用日志以便调试
 })
 
 local script_backtick_translator = {}
@@ -69,6 +69,10 @@ function script_backtick_translator.init(env)
     replace_punct_enabled = config:get_string("translator/replace_punct_enabled") or false
     -- logger:info("反引号分隔符设置: '" .. backtick_delimiter_before .. "' '" .. backtick_delimiter_after .. "'")
 
+    env.single_fuzhu = config:get_bool("aux_code/single_fuzhu") or false
+    -- fuzhu_mode : "before"   # 辅助模式有三种: 1.single只当input中有三个字符的时候进行匹配 2.before,最后一个辅助码和最前边两个 input 字母进行匹配 3. after,最后一个辅助码和最后两个 input 字母进行匹配
+    env.fuzhu_mode = config:get_string("aux_code/fuzhu_mode") or ""
+
     -- 创建script_translator组件
     env.script_translator = Component.Translator(engine, "translator", "script_translator")
     env.user_dict_set_translator = Component.Translator(engine, "user_dict_set", "script_translator")
@@ -88,7 +92,7 @@ function script_backtick_translator.init(env)
     logger:info("脚本反引号翻译器初始化完成")
 
     -- 监听选词事件
-    -- engine.context.select_notifier:connect(backtick_before)
+    engine.context.select_notifier:connect(backtick_before)
 
 end
 
@@ -290,6 +294,8 @@ function script_backtick_translator.func(input, seg, env)
     local segment_candidates = {}  -- 存储每个片段的候选词列表
     local used_fallback = false  -- 记录是否使用了fallback
     local fallback_length_diff = 0  -- 记录fallback导致的长度差异
+    local delete_last_code = false  -- 紧挨着反引号的一个单独字母情况下
+    local script_fail_code = 0  -- 反引号后面没有匹配成功的几位字母
 
     for i, segment in ipairs(segments) do
         local candidates_for_segment = {}
@@ -303,47 +309,100 @@ function script_backtick_translator.func(input, seg, env)
             local allow_fallback = is_last_segment
             logger:info(string.format("片段 %d, 是否最后一个: %s, 允许fallback: %s", i, tostring(is_last_segment), tostring(allow_fallback)))
             
-            local candidates, segment_used_fallback = get_candidates(segment.content, seg, env, 2, allow_fallback)
-            logger:info("get_candidates返回segment_used_fallback: " ..tostring(segment_used_fallback))
-            
-            -- 如果当前segment使用了fallback，更新全局fallback状态
-            if segment_used_fallback then
-                used_fallback = true
-                logger:info("used_fallback: " ..tostring(used_fallback))
-                -- 计算长度差异（最长候选词长度 - segment长度）
+            -- todo
+            -- 判断是否开启辅助码all模式
+            local segment_content = segment.content
+            if env.single_fuzhu and env.fuzhu_mode == "all" then
+                -- 当最后一个seg, 如果有奇数个字母, 则放弃最后一个, 不获取它的候选词
 
-                -- 这个地方整个长度计算是错误的: 应该是长度 segment.length 大于 候选词长度, 
-                -- 对于整个分词例如 nihkdd 没有找到完整的候选词,只匹配了 nihk, 因此候选词的长度更低
-                if #candidates > 0 then
-                    local cand = candidates[1]
-                    local cand_length = cand._end - cand.start
-                    fallback_length_diff = #segment.content - cand_length
-                    logger:info(string.format("使用fallback，fallback_length_diff差异: %d", fallback_length_diff))
+                -- 对于标点符号来说，是不能算在内的，首先判断是否存在标点符号，如果存在标点符号，就替换掉，然后再计算。
+                if is_last_segment then
+                    -- 检查输入是否包含标点符号
+                    local has_punctuation = segment_content:match("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-'\"']") ~= nil
+
+                    if has_punctuation then
+                        logger:debug("有标点符号")
+                        -- 删除segmente_input中的所有标点符号
+                        local segment_content_nopunc = segment_content:gsub("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-'\"']", "")
+                        logger:debug("删除标点符号后的segment_content: " .. segment_content_nopunc)
+                        
+                        if #segment_content_nopunc % 2 == 1 then
+                            segment_content = segment_content:sub(1, -2)
+                            delete_last_code = true
+                            logger:info("调整后segment_content: " .. segment_content)
+                        end
+                    else
+                        if #segment_content % 2 == 1 then
+                            segment_content = segment_content:sub(1, -2)
+                            delete_last_code = true
+                            logger:info("调整后segment_content: " .. segment_content)
+                        end
+                        
+                    end
+
                 end
+
             end
-            
-            -- 遍历candidates并打印属性值
-            logger:info("获取到 " .. #candidates .. " 个候选词" .. (segment_used_fallback and " (使用了fallback)" or "") .. ":")
-            for index, cand in ipairs(candidates) do
-                logger:info(string.format("候选词 %d: '%s'", index, cand.text))
+
+            -- 如果 segment_content == "" 则不向candidates_for_segment 中添加候选词
+            if segment_content == "" then
+                -- 直接开始下一次循环
+                goto continue
+            else
+                local candidates, segment_used_fallback = get_candidates(segment_content, seg, env, 2, allow_fallback)
+                -- segment_used_fallback就是获取的候选项长度不足整个片段的长度. 当我把 wok 变成 wo传进去,长度应该还是满足的
+                logger:info("get_candidates返回segment_used_fallback: " ..tostring(segment_used_fallback))
                 
-                -- 由于get_candidates已经完成长度检查，直接添加到候选列表
-                table.insert(candidates_for_segment, {
-                    text = cand.text,
-                    preedit = cand.preedit or segment.content
-                })
-                logger:info(string.format("候选词 %d 已添加到segment候选列表", index))
+                -- 如果没有获取返回候选项, 说明传入的不是合并的拼音,则忽略这项
+                if #candidates == 0 then
+                    -- 输入了几个字母, cand._end就需要向前移动几位
+                    script_fail_code = segment.length
+                    goto continue
+                end
+
+                -- 如果当前segment使用了fallback，更新全局fallback状态
+                if segment_used_fallback then
+                    used_fallback = true
+                    logger:info("used_fallback: " ..tostring(used_fallback))
+                    -- 计算长度差异（最长候选词长度 - segment长度）
+
+                    -- 这个地方整个长度计算是错误的: 应该是长度 segment.length 大于 候选词长度, 
+                    -- 对于整个分词例如 nihkdd 没有找到完整的候选词,只匹配了 nihk, 因此候选词的长度更低
+                    if #candidates > 0 then
+                        local cand = candidates[1]
+                        local cand_length = cand._end - cand.start
+                        fallback_length_diff = #segment.content - cand_length
+                        logger:info(string.format("使用fallback，fallback_length_diff差异: %d", fallback_length_diff))
+                    end
+                end
+                
+                -- 遍历candidates并打印属性值
+                logger:info("获取到 " .. #candidates .. " 个候选词" .. (segment_used_fallback and " (使用了fallback)" or "") .. ":")
+                for index, cand in ipairs(candidates) do
+                    logger:info(string.format("候选词 %d: '%s'", index, cand.text))
+                    
+                    -- 由于get_candidates已经完成长度检查，直接添加到候选列表
+                    table.insert(candidates_for_segment, {
+                        text = cand.text,
+
+                        -- 如果减少了一位, 这里就是 wo, 
+                        preedit = cand.preedit or segment.content
+                    })
+                    logger:info(string.format("候选词 %d 已添加到segment候选列表", index))
+                end
+                
+                -- -- 如果没有匹配的候选词，使用原内容
+                -- if #candidates_for_segment == 0 then
+                --     table.insert(candidates_for_segment, {
+                --         text = segment.content,
+                --         preedit = segment.content
+                --     })
+                --     logger:info("没有匹配的候选词，使用原内容")
+                -- end                
+                            
             end
-            
-            -- -- 如果没有匹配的候选词，使用原内容
-            -- if #candidates_for_segment == 0 then
-            --     table.insert(candidates_for_segment, {
-            --         text = segment.content,
-            --         preedit = segment.content
-            --     })
-            --     logger:info("没有匹配的候选词，使用原内容")
-            -- end
-            
+
+    
         elseif segment.type == "backtick" then
             -- 反引号内容：固定一个候选项
             logger:info(string.format("处理反引号片段 %d: '%s'", i, segment.content))
@@ -351,6 +410,7 @@ function script_backtick_translator.func(input, seg, env)
                 text = segment.content,
                 preedit = segment.original or segment.content
             })
+                    
             
         else
             -- 其他类型：保持原样
@@ -359,10 +419,14 @@ function script_backtick_translator.func(input, seg, env)
                 text = segment.content,
                 preedit = segment.content
             })
+                    
         end
-        
+
+                                
         segment_candidates[i] = candidates_for_segment
         logger:info(string.format("片段 %d 收集到 %d 个候选项", i, #candidates_for_segment))
+
+        ::continue::
     end
     
     -- 生成所有可能的组合
@@ -417,6 +481,16 @@ function script_backtick_translator.func(input, seg, env)
         if final_text ~= input and final_text ~= "" then
             -- 如果使用了fallback，需要调整候选词的结束位置
             local candidate_end = seg._end
+            if delete_last_code then
+                -- 如果删除了奇数个字母最后一个, 则seg向左移动一位
+                candidate_end = candidate_end - 1
+            end
+
+            if script_fail_code > 0 then
+                -- 最后一段abc如果没有匹配成功任何候选词的情况下, 向前移动
+                candidate_end = candidate_end - script_fail_code
+            end
+
             logger:info("used_fallback的值: " .. tostring(used_fallback) .. "  fallback_length_diff的值: " .. tostring(fallback_length_diff))
             if used_fallback and fallback_length_diff > 0 then
                 logger:info(string.format("使用了fallback，调整候选词结束位置: %d -> %d (差异: %d)", seg._end, candidate_end, fallback_length_diff))
