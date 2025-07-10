@@ -68,16 +68,16 @@ function debug_precessor.func(key, env)
         local clean_text = preedit_text:gsub("‸.*$", "")
         logger:info("清理后的预编辑文本: " .. clean_text)
         
-        -- 输出候选项信息
-        if context:has_menu() then
-            logger:info("存在候选菜单")
-            local composition = context.composition
-            if composition then
-                logger:info("候选项数量: " .. tostring(composition:toSegmentation().size))
-            end
-        else
-            logger:info("无候选菜单")
-        end
+        -- -- 输出候选项信息
+        -- if context:has_menu() then
+        --     logger:info("存在候选菜单")
+        --     local composition = context.composition
+        --     if composition then
+        --         logger:info("候选项数量: " .. tostring(composition:toSegmentation().size))
+        --     end
+        -- else
+        --     logger:info("无候选菜单")
+        -- end
         
         -- 使用debug_utils输出详细的分段信息
         local segmentation = context.composition:toSegmentation()
@@ -88,6 +88,8 @@ function debug_precessor.func(key, env)
         local current_end = segmentation:get_current_end_position()
         logger:info("当前分段开始位置: " .. current_start)
         logger:info("当前分段结束位置: " .. current_end)
+        local caret_pos = context.caret_pos
+        logger:info("当前光标位置: " .. caret_pos)
         
         -- 输出当前分段的输入内容
         if #input > 0 then
@@ -107,11 +109,11 @@ function debug_precessor.func(key, env)
             "backtick_prompt"
         }
         
-        logger:info("--- 上下文属性状态 ---")
-        for _, prop in ipairs(properties) do
-            local value = context:get_property(prop) or "未设置"
-            logger:info(prop .. ": " .. value)
-        end
+        -- logger:info("--- 上下文属性状态 ---")
+        -- for _, prop in ipairs(properties) do
+        --     local value = context:get_property(prop) or "未设置"
+        --     logger:info(prop .. ": " .. value)
+        -- end
         
         -- 输出一些常用的选项状态
         local options = {
@@ -124,19 +126,19 @@ function debug_precessor.func(key, env)
             "cloud_translate"
         }
         
-        logger:info("--- 选项状态 ---")
-        for _, opt in ipairs(options) do
-            local value = context:get_option(opt)
-            logger:info(opt .. ": " .. tostring(value))
-        end
+        -- logger:info("--- 选项状态 ---")
+        -- for _, opt in ipairs(options) do
+        --     local value = context:get_option(opt)
+        --     logger:info(opt .. ": " .. tostring(value))
+        -- end
         
-        -- 输出配置信息
-        local config = engine.schema.config
-        logger:info("--- 配置信息 ---")
-        logger:info("方案ID: " .. (config:get_string("schema/schema_id") or "未知"))
-        logger:info("方案名称: " .. (config:get_string("schema/name") or "未知"))
-        logger:info("字母表: " .. (config:get_string("speller/alphabet") or "未设置"))
-        logger:info("分隔符: " .. (config:get_string("speller/delimiter") or "未设置"))
+        -- -- 输出配置信息
+        -- local config = engine.schema.config
+        -- logger:info("--- 配置信息 ---")
+        -- logger:info("方案ID: " .. (config:get_string("schema/schema_id") or "未知"))
+        -- logger:info("方案名称: " .. (config:get_string("schema/name") or "未知"))
+        -- logger:info("字母表: " .. (config:get_string("speller/alphabet") or "未设置"))
+        -- logger:info("分隔符: " .. (config:get_string("speller/delimiter") or "未设置"))
         
         -- 如果是特殊按键，输出额外信息
         local special_keys = {

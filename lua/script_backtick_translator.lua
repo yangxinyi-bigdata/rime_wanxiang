@@ -70,7 +70,7 @@ function script_backtick_translator.init(env)
     -- logger:info("反引号分隔符设置: '" .. backtick_delimiter_before .. "' '" .. backtick_delimiter_after .. "'")
 
     env.single_fuzhu = config:get_bool("aux_code/single_fuzhu") or false
-    -- fuzhu_mode : "before"   # 辅助模式有三种: 1.single只当input中有三个字符的时候进行匹配 2.before,最后一个辅助码和最前边两个 input 字母进行匹配 3. after,最后一个辅助码和最后两个 input 字母进行匹配
+    -- fuzhu_mode : "before"   # 辅助模式有三种: 1.single只当input中有三个字符的时候进行匹配 2. all全部都匹配
     env.fuzhu_mode = config:get_string("aux_code/fuzhu_mode") or ""
 
     -- 创建script_translator组件
@@ -386,7 +386,10 @@ function script_backtick_translator.func(input, seg, env)
                         text = cand.text,
 
                         -- 如果减少了一位, 这里就是 wo, 
-                        preedit = cand.preedit or segment.content
+                        preedit = cand.preedit or segment.content,
+
+                        -- 添加spans数据
+                        spans = cand:spans()
                     })
                     logger:info(string.format("候选词 %d 已添加到segment候选列表", index))
                 end
@@ -406,18 +409,26 @@ function script_backtick_translator.func(input, seg, env)
         elseif segment.type == "backtick" then
             -- 反引号内容：固定一个候选项
             logger:info(string.format("处理反引号片段 %d: '%s'", i, segment.content))
+            -- 对于反引号部分, 自己生成一个spans, backtick
+            local backtick_spans = Spans()
+            backtick_spans:add_span(segment.start, segment._end)
+
             table.insert(candidates_for_segment, {
                 text = segment.content,
-                preedit = segment.original or segment.content
+                preedit = segment.original or segment.content,
+                spans = backtick_spans
             })
                     
             
         else
             -- 其他类型：保持原样
             logger:info(string.format("处理其他类型片段 %d: type=%s, content='%s'", i, segment.type, segment.content))
+            local other_spans = Spans()
+            other_spans:add_span(segment.start, segment._end)
             table.insert(candidates_for_segment, {
                 text = segment.content,
-                preedit = segment.content
+                preedit = segment.content,
+                spans = other_spans
             })
                     
         end
@@ -473,6 +484,10 @@ function script_backtick_translator.func(input, seg, env)
         for _, segment_cand in ipairs(combination) do
             final_text = final_text .. segment_cand.text
             final_preedit = final_preedit .. segment_cand.preedit
+            -- 计算segment_cand的spans:
+            -- 如果是abc类型的: spans应该是从0开始计算的, 当前片段长度10, 0-10,中间有一些分割点
+            -- 如果是第一个段,则不用改变, 如果是第三段, 则应该在所有分割点信息当中添加上前两段的长度.
+
         end
         
         logger:info(string.format("组合 %d: text='%s', preedit='%s'", combo_index, final_text, final_preedit))

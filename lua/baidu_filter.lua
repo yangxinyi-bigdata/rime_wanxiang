@@ -7,6 +7,7 @@ http.TIMEOUT = 0.5
 local logger_module = require("logger")
 -- 引入文本切分模块
 local text_splitter = require("text_splitter")
+local debug_utils = require("debug_utils")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("baidu_filter", {
@@ -183,14 +184,15 @@ function translator.func(translation, env)
 
    end
 
-   if not context:get_option("cloud_translate") then
-      -- 查看有没有云翻译的标识, 没有的话直接退出
+   if not context:get_option("cloud_translate") then      
+      -- 查看有没有云翻译的标识, 没有的话直接返回原有的候选词
       for cand in translation:iter() do
          yield(cand)  -- 输出原有候选词
       end
+
       return
    else
-   context:set_option("cloud_translate", false)  -- 重置选项，避免重复触发
+      context:set_option("cloud_translate", false)  -- 重置选项，避免重复触发
    end
 
 
@@ -207,34 +209,71 @@ function translator.func(translation, env)
       local url = make_url(full_pinyin, 0, 5)
       local reply = http.request(url)
       local parse_success, baidu_response = pcall(json.decode, reply)
-      
+
+      local first_original_cand = nil
+      local original_preedit = ""   
+      local cand_start = 0
+      local cand_end = 0
+      local cand_type = nil
+      local spans = nil
+
+      -- logger:info("parse_success: " .. tostring(parse_success)  .. "  baidu_response.status: "  .. tostring(baidu_response.status)  .. " baidu_response.result: " .. tostring(baidu_response.result) .. " baidu_response.result[1]: " .. tostring(baidu_response.result[1]))
       if parse_success and baidu_response.status == "T" and baidu_response.result and baidu_response.result[1] then
          -- 先保存第一个原始候选词
-         local first_original_cand = nil
-         local original_preedit = ""
-         
          for cand in translation:iter() do
             first_original_cand = cand
             original_preedit = cand.preedit
+            cand_start = cand.start
+            cand_end = cand._end
+            cand_type = cand.type
+            
+            -- 获取候选词的 spans
+            spans = cand:spans()
+            -- 获取所有分割点
+            local vertices = spans.vertices
+            -- for i, vertex in ipairs(vertices) do
+            --    logger:info("spans Vertex " .. i .. ": " .. vertex)
+            -- end
+            
+            -- 将 vertices 转换为字符串格式保存到属性
+            local vertices_str = ""
+            for i, vertex in ipairs(vertices) do
+               if i > 1 then
+                  vertices_str = vertices_str .. ","
+               end
+               vertices_str = vertices_str .. tostring(vertex)
+            end
+            
+            -- 保存 spans 相关信息到属性（字符串格式）
+            context:set_property("out_spans_vertices", vertices_str)
+            context:set_property("spans_input", input)
+
             break
          end
          
          -- 添加百度云候选词
          for candidate_index, candidate_data in ipairs(baidu_response.result[1]) do
             logger:info("添加百度云候选词: " .. candidate_data[1])
-            local cloud_candidate = Candidate("sentence", segment.start, segment._end, candidate_data[1], "   [云输入]")
+            logger:info("原始候选词preedit: " .. original_preedit)
+            logger:info("segment.start: " .. segment.start .. " segment._end: " .. segment._end .. " cand_start: ".. cand_start .. " cand_end: " .. cand_end)
+
+            -- local cloud_candidate = Candidate("", segment.start, segment._end, candidate_data[1], "   [云输入]")
+            local cloud_candidate = Candidate(cand_type, cand_start, cand_end, candidate_data[1], "   [云输入]")
             cloud_candidate.preedit = original_preedit
+            
             yield(cloud_candidate)
          end
-         
+
          -- 输出原始候选词
          if first_original_cand then
             yield(first_original_cand)
          end
-         
+
+         -- 输出剩余原始候选词
          for cand in translation:iter() do
             yield(cand)
-         end
+         end 
+
       else
          logger:info("百度云接口无结果，输出原始候选词")
          for cand in translation:iter() do
@@ -300,21 +339,49 @@ function translator.func(translation, env)
       
       logger:info("智能切分最终结果: " .. final_result)
       
+      local first_original_cand = nil
+      local original_preedit = ""   
+      local cand_start = 0
+      local cand_end = 0
+      local cand_type = nil
+      local spans = nil
       -- 检查是否有智能合成结果
       if final_result ~= "" then
          -- 先保存第一个原始候选词
-         local first_original_cand = nil
-         local original_preedit = ""
-         
          for cand in translation:iter() do
             first_original_cand = cand
             original_preedit = cand.preedit
+            cand_start = cand.start
+            cand_end = cand._end
+            cand_type = cand.type
+            
+            -- 获取候选词的 spans
+            spans = cand:spans()
+            -- 获取所有分割点
+            local vertices = spans.vertices
+            -- for i, vertex in ipairs(vertices) do
+            --    logger:info("spans Vertex " .. i .. ": " .. vertex)
+            -- end
+            
+            -- 将 vertices 转换为字符串格式保存到属性
+            local vertices_str = ""
+            for i, vertex in ipairs(vertices) do
+               if i > 1 then
+                  vertices_str = vertices_str .. ","
+               end
+               vertices_str = vertices_str .. tostring(vertex)
+            end
+            
+            -- 保存 spans 相关信息到属性（字符串格式）
+            context:set_property("out_spans_vertices", vertices_str)
+            context:set_property("spans_input", input)
+
             break
          end
          
          -- 创建智能合成候选词
          logger:info("创建智能合成候选词: " .. final_result)
-         local candidate = Candidate("sentence", segment.start, segment._end, final_result, "   [云输入]")
+         local candidate = Candidate("sentence", cand_start, cand_end, final_result, "   [云输入]")
          candidate.preedit = original_preedit
          yield(candidate)
          
