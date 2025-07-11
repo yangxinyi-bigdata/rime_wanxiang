@@ -54,8 +54,34 @@ function translator.func(input, seg, env)
             logger:info("composition.length: " .. tostring(ctx.composition.length))
         end
     end
+
+    logger:info("=========================")
+
+    local spans = Spans()
+    spans:add_span(0, 4)
+    local spans2 = Spans()
+    spans2:add_span(0, 6)
+    spans2:add_vertex(2)
+    spans2:add_vertex(4)
+    local vertices = spans2.vertices
+    for i, vertex in ipairs(vertices) do
+        spans:add_vertex(vertex + 4)
+    end
+
+
+    logger:info("Segment spans count: " .. spans.count)
+    logger:info("Start: " .. spans._start .. ", End: " .. spans._end)
+   
+    -- 获取所有分割点
+    local vertices = spans.vertices
+    for i, vertex in ipairs(vertices) do
+        logger:info("Vertex " .. i .. ": " .. vertex)
+    end
+    -- 首先创建一个1-4的Span, 然后创建一个(1-6)的span, 然后合并试试
+
+
     
-    logger:info("")
+    logger:info("=========================")
     logger:info("翻译处理完成")
     logger:info("=" .. string.rep("=", 80))
 end

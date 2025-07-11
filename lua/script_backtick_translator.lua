@@ -8,7 +8,7 @@ local debug_utils = require("debug_utils")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("script_backtick_translator", {
-    enabled = false  -- 启用日志以便调试
+    enabled = true  -- 启用日志以便调试
 })
 
 local script_backtick_translator = {}
@@ -237,6 +237,13 @@ end
 
 function script_backtick_translator.func(input, seg, env)
     local context = env.engine.context
+    local context_input = context.input
+
+    if context_input:find("`") == nil then
+        -- 没有反引号了，应该清空所有spans的信息
+        context:set_property("backtick_spans_input", "")
+        context:set_property("backtick_spans_vertices", "")
+    end
 
     logger:info("")
     logger:info("")
@@ -247,6 +254,8 @@ function script_backtick_translator.func(input, seg, env)
         logger:info("输入长度为1，不处理")
         return
     end
+
+
 
     -- 检查输入是否包含反引号标签
     if not seg:has_tag("backtick") then
@@ -380,16 +389,24 @@ function script_backtick_translator.func(input, seg, env)
                 logger:info("获取到 " .. #candidates .. " 个候选词" .. (segment_used_fallback and " (使用了fallback)" or "") .. ":")
                 for index, cand in ipairs(candidates) do
                     logger:info(string.format("候选词 %d: '%s'", index, cand.text))
-                    
+
+                    local test_spans = cand:spans()
+                    local test_spans_vertices = test_spans.vertices
+                    for i, vertex in ipairs(test_spans_vertices) do
+                        logger:info("test_spans_vertices Vertex " .. i .. ": " .. vertex)
+                    end
+
                     -- 由于get_candidates已经完成长度检查，直接添加到候选列表
                     table.insert(candidates_for_segment, {
                         text = cand.text,
-
                         -- 如果减少了一位, 这里就是 wo, 
                         preedit = cand.preedit or segment.content,
-
                         -- 添加spans数据
-                        spans = cand:spans()
+                        spans = cand:spans(),
+                        start = segment.start,
+                        _end = segment._end,
+                        length = segment.length,
+                        type = segment.type
                     })
                     logger:info(string.format("候选词 %d 已添加到segment候选列表", index))
                 end
@@ -416,7 +433,11 @@ function script_backtick_translator.func(input, seg, env)
             table.insert(candidates_for_segment, {
                 text = segment.content,
                 preedit = segment.original or segment.content,
-                spans = backtick_spans
+                spans = backtick_spans,
+                start = segment.start,
+                _end = segment._end,
+                length = segment.length,
+                type = segment.type
             })
                     
             
@@ -428,7 +449,11 @@ function script_backtick_translator.func(input, seg, env)
             table.insert(candidates_for_segment, {
                 text = segment.content,
                 preedit = segment.content,
-                spans = other_spans
+                spans = other_spans,
+                start = segment.start,
+                _end = segment._end,
+                length = segment.length,
+                type = segment.type              
             })
                     
         end
@@ -481,13 +506,90 @@ function script_backtick_translator.func(input, seg, env)
         local final_text = ""
         local final_preedit = ""
         
+        local count = 0
+        local long_span = nil
+        logger:info("测试段执行:")
         for _, segment_cand in ipairs(combination) do
+            count = count + 1
             final_text = final_text .. segment_cand.text
             final_preedit = final_preedit .. segment_cand.preedit
+            
             -- 计算segment_cand的spans:
             -- 如果是abc类型的: spans应该是从0开始计算的, 当前片段长度10, 0-10,中间有一些分割点
             -- 如果是第一个段,则不用改变, 如果是第三段, 则应该在所有分割点信息当中添加上前两段的长度.
+            
+            local success, err = pcall(function()
+                if count == 1 then
+                    long_span = segment_cand.spans
+                elseif count > 1 and segment_cand.type == "abc" then
+                    -- 全部累加, segment_cand.start 就是每一段的开始, 所以原来是0开始,改成从start开始
+                    
+                    -- 对segment_cand.spans() 中的Spans进行遍历,然后对每个分割点依次进行累加.
+                    local last_span = segment_cand.spans
+                    local vertices = last_span.vertices
+               
+                    for i, vertex in ipairs(vertices) do
+                        logger:info("vertex: " .. i .. ": " .. vertex)
+                        logger:info("segment_cand.start: ".. tostring(segment_cand.start) )
+                        long_span:add_vertex(segment_cand.start + vertex) 
+                    end
 
+                elseif count > 1 and segment_cand.type == "backtick" then
+                    long_span:add_span(segment_cand.start, segment_cand._end)
+                else 
+                    long_span:add_span(segment_cand.start, segment_cand._end)
+                end
+            end)
+            
+            if not success then
+                logger:error("处理段落spans时出错: " .. tostring(err))
+                error("处理段落spans时出错: " .. tostring(err))
+            end
+
+        end
+
+
+
+        -- 将 vertices 转换为字符串格式保存到属性
+        local vertices = long_span.vertices
+        -- for i, vertex in ipairs(vertices) do
+        --     logger:info("long_span.vertices " .. i .. ": " .. vertex)
+        -- end
+
+        local vertices_str = ""
+        for i, vertex in ipairs(vertices) do
+            -- logger:info("long_span Vertex " .. i .. ": " .. vertex)
+            vertices_str = vertices_str .. tostring(vertex)
+            if i < #vertices then
+                vertices_str = vertices_str .. ","
+            end
+        end
+        logger:info("long_span out_spans_vertices" .. vertices_str)
+        -- 保存 spans 相关信息到属性（字符串格式）
+        -- 在移动光标的时候vertices_str 和 context.input的值都会发生变化
+        -- 应该说不管我是移动光标,还是新增或者删除字母,都会触发到这个分支,也就是说,如果移动光标, vertices_str会改变
+        -- 如果新增或者删除context.input会发生改变. 当移动光标到`haha`后面,则又触发分支
+        -- vertices_str 从 0,2,4,6,12,14,16,18 变成 0,2,4,6,12
+        -- context.input 不变
+        -- 如果spans_input 不变, 则不用改变vertices_str的值
+        -- 1. 如果内容是 nihk`haha`, 第一次进入, backtick_spans_input 设置为: nihk`haha`
+        -- 2. 输入wo, nihk`haha`wo, 这个时候backtick_spans_input ~= context.input, 更新vertices_str,backtick_spans_input
+        -- 3. tab移动 ni | hk`haha`wo 这时候 backtick_spans_input == context.input, 不更新vertices_str.
+        -- 4. tab那边如何判断? backtick_spans_input 只要有内容, 就说明进入到反引号分支了? 都要接管光标移动. 但input不变的情况下, 什么都不变.
+        -- 5. 那么问题来了, 什么时候重新设置backtick_spans_input为空呢? 应该是  context.input 中没有反引号了之后, 
+        if context:get_property("backtick_spans_input") == "" then
+            -- 第一次进入这个分支
+            context:set_property("backtick_spans_vertices", vertices_str)
+            context:set_property("backtick_spans_input", context_input)
+        -- 当没有反引号的时候, segment中没有 backtick 的tags, 前面就返回了
+        -- elseif context_input:find("`") == nil then
+        --     -- 没有反引号了，应该清空所有
+        --     context:set_property("backtick_spans_input", "")
+        --     context:set_property("backtick_spans_vertices", "")
+        elseif context:get_property("backtick_spans_input") ~= context.input then
+            -- 说明输入了新的内容, 更新分割线, 如果没有变化, 说明是在移动光标, 这时两个都不应该更新
+            context:set_property("backtick_spans_vertices", vertices_str)
+            context:set_property("backtick_spans_input", context.input)
         end
         
         logger:info(string.format("组合 %d: text='%s', preedit='%s'", combo_index, final_text, final_preedit))

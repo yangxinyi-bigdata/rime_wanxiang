@@ -235,13 +235,13 @@ function translator.func(translation, env)
             --    logger:info("spans Vertex " .. i .. ": " .. vertex)
             -- end
             
-            -- 将 vertices 转换为字符串格式保存到属性
+            -- 将 vertices 转换为字符串格式保存到属性，包含所有分割点
             local vertices_str = ""
             for i, vertex in ipairs(vertices) do
-               if i > 1 then
+               vertices_str = vertices_str .. tostring(vertex)
+               if i < #vertices then
                   vertices_str = vertices_str .. ","
                end
-               vertices_str = vertices_str .. tostring(vertex)
             end
             
             -- 保存 spans 相关信息到属性（字符串格式）
@@ -356,26 +356,40 @@ function translator.func(translation, env)
             cand_type = cand.type
             
             -- 获取候选词的 spans
-            spans = cand:spans()
+            
+            -- 这里获取的是原始第一个候选词的分割信息, 原始是的 nihk`haha`wode, 这个候选词本身就是我自己合成出来的, 所以是不存在spans信息的
+            -- 但在产生的时候候选信息已经被我保存下来了.
             -- 获取所有分割点
-            local vertices = spans.vertices
+            -- 检查 backtick_spans_input（反引号的spans）
+            local backtick_spans_input = context:get_property("backtick_spans_input")
+            
+            if backtick_spans_input ~= "" then
+               local backtick_spans_vertices = context:get_property("backtick_spans_vertices")
+               logger:info("backtick_spans_input: " .. backtick_spans_input .. " context.input:" .. context.input)
+               -- 保存 spans 相关信息到属性（字符串格式）
+               context:set_property("out_spans_vertices", backtick_spans_vertices)
+               context:set_property("spans_input", backtick_spans_input)          
+                -- 只要backtick_spans_input存在内容,就要接管移动
+            else
+               -- 将 vertices 转换为字符串格式保存到属性，包含所有分割点
+               spans = cand:spans()
+               local vertices = spans.vertices
+               local vertices_str = ""
+               for i, vertex in ipairs(vertices) do
+                  vertices_str = vertices_str .. tostring(vertex)
+                  if i < #vertices then
+                     vertices_str = vertices_str .. ","
+                  end
+               end
+               
+               -- 保存 spans 相关信息到属性（字符串格式）
+               context:set_property("out_spans_vertices", vertices_str)
+               context:set_property("spans_input", input)               
+            end
             -- for i, vertex in ipairs(vertices) do
             --    logger:info("spans Vertex " .. i .. ": " .. vertex)
             -- end
             
-            -- 将 vertices 转换为字符串格式保存到属性
-            local vertices_str = ""
-            for i, vertex in ipairs(vertices) do
-               if i > 1 then
-                  vertices_str = vertices_str .. ","
-               end
-               vertices_str = vertices_str .. tostring(vertex)
-            end
-            
-            -- 保存 spans 相关信息到属性（字符串格式）
-            context:set_property("out_spans_vertices", vertices_str)
-            context:set_property("spans_input", input)
-
             break
          end
          

@@ -200,11 +200,11 @@ function smart_cursor_processor.move_by_vertices(env, vertices_str)
     local current_vertex_index = nil
     local next_vertex_pos = nil
     
-    -- 如果光标在最末尾，跳转到第一个分割点
+    -- 如果光标在最末尾，跳转到第二个分割点（第一个是0）
     if caret_pos == #input then
         logger:info("光标在末尾，跳转到开头")
         engine:process_key(KeyEvent("Home"))
-        next_vertex_pos = vertices[2] 
+        next_vertex_pos = vertices[2]
         caret_pos = 0
     else
         -- 查找当前光标所在的区间
@@ -277,35 +277,49 @@ function smart_cursor_processor.func(key, env)
 
         -- local segmentation = context.composition:toSegmentation()
         -- debug_utils.print_segmentation_info(segmentation, logger)
-        
+
         -- 检测自定义的智能移动快捷键
         if key_repr == "Tab" then
  
             -- 判断当前input的值是否等于spans_input, 如果等于说明需要继续手动移动光标
             -- 如果不等于, 说明重新计算过了, 不需要处理tab. context.input
+            -- 百度的和反引号的兼容关系, 百度云的优先,如果百度云的不符号条件,再判断反引号的
 
-            if context:get_property("spans_input") == "" then
-                logger:info("spans_input属性不存在")
-                return kNoop
-            else
-                -- logger:info("spans_input属性存在, spans_input: " .. tostring(context:get_property("spans_input"))  .. " context.input:" .. context.input)
-                if context.input ~= context:get_property("spans_input") then
+            -- 优先检查 spans_input（百度云的spans）
+            local spans_input = context:get_property("spans_input")
+            local out_spans_vertices = context:get_property("out_spans_vertices")
+            
+            if spans_input and spans_input ~= "" then
+                logger:info("百度云分支: spans_input属性存在, spans_input: " .. spans_input .. " context.input:" .. context.input)
+                if context.input == spans_input then
+                    -- tab键,判断context:set_property("out_spans_vertices", vertices_str) 是否存在内容
+                    -- 如果不为空,则进入tab移动功能
+                    if out_spans_vertices and out_spans_vertices ~= "" then
+                        if smart_cursor_processor.move_by_vertices(env, out_spans_vertices) then
+                            return kAccepted
+                        end
+                    end
+                else
+                    -- 输入已变化，清空spans相关属性
                     context:set_property("out_spans_vertices", "")
-                    context:set_property("spans_input","")
-                    return kNoop
+                    context:set_property("spans_input", "")
                 end
             end
-
-            -- tab键,判断context:set_property("out_spans_vertices", vertices_str) 是否存在内容
-            -- 如果不为空,则进入tab移动功能
-            local vertices_str = context:get_property("out_spans_vertices")
-            if vertices_str and vertices_str ~= "" then
-                if smart_cursor_processor.move_by_vertices(env, vertices_str) then
+            
+            -- 检查 backtick_spans_input（反引号的spans）
+            local backtick_spans_input = context:get_property("backtick_spans_input")
+            local backtick_spans_vertices = context:get_property("backtick_spans_vertices")
+            
+            if backtick_spans_input ~= "" then
+                logger:info("backtick_spans_input: " .. backtick_spans_input .. " context.input:" .. context.input)
+                -- 只要backtick_spans_input存在内容,就要接管移动
+                if smart_cursor_processor.move_by_vertices(env, backtick_spans_vertices) then
                     return kAccepted
                 end
-            else 
-                return kNoop
             end
+            
+            -- 如果两个都不满足条件，返回kNoop
+            return kNoop
 
         elseif key_repr == "Super+d" then
             logger:info("触发向左智能移动")
