@@ -16,7 +16,6 @@ local logger = logger_module.create("aux_code_filter_v3", {
 local aux_code_filter = {}
 local last_segment_input = ""
 
--- 初始化函数,初始化中应该做什么? 将辅助码读取进来
 function aux_code_filter.init(env)
     
     logger:clear()
@@ -128,7 +127,6 @@ end
 
 
 
--- first_char第一个汉字 例如 时, 最后一个辅助码 例如 o
 -- 提取出当前候选词的中文, 和输入的匹配码, 返回是否匹配成功? 
 local function fuzhuma_match(match_char, match_code)
     -- 进行辅助码匹配
@@ -162,6 +160,8 @@ function aux_code_filter.func(translation, env)
     
     -- 如果是在反引号模式中, 也不进入, 如果input长度小于3 或者是偶数,也不进入
     -- 如果是剩余的segmente_input小于3,还进不进入呢？按说也应该不进入, 只是我需要在选词之后, 保持set_fuzhuma为真
+    -- `haha`w 这个时候,也是反引号模式,应该直接进入下面这个分支, 但要区分 hahaw
+    -- 关键是之前设置,如果选词之后只剩一个字母,那么应该删除这个字母,怎么办呢?选词之后,也是只剩一个字母
     logger:info("backtick_prompt: " .. context:get_property("backtick_prompt"))
     if not env.single_fuzhu or #input <=2 or context:get_property("backtick_prompt") == "1" then        
         logger:debug("当前输入#input偶数个或者长度小于等于2, set_fuzhuma设置为false")
@@ -199,6 +199,8 @@ function aux_code_filter.func(translation, env)
         -- 将segmente_input中的反引号``包裹的片段删除
         segmente_input = segmente_input:gsub("`[^`]*`", "")
         logger:debug("删除反引号包裹片段后的segmente_input: " .. segmente_input)
+        -- -- 如果删除反引号片段之后,只剩下一个字母, 不应该触发删除辅助码
+        -- aux_code_filter.set_fuzhuma = false
     end
 
     -- 检查输入是否包含标点符号
@@ -215,8 +217,8 @@ function aux_code_filter.func(translation, env)
     end
 
     -- 重新检查删除标点符号后的长度
-    if #segmente_input % 2 == 0 then
-        logger:debug("segmente_input长度是偶数,直接返回")
+    if #segmente_input % 2 == 0 or #segmente_input == 1 then
+        logger:debug("segmente_input长度是偶数或者长度为1,直接返回")
         aux_code_filter.set_fuzhuma = false
         for cand in translation:iter() do
             yield(cand)

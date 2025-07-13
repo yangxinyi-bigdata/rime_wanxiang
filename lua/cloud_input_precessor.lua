@@ -81,6 +81,7 @@ function cloud_input_precessor.func(key, env)
         local segmente_input = input:sub(current_start + 1, current_end)
         logger:info("segmente_input: " .. segmente_input)
         -- 已经上屏的部分也会被影响吗?  这里的input是所有的,包含已经上屏确认的部分,应该提取出剩余的
+        -- 这个有没有可能通过标签处理，当前便有反引号片段,是不是应该已经打了标签? 但标签不能判断是以反引号开通的, 除非是那个切割函数
         if #segmente_input >= 3 and segmente_input:sub(1, 1) == "`" and segmente_input:sub(-2, -2) == "`" then
             if context:confirm_current_selection() then
                 logger:info("确认当前选择成功")
@@ -293,7 +294,8 @@ function cloud_input_precessor.func(key, env)
             context:set_option("cloud_translate", true)
 
             -- 返回已处理,阻止其他处理器处理这个按键
-            return kAccepted
+            -- return kAccepted
+            return 0
         end
 
         return kNoop

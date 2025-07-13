@@ -17,13 +17,69 @@ local punct_map = {
     -- ["]"] = "】",    -- 右方括号
     ["{"] = "｛",    -- 左花括号
     ["}"] = "｝",    -- 右花括号
-    ["'"] = "'",     -- 单引号（左）
     ["<"] = "《",    -- 左书名号
     [">"] = "》",    -- 右书名号
 }
 
+-- 成对引号的映射表
+local quote_map = {
+    ["\""] = {"“", "”"},  -- 双引号：前引号、后引号
+    ["'"] = {"‘", "’"},     -- 单引号：前引号、后引号
+}
+
+-- 处理成对引号的替换函数
+function text_splitter.replace_quotes(text)
+    
+    local result = text
+    
+    -- 处理双引号
+    local double_quote_open = true  -- 跟踪双引号状态，true表示下一个是开引号
+    result = result:gsub("\"", function()
+        if double_quote_open then
+            double_quote_open = false
+            return "“"  -- 前引号
+        else
+            double_quote_open = true
+            return "”"  -- 后引号
+        end
+    end)
+    
+    -- -- 处理单引号, 因为单引号是音节分隔符, 所以这里不能使用单引号. 
+    -- local single_quote_open = true  -- 跟踪单引号状态，true表示下一个是开引号
+    -- result = result:gsub("'", function()
+    --     if single_quote_open then
+    --         single_quote_open = false
+    --         return "‘"  -- 前引号
+    --     else
+    --         single_quote_open = true
+    --         return "’"  -- 后引号
+    --     end
+    -- end)
+    
+    return result
+end
+
 -- 标点符号替换函数
 function text_splitter.replace_punct(text)
+    if not text or text == "" then
+        return text
+    end
+    
+    local result = text
+    
+    -- 先处理成对引号
+    result = text_splitter.replace_quotes(result)
+    
+    -- 再处理其他标点符号
+    for eng_punct, chn_punct in pairs(punct_map) do
+        result = result:gsub(eng_punct:gsub("([%(%)%.%+%-%*%?%[%]%^%$%%])", "%%%1"), chn_punct)
+    end
+    
+    return result
+end
+
+-- 标点符号替换函数, 原生不替换引号版本
+function text_splitter.replace_punct_org(text)
     if not text or text == "" then
         return text
     end
@@ -48,11 +104,6 @@ function text_splitter.has_punctuation(text, logger)
     -- 简单检查是否包含常见标点符号
     local has_punct = false
     
-    -- 检查中文标点
-    if string.find(text, "[，。！？；：（）【】《》、]") then
-        has_punct = true
-    end
-    
     -- 检查英文标点 (包含反引号)
     if string.find(text, "[,.!?;:()%[%]<>/_=+*&^%%$#@~`|\\-]") then
         has_punct = true
@@ -75,15 +126,8 @@ function text_splitter.has_punctuation_no_backtick(text, logger)
         logger:info("检测输入内容是否包含标点符号(不含反引号): " .. text)
     end
 
-    -- 简单检查是否包含常见标点符号
+    -- 只检查英文标点（不包含反引号）
     local has_punct = false
-    
-    -- 检查中文标点
-    if string.find(text, "[，。！？；：（）【】《》、]") then
-        has_punct = true
-    end
-    
-    -- 检查英文标点（不包含反引号）
     if string.find(text, "[,.!?;:()%[%]<>/_=+*&^%%$#@~|\\-]") then
         has_punct = true
     end

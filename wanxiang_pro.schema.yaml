@@ -78,7 +78,7 @@ switches:
 # 输入引擎
 engine:
   processors:
-    - lua_processor@*debug_processor      #调试处理器，打印输入、分词、环境等信息
+    # - lua_processor@*debug_processor      #调试处理器，打印输入、分词、环境等信息
     - lua_processor@*smart_cursor_processor #智能光标移动处理器，在标点符号处停止
     - predictor                            #联想处理器，与predictor顶层配置配合
     # - chord_composer                     #并击处理器，与置顶参数：是否启用并击，选项配合使用
@@ -152,7 +152,7 @@ engine:
     - lua_filter@*super_comment                     #超级注释模块，支持错词提示、辅助码显示，部件组字读音注释，支持个性化配置和关闭相应的功能，详情搜索super_comment进行详细配置
     - lua_filter@*text_formatting                   #给自定义用户词扩展一个换行:\n, 制表符：\t, 回车符：\r, 空格：\s
     - lua_filter@*baidu_filter                      #百度云输入法API调用，支持百度云输入法的候选词获取   
-    # - lua_filter@*punct_eng_chinese_filter          # 将候选项当中的英文标点转换为中文标点 
+    - lua_filter@*punct_eng_chinese_filter          # 将候选项当中的英文标点转换为中文标点 
     - uniquifier                                    #去重
 
 
@@ -385,6 +385,9 @@ key_binder:
   # Lua 配置: 超级tips上屏按键
   tips_key: "period"   #修改时候去default找
   search: ";"             # 辅码引导符，要添加到 speller/alphabet
+  move_next_punct: "Super+d"
+  move_prev_punct: "Super+s"
+  search_move_cursor: "Super+f"  # 搜索移动光标
   bindings:             # 也可以再增加方案专有的
     #- { when: composing, accept: Tab, send: '[' } ## 取消注释后：tab引导辅助码
     - { when: composing, accept: Control+w, send: Control+BackSpace }
