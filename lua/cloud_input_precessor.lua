@@ -294,8 +294,7 @@ function cloud_input_precessor.func(key, env)
             context:set_option("cloud_translate", true)
 
             -- 返回已处理,阻止其他处理器处理这个按键
-            -- return kAccepted
-            return 0
+            return kAccepted
         end
 
         return kNoop

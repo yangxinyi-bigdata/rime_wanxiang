@@ -526,10 +526,23 @@ function script_backtick_translator.func(input, seg, env)
 
         local count = 0
         local long_span = nil
-        for _, segment_cand in ipairs(combination) do
+        local text_len = 0
+        local chinese_pos = "chinese_pos:"
+        for _, one_cand in ipairs(combination) do
             count = count + 1
-            final_text = final_text .. segment_cand.text
-            final_preedit = final_preedit .. segment_cand.preedit
+            final_text = final_text .. one_cand.text
+            final_preedit = final_preedit .. one_cand.preedit
+
+            -- 计算反引号片段的索引位置
+            if one_cand.type == "abc" then
+                local pos_start = text_len + 1
+                text_len = text_len + utf8.len(one_cand.text)
+                local pos_end = text_len
+                chinese_pos = chinese_pos .. pos_start .. "," .. pos_end .. ","
+            else
+                text_len = text_len + #one_cand.text
+            end
+            -- 字符串保存格式: abc_pos:6,8,12,18
 
             -- 计算segment_cand的spans:
             -- 如果是abc类型的: spans应该是从0开始计算的, 当前片段长度10, 0-10,中间有一些分割点
@@ -539,24 +552,24 @@ function script_backtick_translator.func(input, seg, env)
             if output_count == 1 then
                 local success, err = pcall(function()
                     if count == 1 then
-                        long_span = segment_cand.spans
-                    elseif count > 1 and segment_cand.type == "abc" then
+                        long_span = one_cand.spans
+                    elseif count > 1 and one_cand.type == "abc" then
                         -- 全部累加, segment_cand.start 就是每一段的开始, 所以原来是0开始,改成从start开始
 
                         -- 对segment_cand.spans() 中的Spans进行遍历,然后对每个分割点依次进行累加.
-                        local last_span = segment_cand.spans
+                        local last_span = one_cand.spans
                         local vertices = last_span.vertices
 
                         for i, vertex in ipairs(vertices) do
-                            logger:info("vertex: " .. i .. ": " .. vertex)
-                            logger:info("segment_cand.start: " .. tostring(segment_cand.start))
-                            long_span:add_vertex(segment_cand.start + vertex)
+                            -- logger:info("vertex: " .. i .. ": " .. vertex)
+                            -- logger:info("segment_cand.start: " .. tostring(one_cand.start))
+                            long_span:add_vertex(one_cand.start + vertex)
                         end
 
-                    elseif count > 1 and segment_cand.type == "backtick" then
-                        long_span:add_span(segment_cand.start, segment_cand._end)
+                    elseif count > 1 and one_cand.type == "backtick" then
+                        long_span:add_span(one_cand.start, one_cand._end)
                     else
-                        long_span:add_span(segment_cand.start, segment_cand._end)
+                        long_span:add_span(one_cand.start, one_cand._end)
                     end
 
                 end)
@@ -612,8 +625,14 @@ function script_backtick_translator.func(input, seg, env)
                 candidate_end = seg._end - fallback_length_diff
             end
 
-            local candidate = Candidate("sentence", seg.start, candidate_end, final_text,
-                string.format("   [组合%d]", combo_index))
+            -- local candidate = Candidate("sentence", seg.start, candidate_end, final_text,
+                -- string.format("   [组合%d]", combo_index))
+            -- 这是原来的候选词, 现在需要在第五个参数中传入反引号范围信息
+            logger:debug("output_count为: " .. output_count .. " 候选词: " .. final_text ..
+                             "  生成backtick_pos值为: " .. chinese_pos)
+            local candidate = Candidate("backtick_combo", seg.start, candidate_end, final_text, chinese_pos)
+
+
             candidate.preedit = final_preedit
             yield(candidate)
 

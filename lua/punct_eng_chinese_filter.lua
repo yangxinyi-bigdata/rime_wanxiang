@@ -9,7 +9,7 @@ local spans_manager = require("spans_manager")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("punct_eng_chinese_filter", {
-    enabled = false -- 可以通过这里控制日志开关
+    enabled = true -- 可以通过这里控制日志开关
 })
 
 local punct_eng_chinese_filter = {}
@@ -43,10 +43,10 @@ function punct_eng_chinese_filter.func(translation, env)
             -- logger:info("当前cloud_translate_prompt状态: ".. tostring(context:get_option("cloud_translate_prompt")))
 
             -- 定义两种提示文本
-            local cloud_prompt_text = "  ▶ [回车AI转换]  "
-            local backtick_prompt_text = "  ▶ [反引号模式]  "
-            local search_move_prompt = " ▶ [搜索模式] "
-            local search_move_prompt_char = " ▶ [搜索模式:%s] "
+            local cloud_prompt_text = "    ▶ [回车AI转换]  "
+            local backtick_prompt_text = "    ▶ [英文模式]  "
+            local search_move_prompt = "    ▶ [搜索模式]  "
+            local search_move_prompt_char = "    ▶ [搜索模式:%s]  "
 
             -- 获取两个状态
             local search_move = context:get_option("search_move")
@@ -87,38 +87,76 @@ function punct_eng_chinese_filter.func(translation, env)
     local success, error_msg = pcall(function()
         logger:info("标点符号过滤器开始处理")
 
-        local count = 0 -- 用于计数，限制最多处理6个候选词
+        local count = 0 -- 用于计数，限制最多处理4个候选词
         -- 遍历所有候选词并进行标点符号替换
         local punch_flag = false -- 是否存在标点符号
         for cand in translation:iter() do
             count = count + 1
             -- 当 count 等于 1 的时候，这个时候判断是否有标点符号，如果没有则后面不用判断了。
             if count == 1 then
+                -- todo: 这个地方可能要修改,应该是判断去掉反引号部分的其他内容是否含有标点符号,反引号里面的是不需要替换的
                 if cand.text and text_splitter.has_punctuation_no_backtick(cand.text, logger) then
                     punch_flag = true
                     -- 检查是否已有spans信息，如果没有则尝试保存
                     local existing_spans = spans_manager.get_spans(context)
                     if not existing_spans then
                         -- 尝试从候选词中提取并保存spans信息
-                        -- spans_manager.extract_and_save_from_candidate(context, cand, context.input, "punct_eng_chinese_filter")
+                        spans_manager.extract_and_save_from_candidate(context, cand, context.input,
+                            "punct_eng_chinese_filter")
                     else
                         logger:info("已存在spans信息，来源: " .. existing_spans.source)
                     end
                 end
             end
 
+            -- 检查输入是否包含反引号标签
+            local new_text = ""
             if punch_flag and count < 5 then
-                local original_text = cand.text
-                local new_text = text_splitter.replace_punct(original_text)
+                local cand_text = cand.text
+                local cand_type = cand.type
+                local cand_comment = cand.comment
+                -- 反引号组合候选词backtick_combo
+                if cand_comment:match("^chinese_pos:") then
+                    logger:info("候选词为chinese_pos, 使用反引号替换")
+                    -- 我应该在cand里面附带上自己的信息, 也就是哪部分是通过backtick合并进来的, lua/script_backtick_translator.lua, 可以放在comment当中, 然后在这里再删除掉即可
+                    -- 将反引号索引段的信息保存到了cand.comment
+                    -- 当有多个索引的时候,应该判断
 
-                logger:info("标点替换: " .. original_text .. " -> " .. new_text)
+                    logger:info("cand.comment: " .. cand.comment .. " cand_text: " .. cand_text)
+                    local chinese_pos = cand.comment
+                    new_text = text_splitter.replace_punct_skip_pos(cand_text, chinese_pos, logger)
+                else
+                    logger:info("候选词不是chinese_pos ,按照原来的处理即可")
+                    new_text = text_splitter.replace_punct(cand_text)
+                end
+
+                -- if not segment:has_tag("backtick") then
+                --     logger:info("没有包含backtick标签,按照原来的处理即可")
+                --     new_text = text_splitter.replace_punct(cand_text)
+                -- else
+                --     logger:info("包含backtick标签,反引号之内的部分需要跳过标点符号替换")
+                --     -- 我应该在cand里面附带上自己的信息, 也就是哪部分是通过backtick合并进来的, lua/script_backtick_translator.lua, 可以放在comment当中, 然后在这里再删除掉即可
+                --     -- 将反引号索引段的信息保存到了cand.comment
+                --     -- 当有多个索引的时候,应该判断
+
+                --     logger:info("cand.comment: " .. cand.comment .. " cand_text: " .. cand_text)
+                --     local chinese_pos = cand.comment
+                --     new_text = text_splitter.replace_punct_skip_pos(cand_text, chinese_pos, logger)
+                -- end
+
+                logger:info("标点替换: " .. cand_text .. " -> " .. new_text)
                 -- 根据文档，使用Candidate构造方法创建新候选项
                 -- Candidate(type, start, end, text, comment)
+                if cand_type == "baidu_cloud" then
+                    cand_comment = "   [云输入]"
+                elseif cand_type == "backtick_combo" then
+                    cand_comment = ""
+                end
                 local new_cand = Candidate(cand.type or "punct_converted", -- 保持原有类型或标记为标点转换
                     cand.start or 0, -- 分词开始位置
                     cand._end or 0, -- 分词结束位置  
                     new_text, -- 替换后的文本
-                    cand.comment or "" -- 保持原有注释
+                    cand_comment or "" -- 保持原有注释
                 )
                 -- 保持其他重要属性
                 if cand.preedit then

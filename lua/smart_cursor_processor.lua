@@ -1,6 +1,8 @@
 -- 智能光标移动处理器 - 在标点符号处停止
 local logger_module = require("logger")
 local debug_utils = require("debug_utils")
+-- 引入文本切分模块
+local text_splitter = require("text_splitter")
 -- 引入spans管理模块
 local spans_manager = require("spans_manager")
 
@@ -390,93 +392,106 @@ function smart_cursor_processor.func(key, env)
             if is_valid_char then
 
                 -- 在segment后面添加prompt
-                    if segment then
+                if segment then
 
-                        -- 这里有问题, 如果说其他程序替换了 prompt 怎么办                
-                        -- if segment.prompt:sub(1, #search_move_prompt) == search_move_prompt then
+                    -- 这里有问题, 如果说其他程序替换了 prompt 怎么办                
+                    -- if segment.prompt:sub(1, #search_move_prompt) == search_move_prompt then
 
-                        -- 2. 继续输入的字母, 被拦截,然后将这个字母添加到prompt当中去, 获取也可以不添加,反正都跳过去了.
-                        -- 3. 并且将这个字母记录下来, 在当前segment_input当中,从头搜索匹配的字母,然后进行跳转.再输入一个字母则有两个字母,用这两个字母进行跳转.
-                        -- 4. 如果存在多个重复的搜索匹配项,怎么办？按tab键可以在多个重复项之间跳转.
-                        -- 5. 如果搜索到的位置试想要跳转到的位置, 按下回车键,或者再次按下ctrl+f键退出搜索模式. 或者直接用空格进行选词,选词之后也会自动退出搜索模式
+                    -- 2. 继续输入的字母, 被拦截,然后将这个字母添加到prompt当中去, 获取也可以不添加,反正都跳过去了.
+                    -- 3. 并且将这个字母记录下来, 在当前segment_input当中,从头搜索匹配的字母,然后进行跳转.再输入一个字母则有两个字母,用这两个字母进行跳转.
+                    -- 4. 如果存在多个重复的搜索匹配项,怎么办？按tab键可以在多个重复项之间跳转.
+                    -- 5. 如果搜索到的位置试想要跳转到的位置, 按下回车键,或者再次按下ctrl+f键退出搜索模式. 或者直接用空格进行选词,选词之后也会自动退出搜索模式
 
-                        local add_search_move_str = ""
-                        if key_repr == "Tab" then
-                            local search_move_str = context:get_property("search_move_str")
-                            add_search_move_str = search_move_str
-                            logger:info("搜索模式中Tab, add_search_move_str不变: " .. add_search_move_str)
-                        else
-                            -- search_move_str就是搜索的字符串
-                            local search_move_str = context:get_property("search_move_str")
-                            add_search_move_str = search_move_str .. key_repr
+                    local add_search_move_str = ""
+                    if key_repr == "Tab" then
+                        local search_move_str = context:get_property("search_move_str")
+                        add_search_move_str = search_move_str
+                        logger:info("搜索模式中Tab, add_search_move_str不变: " .. add_search_move_str)
+                    else
+                        -- search_move_str就是搜索的字符串
+                        local search_move_str = context:get_property("search_move_str")
+                        add_search_move_str = search_move_str .. key_repr
 
-                            context:set_property("search_move_str", add_search_move_str)
-                            logger:info("add_search_move_str: " .. add_search_move_str)
-                        end
-
-                        -- segment.prompt = string.format(" ▶ [搜索模式:%s] ", add_search_move_str)
-                        -- logger:info("更新搜索模式提示: " .. segment.prompt)
-
-                        -- 移动光标位置,只在当前segment（未确认部分）中搜索
-                        local input = context.input
-
-                        local segmentation = context.composition:toSegmentation()
-
-                        local confirmed_pos = segmentation:get_confirmed_position()
-                        local confirmed_pos_input = input:sub(confirmed_pos + 1)
-                        logger:info("confirmed_pos_input: " .. confirmed_pos_input)
-                        local current_caret_pos = context.caret_pos
-
-                        local caret_relative_pos = current_caret_pos - confirmed_pos
-
-                        logger:info("光标在剩余input内的相对位置: " .. caret_relative_pos)
-
-                        local search_start_pos = nil
-                        -- 如果是tab模式,则光标移动到当前单词后面匹配, 如果不是tab模式,则光标移动到当前单词后面进行匹配.
-                        if key_repr == "Tab" then
-                            -- 对于tab模式,应该从当前光标位置开始搜索下一个符合的, 所以向后移动一位开始搜索
-                            -- 从当前光标位置开始向后搜索
-                            search_start_pos = caret_relative_pos + 1
-                            -- 当tab键, 不用移动
-                        else
-                            -- 对于普通模式,应该是添加了一个字符串, 如果原来是"", 则现在变成了"w"
-                            -- 如果原来是"w",则变成了"wo"
-                            -- 应该从头开始搜索即可,只搜索第一个
-                            -- 向前移动搜索字符长度个数 - 1
-                            -- ni hk wo de wo 光标位置10, 搜索wo, 
-                            search_start_pos = 1
-                        end
-
-                        local found_pos = string.find(confirmed_pos_input, add_search_move_str, search_start_pos, true)
-
-                        if found_pos then
-                            local move_pos = confirmed_pos + found_pos - 1 + #add_search_move_str
-                            context.caret_pos = move_pos
-                            logger:info("在confirmed_pos_input内找到搜索字符串 '" .. add_search_move_str ..
-                                            "' 在相对位置 " .. found_pos .. "，移动光标位置 " .. move_pos)
-                        else
-                            -- 没找到，从segment开头搜索
-                            found_pos = string.find(confirmed_pos_input, add_search_move_str, 1, true)
-                            if found_pos then
-                                local absolute_pos = confirmed_pos + found_pos - 1 + #add_search_move_str
-                                context.caret_pos = absolute_pos
-                                logger:info(
-                                    "从confirmed_pos_input开头搜索找到字符串 '" .. add_search_move_str ..
-                                        "' 在相对位置 " .. found_pos .. "，移动光标位置 " .. absolute_pos)
-                            else
-                                -- 当没有搜索到不会触发重新分词,需要自己添加prompt
-                                segment.prompt = string.format(" ▶ [搜索模式:%s] ", add_search_move_str)
-                                logger:info("在当前confirmed_pos_input内未找到搜索字符串 '" ..
-                                                add_search_move_str .. "'")
-                            end
-                        end
-
-                        return kAccepted
-                        -- else
-                        --     logger:debug("退出搜索模式")
-                        --     context:set_option("search_move", false)
-
+                        context:set_property("search_move_str", add_search_move_str)
+                        logger:info("add_search_move_str: " .. add_search_move_str)
                     end
+
+                    -- segment.prompt = string.format(" ▶ [搜索模式:%s] ", add_search_move_str)
+                    -- logger:info("更新搜索模式提示: " .. segment.prompt)
+
+                    -- 移动光标位置,只在当前segment（未确认部分）中搜索
+                    local input = context.input
+
+                    local segmentation = context.composition:toSegmentation()
+
+                    local confirmed_pos = segmentation:get_confirmed_position()
+                    local confirmed_pos_input = input:sub(confirmed_pos + 1)
+                    logger:info("confirmed_pos_input: " .. confirmed_pos_input)
+                    local current_caret_pos = context.caret_pos
+
+                    local caret_relative_pos = current_caret_pos - confirmed_pos
+
+                    logger:info("光标在剩余input内的相对位置: " .. caret_relative_pos)
+
+                    local search_start_pos = nil
+                    -- 如果是tab模式,则光标移动到当前单词后面匹配, 如果不是tab模式,则光标移动到当前单词后面进行匹配.
+                    if key_repr == "Tab" then
+                        -- 对于tab模式,应该从当前光标位置开始搜索下一个符合的, 所以向后移动一位开始搜索
+                        -- 从当前光标位置开始向后搜索
+                        search_start_pos = caret_relative_pos + 1
+                        -- 当tab键, 不用移动
+                    else
+                        -- 对于普通模式,应该是添加了一个字符串, 如果原来是"", 则现在变成了"w"
+                        -- 如果原来是"w",则变成了"wo"
+                        -- 应该从头开始搜索即可,只搜索第一个
+                        -- 向前移动搜索字符长度个数 - 1
+                        -- ni hk wo de wo 光标位置10, 搜索wo, 
+                        search_start_pos = 1
+                    end
+
+                    local found_pos = text_splitter.find_text_skip_backticks_with_wrap(confirmed_pos_input,
+                        add_search_move_str, search_start_pos, logger)
+                    if found_pos then
+                        local move_pos = confirmed_pos + found_pos - 1 + #add_search_move_str
+                        context.caret_pos = move_pos
+                        logger:info("在confirmed_pos_input内找到搜索字符串 '" .. add_search_move_str ..
+                                        "' 在相对位置 " .. found_pos .. "，移动光标位置 " .. move_pos)
+                    else
+                        -- 当没有搜索到不会触发重新分词,需要自己添加prompt
+                        segment.prompt = string.format(" ▶ [搜索模式:%s] ", add_search_move_str)
+                        logger:info(
+                            "在当前confirmed_pos_input内未找到搜索字符串 '" .. add_search_move_str .. "'")
+                    end
+
+                    -- local found_pos = string.find(confirmed_pos_input, add_search_move_str, search_start_pos, true)
+
+                    -- if found_pos then
+                    --     local move_pos = confirmed_pos + found_pos - 1 + #add_search_move_str
+                    --     context.caret_pos = move_pos
+                    --     logger:info("在confirmed_pos_input内找到搜索字符串 '" .. add_search_move_str ..
+                    --                     "' 在相对位置 " .. found_pos .. "，移动光标位置 " .. move_pos)
+                    -- else
+                    --     -- 没找到，从segment开头搜索
+                    --     found_pos = string.find(confirmed_pos_input, add_search_move_str, 1, true)
+                    --     if found_pos then
+                    --         local move_pos = confirmed_pos + found_pos - 1 + #add_search_move_str
+                    --         context.caret_pos = move_pos
+                    --         logger:info("从confirmed_pos_input开头搜索找到字符串 '" .. add_search_move_str ..
+                    --                         "' 在相对位置 " .. found_pos .. "，移动光标位置 " .. move_pos)
+                    --     else
+                    --         -- 当没有搜索到不会触发重新分词,需要自己添加prompt
+                    --         segment.prompt = string.format(" ▶ [搜索模式:%s] ", add_search_move_str)
+                    --         logger:info("在当前confirmed_pos_input内未找到搜索字符串 '" ..
+                    --                         add_search_move_str .. "'")
+                    --     end
+                    -- end
+
+                    return kAccepted
+                    -- else
+                    --     logger:debug("退出搜索模式")
+                    --     context:set_option("search_move", false)
+
+                end
 
             elseif key_repr == "Escape" then
                 -- 退出搜索模式

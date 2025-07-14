@@ -231,7 +231,7 @@ function translator.func(translation, env)
                         cand_start .. " cand_end: " .. cand_end)
 
                 -- local cloud_candidate = Candidate("", segment.start, segment._end, candidate_data[1], "   [云输入]")
-                local cloud_candidate = Candidate(cand_type, cand_start, cand_end, candidate_data[1], "   [云输入]")
+                local cloud_candidate = Candidate("baidu_cloud", cand_start, cand_end, candidate_data[1], "   [云输入]")
                 cloud_candidate.preedit = original_preedit
 
                 yield(cloud_candidate)
@@ -322,6 +322,7 @@ function translator.func(translation, env)
         local cand_start = 0
         local cand_end = 0
         local cand_type = nil
+        local cand_comment = ""
         local spans = nil
         -- 检查是否有智能合成结果
         if final_result ~= "" then
@@ -332,6 +333,7 @@ function translator.func(translation, env)
                 cand_start = cand.start
                 cand_end = cand._end
                 cand_type = cand.type
+                cand_comment = cand.comment
 
                 -- 获取候选词的 spans
 
@@ -356,7 +358,9 @@ function translator.func(translation, env)
 
             -- 创建智能合成候选词
             logger:info("创建智能合成候选词: " .. final_result)
-            local candidate = Candidate("sentence", cand_start, cand_end, final_result, "   [云输入]")
+            -- local candidate = Candidate("baidu_cloud", cand_start, cand_end, final_result, "   [云输入]")
+            -- 为了替换标点符号,把这个含有反引号片段的百度云返回值也标记成backtick_combo
+            local candidate = Candidate("baidu_cloud", cand_start, cand_end, final_result, cand_comment)
             candidate.preedit = original_preedit
             yield(candidate)
 

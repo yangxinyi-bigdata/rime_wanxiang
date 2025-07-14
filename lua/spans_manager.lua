@@ -6,7 +6,7 @@ local logger_module = require("logger")
 
 -- 创建日志记录器
 local logger = logger_module.create("spans_manager", {
-    enabled = true
+    enabled = false
 })
 
 local spans_manager = {}

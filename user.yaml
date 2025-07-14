@@ -1,5 +1,5 @@
 var:
-  last_build_time: 1752403553
+  last_build_time: 1752487818
   option:
     ascii_punct: false
     chinese_english: false
@@ -10,6 +10,6 @@ var:
     tone_hint: false
   previously_selected_schema: wanxiang_pro
   schema_access_time:
-    wanxiang_en: 1751427397
-    wanxiang_pro: 1751427703
+    wanxiang_en: 1752461097
+    wanxiang_pro: 1752461125
     wanxiang_radical: 1751425940
