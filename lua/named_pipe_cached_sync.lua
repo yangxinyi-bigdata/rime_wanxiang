@@ -27,3 +27,26 @@ local pipe_cache_system = {
     -- 状态
     is_initialized = false
 }
+
+-- 初始化命名管道缓存系统
+function M.init_pipe_cache()
+    if pipe_cache_system.is_initialized then
+        return true
+    end
+    
+    -- 创建命名管道
+    local success = os.execute("mkfifo " .. pipe_cache_system.pipe_name .. " 2>/dev/null")
+    
+    -- 以非阻塞模式打开管道
+    pipe_cache_system.pipe_handle = io.open(pipe_cache_system.pipe_name, "w+")
+    if pipe_cache_system.pipe_handle then
+        -- 设置内核缓存策略
+        pipe_cache_system.pipe_handle:setvbuf("line", 1024)  -- 1KB行缓存
+        pipe_cache_system.is_initialized = true
+        log.info("命名管道缓存系统初始化成功")
+        return true
+    end
+    
+    log.error("命名管道缓存系统初始化失败")
+    return false
+end
