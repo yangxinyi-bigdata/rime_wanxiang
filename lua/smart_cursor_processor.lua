@@ -8,15 +8,19 @@ local spans_manager = require("spans_manager")
 
 -- 创建日志记录器
 local logger = logger_module.create("smart_cursor_processor", {
-    enabled = true
+    enabled = true,
+    unified_log = false -- 启用日志以便测试
 })
+
+local RimeTcpServer = require("rime_socket_server")
 
 local smart_cursor_processor = {}
 
 function smart_cursor_processor.init(env)
     local engine = env.engine
     local context = engine.context
-    local config = engine.schema.config
+    local schema = engine.schema
+    local config = schema.config
     logger:clear()
     logger:info("智能光标移动处理器初始化完成")
     env.move_next_punct = config:get_string("key_binder/move_next_punct")
@@ -53,6 +57,12 @@ function smart_cursor_processor.init(env)
         ["'"] = true,
         ['"'] = true
     }
+    if not context:get_option("http_server") then
+
+        RimeTcpServer.init(env)
+        logger:info("HttpServer服务器初始化完成")
+        context:set_option("http_server", true)
+    end
 
     env.select_notifier = context.select_notifier:connect(function(context)
         -- 只要出发了选词通知,就关闭搜索模式
@@ -105,6 +115,31 @@ function smart_cursor_processor.init(env)
     --     logger:debug("触发unhandled_key_notifier更新通知")
 
     -- end)
+
+    -- update_notifier每次都检查http服务器是否有收到新的消息
+    env.http_server_update_notifier = context.update_notifier:connect(function()
+        -- 测试 HTTP 服务器模块
+
+        logger:debug("触发http_server_update_notifier context更新通知")
+        RimeTcpServer:process()
+        logger:debug("HTTP消息处理成功")
+        -- 将env传入
+        -- local engine = env.engine
+        -- local context = engine.context
+        -- if not context:is_composing() then
+        --     -- 使用静态变量确保只初始化一次
+        --     if rime_http_server then
+        --         rime_http_server.set_rime_context(env)
+        --     end
+        -- end
+
+    end)
+
+    env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function()
+        logger:debug("触发unhandled_key_notifier更新通知")
+        RimeTcpServer:process()
+        logger:debug("unhandled_key_notifier更新通知HTTP消息处理成功")
+    end)
 
 end
 
@@ -347,17 +382,19 @@ function smart_cursor_processor.move_by_vertices(env, vertices_str)
 end
 
 function smart_cursor_processor.func(key, env)
-    local kRejected = 0
-    local kAccepted = 1
-    local kNoop = 2
     local engine = env.engine
     local context = engine.context
-    local composition = context.composition
-    local search_move_prompt = " ▶ [搜索模式:] "
-
+    -- 返回值常量定义
+    local kRejected = 0 -- 表示按键被拒绝
+    local kAccepted = 1 -- 表示按键已被处理
+    local kNoop = 2 -- 表示按键未被处理,继续传递给下一个处理器
+    local is_composing = context:is_composing()
     if not key or not context:is_composing() then
         return kNoop
     end
+
+    local composition = context.composition
+    local search_move_prompt = " ▶ [搜索模式:] "
 
     local key_repr = key:repr()
 
@@ -578,6 +615,8 @@ function smart_cursor_processor.func(key, env)
                 end
             end
 
+            return kAccepted
+
         end
 
         return kNoop
@@ -597,18 +636,15 @@ function smart_cursor_processor.fini(env)
         env.update_notifier:disconnect()
     end
 
+    if env.http_server_update_notifier then
+        env.http_server_update_notifier:disconnect()
+    end
+
     if env.select_notifier then
         env.select_notifier:disconnect()
     end
 
-    -- if env.commit_notifier then
-    --     env.commit_notifier:disconnect()
-    -- end
-
-    -- if env.delete_notifier then
-    --     env.delete_notifier:disconnect()
-    -- end
-
+    -- RimeTcpServer.stop()
 end
 
 return smart_cursor_processor

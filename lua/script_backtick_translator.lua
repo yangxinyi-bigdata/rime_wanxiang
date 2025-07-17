@@ -9,11 +9,12 @@ local spans_manager = require("spans_manager")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("script_backtick_translator", {
-    enabled = false -- 启用日志以便调试
+    enabled = true -- 启用日志以便调试
 })
 
 local script_backtick_translator = {}
 
+local delimiter = ""
 local backtick_delimiter_before = "" -- 反引号分隔符
 local backtick_delimiter_after = ""
 local replace_punct_enabled = false
@@ -65,6 +66,11 @@ function script_backtick_translator.init(env)
     local config = engine.schema.config
 
     -- 读取反引号分隔符配置
+    -- 获取输入法引擎和上下文   
+    local config = env.engine.schema.config
+    delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
+    logger:info("当前分隔符: " .. delimiter)
+
     backtick_delimiter_before = config:get_string("translator/backtick_delimiter_before") or ""
     backtick_delimiter_after = config:get_string("translator/backtick_delimiter_after") or ""
     replace_punct_enabled = config:get_string("translator/replace_punct_enabled") or false
@@ -264,6 +270,8 @@ function script_backtick_translator.func(input, seg, env)
         return
     end
 
+
+
     -- 检查输入是否包含反引号标签
     if not seg:has_tag("backtick") then
         logger:info("没有包含backtick标签，不处理")
@@ -308,7 +316,7 @@ function script_backtick_translator.func(input, seg, env)
             status))
         -- 打印开始和结束位置
         logger:info(string.format("片段开始位置: %d, 结束位置: %d", segments[1].start, segments[1]._end))
-        local cand_temp = Candidate("sentence", seg.start, seg.start + segments[1].length, segments[1].content,
+        local cand_temp = Candidate("backtick_combo", seg.start, seg.start + segments[1].length, segments[1].content,
             "   [英文]")
         yield(cand_temp)
 
@@ -626,13 +634,19 @@ function script_backtick_translator.func(input, seg, env)
             end
 
             -- local candidate = Candidate("sentence", seg.start, candidate_end, final_text,
-                -- string.format("   [组合%d]", combo_index))
+            -- string.format("   [组合%d]", combo_index))
             -- 这是原来的候选词, 现在需要在第五个参数中传入反引号范围信息
             logger:debug("output_count为: " .. output_count .. " 候选词: " .. final_text ..
                              "  生成backtick_pos值为: " .. chinese_pos)
-            local candidate = Candidate("backtick_combo", seg.start, candidate_end, final_text, chinese_pos)
+            -- 如果final_text中有标点符号,才需要添加chinese_pos
+            local candidate = ""
+            if text_splitter.has_punctuation_no_backtick(final_text, logger) then
+                candidate = Candidate("backtick_combo", seg.start, candidate_end, final_text, chinese_pos)
+            else
+                candidate = Candidate("backtick_combo", seg.start, candidate_end, final_text, "")
+            end
 
-
+            -- local candidate = Candidate("backtick_combo", seg.start, candidate_end, final_text, chinese_pos)
             candidate.preedit = final_preedit
             yield(candidate)
 

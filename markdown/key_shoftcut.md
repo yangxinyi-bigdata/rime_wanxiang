@@ -19,8 +19,8 @@
 
 | 功能 | 自定义快捷键 | 原生快捷键 | 备注 |
 |------|-------------|------------|------|
-| 格式化代码 | DF | option+shift+F | 非常有用的功能 ⭐ |
-| 格式化选中代码 | DG | option+shift+G | - |
+| 格式化代码 | GG | option+shift+F | 非常有用的功能 ⭐ |
+| 格式化选中代码 | GD | option+shift+G | - |
 | 在下面插入行 | - | shift+Enter | 已改成shift+Enter |
 | 在上面插入行 | - | shift+Command+enter | 使用默认配置 |
 | 删除当前行 | DD | shift+command+K | - |
@@ -33,8 +33,8 @@
 
 ### D按键功能详细说明
 
-- **格式化代码**: DF (option+shift+F) - 非常有用的功能
-- **格式化选中代码**: DG (option+shift+G)
+- **格式化代码**: GG (option+shift+F) - 非常有用的功能
+- **格式化选中代码**: GD (option+shift+G)
 - **在下面插入行**: 改成shift+Enter
 - **在上面插入行**: 使用默认的 shift+Command+enter
 - **删除当前行**: DD (shift+command+K)
@@ -73,7 +73,7 @@
 - **命令面板**: ⌘⇧P
 - **快速打开文件**: ⌘P
 - **代码补全建议**: cmd+shift+? 或 shift+cmd+/
-- **格式化代码**: DF (option+shift+F)
+- **格式化代码**: GG (option+shift+F)
 - **递归切换折叠**: FF
 
 ### 📝 编辑功能

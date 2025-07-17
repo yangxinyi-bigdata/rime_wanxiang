@@ -19,8 +19,6 @@ end
 
 function segmentor.func(segmentation, env)
 
-    
-    
     local input = segmentation.input
     logger:info("")
     logger:info(">>> 新的分词处理 <<<")

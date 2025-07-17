@@ -1,8 +1,7 @@
 -- lua/baidu_filter.lua 修改成filter版本,通过百度云接口获取云输入法拼音词组,并添加到候选词中第一位中来
 -- 百度云输入获取filter版本
 local json = require("json")
-local http = require("simplehttp")
-http.TIMEOUT = 0.5
+
 -- 引入日志工具模块
 local logger_module = require("logger")
 -- 引入文本切分模块
@@ -13,10 +12,27 @@ local spans_manager = require("spans_manager")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("baidu_filter", {
-    enabled = true -- 启用日志以便测试
+    enabled = true, -- 启用日志以便测试
+    unified_log = false -- 启用日志以便测试
 })
--- local http = require("simplehttp")
--- http.TIMEOUT = 0.5
+
+-- 添加 ARM64 Homebrew 的 Lua 路径
+local function setup_lua_paths()
+    -- 保存原始路径
+    local original_path = package.path
+    local original_cpath = package.cpath
+
+    -- 添加 ARM64 Homebrew 路径
+    package.path = package.path .. ";/opt/homebrew/share/lua/5.4/?.lua;/opt/homebrew/share/lua/5.4/?/init.lua"
+    package.cpath = package.cpath .. ";/opt/homebrew/lib/lua/5.4/?.so;/opt/homebrew/lib/lua/5.4/?/core.so"
+
+    logger:info("已添加 ARM64 Homebrew Lua 路径")
+end
+
+setup_lua_paths()
+
+local http = require("simplehttp")
+http.TIMEOUT = 0.5
 
 local function make_url(input, bg, ed)
     return 'https://olime.baidu.com/py?input=' .. input .. '&inputtype=py&bg=' .. bg .. '&ed=' .. ed ..
@@ -36,7 +52,47 @@ local translator = {}
 local ziranma_mapping_config = {} -- 自然码映射表
 local backtick_delimiter_before = "" -- 反引号分隔符
 local backtick_delimiter_after = ""
+local delimiter = ""
 local replace_punct_enabled = false
+
+local function set_cloud_translate_flag(cand, context)
+    -- 这部分代码时检测输入的字符长度，通过检测中间有几个分隔符实现
+    -- 检查当前是否正在组词状态（即用户正在输入但还未确认）
+    local is_composing = context:is_composing()
+    local preedit_text = cand.preedit
+    -- 移除光标符号和后续的prompt内容
+    local clean_text = preedit_text:gsub("‸.*$", "") -- 从光标符号开始删除到结尾
+    logger:info("当前预编辑文本: " .. clean_text)
+    local _, count = string.gsub(clean_text, delimiter, delimiter)
+    logger:info("当前输入内容分隔符数量: " .. count)
+    -- local has_punct = has_punctuation(input)
+
+    -- 触发状态改成,当数如字符超过4个,或者有标点且超过2个:
+    if is_composing and count >= 3 then
+        logger:info("当前正在组词状态,检测到分隔符数量达到3,触发云输入提示")
+        -- 只在值真正需要改变时才设置
+        -- 先获取当前选项的值，避免不必要的更新
+        logger:info("当前云输入提示标志: " .. context:get_property("cloud_translate_flag"))
+
+        if context:get_property("cloud_translate_flag") == "0" then
+            logger:info("云输入提示标志为 0, 设置为 1")
+            context:set_property("cloud_translate_flag", "1")
+            -- context:set_option("cloud_translate_prompt", true)
+            logger:info("cloud_translate_flag 已设置为 1")
+
+        end
+
+    else
+        -- 如果不在组词状态或没有达到触发条件,则重置提示选项
+        logger:info("当前不在组词状态或未达到触发条件,云输入提示已重置")
+        if context:get_property("cloud_translate_flag") == "1" then
+            -- context:set_option("cloud_translate_prompt", false)
+            context:set_property("cloud_translate_flag", "0")
+            logger:info("cloud_translate_flag 已设置为 0")
+
+        end
+    end
+end
 
 function translator.init(env)
     -- 初始化时清空日志文件
@@ -53,8 +109,10 @@ function translator.init(env)
     -- 读取反引号分隔符配置
     backtick_delimiter_before = config:get_string("translator/backtick_delimiter_before") or ""
     backtick_delimiter_after = config:get_string("translator/backtick_delimiter_after") or ""
-
-
+    -- 获取输入法引擎和上下文   
+    local config = env.engine.schema.config
+    delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
+    logger:info("当前分隔符: " .. delimiter)
 
     --  replace_punct_enabled = config:get_string("translator/replace_punct_enabled") or false
     -- logger:info("反引号分隔符设置: '" .. backtick_delimiter_before .. "' '" .. backtick_delimiter_after .. "'")
@@ -168,8 +226,16 @@ function translator.func(translation, env)
 
     if not context:get_option("cloud_translate") then
         -- 查看有没有云翻译的标识, 没有的话直接返回原有的候选词
+        local count = 0
         for cand in translation:iter() do
-            yield(cand) -- 输出原有候选词
+            count = count + 1
+            if count == 1 then
+                set_cloud_translate_flag(cand, context)
+                yield(cand) -- 输出原有候选词
+            else
+                yield(cand) -- 输出原有候选词
+            end
+
         end
 
         return
@@ -231,7 +297,8 @@ function translator.func(translation, env)
                         cand_start .. " cand_end: " .. cand_end)
 
                 -- local cloud_candidate = Candidate("", segment.start, segment._end, candidate_data[1], "   [云输入]")
-                local cloud_candidate = Candidate("baidu_cloud", cand_start, cand_end, candidate_data[1], "   [云输入]")
+                local cloud_candidate = Candidate("baidu_cloud", cand_start, cand_end, candidate_data[1],
+                    "   [云输入]")
                 cloud_candidate.preedit = original_preedit
 
                 yield(cloud_candidate)

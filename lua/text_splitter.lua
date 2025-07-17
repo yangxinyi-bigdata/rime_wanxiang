@@ -380,7 +380,7 @@ function text_splitter.has_punctuation_no_backtick(text, logger)
 
     -- 只检查英文标点（不包含反引号）
     local has_punct = false
-    if string.find(text, "[,.!?;:()%[%]<>/_=+*&^%%$#@~|\\-'\"']") then
+    if string.find(text, "[,.!?;:()%[%]<>/_=+*&^%%$#@~|\\-'\"]") then
         has_punct = true
     end
 

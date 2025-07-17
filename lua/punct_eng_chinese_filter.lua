@@ -13,11 +13,16 @@ local logger = logger_module.create("punct_eng_chinese_filter", {
 })
 
 local punct_eng_chinese_filter = {}
+local delimiter = ""
 
 function punct_eng_chinese_filter.init(env)
     -- 初始化时清空日志文件
     logger:clear()
     logger:info("云输入处理器初始化完成")
+    -- 获取输入法引擎和上下文   
+    local config = env.engine.schema.config
+    delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
+    logger:info("当前分隔符: " .. delimiter)
 
 end
 
@@ -27,9 +32,6 @@ function punct_eng_chinese_filter.func(translation, env)
     local context = engine.context
 
     local input = context.input
-
-    -- 自动检查并清除过期的spans信息
-    -- spans_manager.auto_clear_check(context, input)
 
     -- 判断是否存在标点符号或者长度超过设定值,如果是在seg后面添加prompt说明
     local segment = ""
@@ -94,6 +96,7 @@ function punct_eng_chinese_filter.func(translation, env)
             count = count + 1
             -- 当 count 等于 1 的时候，这个时候判断是否有标点符号，如果没有则后面不用判断了。
             if count == 1 then
+
                 -- todo: 这个地方可能要修改,应该是判断去掉反引号部分的其他内容是否含有标点符号,反引号里面的是不需要替换的
                 if cand.text and text_splitter.has_punctuation_no_backtick(cand.text, logger) then
                     punch_flag = true

@@ -65,23 +65,23 @@ function logger.create(module_name, config)
     }
     
     -- 清空日志文件函数
-    function log_instance.clear()
-        if not log_instance.enabled then
+    function log_instance:clear()
+        if not self.enabled then
             return true
         end
         
         local success, error_msg = pcall(function()
-            local file = io.open(log_instance.log_file_path, "w")
+            local file = io.open(self.log_file_path, "w")
             if file then
                 file:close()
                 return true
             else
-                error("无法打开文件进行写入: " .. log_instance.log_file_path)
+                error("无法打开文件进行写入: " .. self.log_file_path)
             end
         end)
         
         if success then
-            print("日志文件已清空: " .. log_instance.log_file_path)
+            print("日志文件已清空: " .. self.log_file_path)
             return true
         else
             print("清空日志文件失败: " .. tostring(error_msg))
@@ -90,33 +90,33 @@ function logger.create(module_name, config)
     end
     
     -- 写入日志函数
-    function log_instance.write(message, level)
+    function log_instance:write(message, level)
         -- -- 打印log_instance中的属性值到日志文件: 
         -- -- 为了避免无限递归，先检查是否已经在记录属性
-        -- if not log_instance._logging_properties then
-        --     log_instance._logging_properties = true
+        -- if not self._logging_properties then
+        --     self._logging_properties = true
             
         --     -- 写入属性到日志文件
         --     local properties_info = string.format("log_instance属性: enabled=%s, module_name=%s, log_file_path=%s, timestamp_format=%s",
-        --         tostring(log_instance.enabled), tostring(log_instance.module_name), 
-        --         tostring(log_instance.log_file_path), tostring(log_instance.timestamp_format))
+        --         tostring(self.enabled), tostring(self.module_name), 
+        --         tostring(self.log_file_path), tostring(self.timestamp_format))
             
         --     -- 直接写入文件，避免递归调用
-        --     local timestamp = os.date(log_instance.timestamp_format)
+        --     local timestamp = os.date(self.timestamp_format)
         --     local property_log_message = string.format("[%s] [DEBUG] [%s] %s\n", 
-        --         timestamp, log_instance.module_name, properties_info)
+        --         timestamp, self.module_name, properties_info)
             
-        --     local file = io.open(log_instance.log_file_path, "a")
+        --     local file = io.open(self.log_file_path, "a")
         --     if file then
         --         file:write(property_log_message)
         --         file:close()
         --     end
             
-        --     log_instance._logging_properties = false
+        --     self._logging_properties = false
         -- end
         
         -- 如果日志功能未开启，直接返回
-        if not log_instance.enabled then
+        if not self.enabled then
             return
         end
         
@@ -126,17 +126,17 @@ function logger.create(module_name, config)
         end
         
         level = level or "INFO"
-        local timestamp = os.date(log_instance.timestamp_format)
+        local timestamp = os.date(self.timestamp_format)
         local log_message = string.format("[%s] [%s] [%s] %s\n", 
-            timestamp, level, log_instance.module_name, message)
+            timestamp, level, self.module_name, message)
         
         local success, error_msg = pcall(function()
-            local file = io.open(log_instance.log_file_path, "a")
+            local file = io.open(self.log_file_path, "a")
             if file then
                 file:write(log_message)
                 file:close()
             else
-                error("无法打开日志文件: " .. log_instance.log_file_path)
+                error("无法打开日志文件: " .. self.log_file_path)
             end
         end)
         
@@ -146,20 +146,20 @@ function logger.create(module_name, config)
     end
     
     -- 便捷的日志级别函数
-    function log_instance.info(message)
-        log_instance.write(message, "INFO")
+    function log_instance:info(message)
+        self:write(message, "INFO")
     end
     
-    function log_instance.debug(message)
-        log_instance.write(message, "DEBUG")
+    function log_instance:debug(message)
+        self:write(message, "DEBUG")
     end
     
-    function log_instance.warn(message)
-        log_instance.write(message, "WARN")
+    function log_instance:warn(message)
+        self:write(message, "WARN")
     end
     
-    function log_instance.error(message)
-        log_instance.write(message, "ERROR")
+    function log_instance:error(message)
+        self:write(message, "ERROR")
     end
     
     return log_instance

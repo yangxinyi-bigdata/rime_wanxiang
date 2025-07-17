@@ -1,9 +1,10 @@
 var:
-  last_build_time: 1752487818
+  last_build_time: 1752744368
   option:
     ascii_punct: false
     chinese_english: false
     emoji: false
+    full_shape: false
     fuzhu_hint: false
     super_tips: false
     tone_display: false
