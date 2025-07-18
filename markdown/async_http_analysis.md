@@ -344,7 +344,7 @@ local function cached_get_cloud_result(pinyin_text)
     -- 检查缓存
     if cloud_cache[cache_key] and 
        (current_time - cloud_cache[cache_key].timestamp) < cache_timeout then
-        logger:info("使用缓存结果: " .. pinyin_text .. " -> " .. cloud_cache[cache_key].result)
+        logger.info("使用缓存结果: " .. pinyin_text .. " -> " .. cloud_cache[cache_key].result)
         return cloud_cache[cache_key].result
     end
     
@@ -391,12 +391,12 @@ local function get_cloud_result_with_timeout(pinyin_text, timeout_ms)
     if success and elapsed < timeout_ms then
         local parse_success, baidu_response = pcall(json.decode, reply)
         if parse_success and baidu_response.status == "T" and baidu_response.result and baidu_response.result[1] and baidu_response.result[1][1] then
-            logger:info(string.format("云输入成功 (%dms): %s -> %s", elapsed, pinyin_text, baidu_response.result[1][1][1]))
+            logger.info(string.format("云输入成功 (%dms): %s -> %s", elapsed, pinyin_text, baidu_response.result[1][1][1]))
             return baidu_response.result[1][1][1]
         end
     end
     
-    logger:info(string.format("云输入超时或失败 (%dms)，使用原文: %s", elapsed, pinyin_text))
+    logger.info(string.format("云输入超时或失败 (%dms)，使用原文: %s", elapsed, pinyin_text))
     return pinyin_text
 end
 ```

@@ -23,16 +23,16 @@ local function setup_lua_paths()
     package.path = package.path .. ";/opt/homebrew/share/lua/5.4/?.lua;/opt/homebrew/share/lua/5.4/?/init.lua"
     package.cpath = package.cpath .. ";/opt/homebrew/lib/lua/5.4/?.so;/opt/homebrew/lib/lua/5.4/?/core.so"
 
-    logger:info("已添加 ARM64 Homebrew Lua 路径")
-    logger:info("package.path: " .. package.path)
-    logger:info("package.cpath: " .. package.cpath)
+    logger.info("已添加 ARM64 Homebrew Lua 路径")
+    logger.info("package.path: " .. package.path)
+    logger.info("package.cpath: " .. package.cpath)
 end
 
 setup_lua_paths()
 
 local ok_socket, socket = pcall(require, "socket")
 if not ok_socket then
-    logger:error("无法加载 socket 模块: " .. tostring(socket))
+    logger.error("无法加载 socket 模块: " .. tostring(socket))
     error("无法加载 socket 模块: " .. tostring(socket))
 end
 
@@ -109,7 +109,7 @@ end
 
 -- API路由处理
 local function handle_api_request(method, path, body)
-    logger:info(string.format("API请求: %s %s", method, path))
+    logger.info(string.format("API请求: %s %s", method, path))
 
     -- 健康检查
     if path == "/health" then
@@ -122,7 +122,7 @@ local function handle_api_request(method, path, body)
 
     -- 获取Rime状态
     if path == "/rime/status" or path == "/api/status" then
-        logger:info("/rime/status成功执行到这里")
+        logger.info("/rime/status成功执行到这里")
         local status = {
             connected = false,
             schema_id = "未知",
@@ -138,7 +138,7 @@ local function handle_api_request(method, path, body)
         -- 检查是否有 Rime 上下文
         if rime_context.env then
             local env = rime_context.env
-            logger:info("/rime/status成功执行到这里rime_context.env")
+            logger.info("/rime/status成功执行到这里rime_context.env")
             status.connected = true
 
             -- 获取当前方案信息（带错误捕获）
@@ -148,19 +148,19 @@ local function handle_api_request(method, path, body)
                 local schema = engine.schema
                 local schema_id = schema.schema_id or "未知"
                 local schema_name = schema.schema_name or "未知"
-                logger:info("schema.schema_id: " .. tostring(schema_id))
-                logger:info("schema.schema_name: " .. tostring(schema_name))
+                logger.info("schema.schema_id: " .. tostring(schema_id))
+                logger.info("schema.schema_name: " .. tostring(schema_name))
 
                 local schema = rime_context.env.engine.schema
                 if schema then
                     status.schema_id = schema.schema_id or "未知"
                     status.schema_name = schema.schema_name or "未知"
-                    logger:info("schema.schema_id: " .. tostring(schema.schema_id))
-                    logger:info("schema.schema_name: " .. tostring(schema.schema_name))
+                    logger.info("schema.schema_id: " .. tostring(schema.schema_id))
+                    logger.info("schema.schema_name: " .. tostring(schema.schema_name))
                 end
             end)
             if not ok then
-                logger:error("获取当前方案信息出错: " .. tostring(err))
+                logger.error("获取当前方案信息出错: " .. tostring(err))
             end
 
             -- 获取 ASCII 模式状态
@@ -295,7 +295,7 @@ local function handle_api_request(method, path, body)
             config_data = json.decode(body)
         end
 
-        logger:info("接收到配置更新请求: " .. (body or "空"))
+        logger.info("接收到配置更新请求: " .. (body or "空"))
 
         return create_json_response({
             message = "配置更新成功",
@@ -305,7 +305,7 @@ local function handle_api_request(method, path, body)
 
     -- 重启Rime
     if path == "/rime/restart" and method == "POST" then
-        logger:info("接收到重启请求")
+        logger.info("接收到重启请求")
         return create_json_response({
             message = "Rime重启指令已发送"
         })
@@ -330,7 +330,7 @@ local function handle_request(client, request_line)
         return
     end
 
-    logger:info(string.format("收到请求: %s %s", method, path))
+    logger.info(string.format("收到请求: %s %s", method, path))
 
     -- 读取请求头
     local headers = {}
@@ -357,7 +357,7 @@ local function handle_request(client, request_line)
                              "Access-Control-Allow-Headers: Content-Type\r\n" .. "Content-Length: 0\r\n" .. "\r\n"
 
         client:send(response)
-        logger:info("OPTIONS响应发送成功")
+        logger.info("OPTIONS响应发送成功")
         return
     end
 
@@ -391,21 +391,21 @@ local function handle_request(client, request_line)
     end)
 
     if success then
-        logger:info("响应发送成功")
+        logger.info("响应发送成功")
     else
-        logger:error("响应发送失败: " .. tostring(err))
+        logger.error("响应发送失败: " .. tostring(err))
     end
 end
 
 -- 启动服务器（单例模式）
 function RimeTcpServer.start(env, config)
     if server_running then
-        logger:info("TCP服务器已在运行")
+        logger.info("TCP服务器已在运行")
         return true
     end
 
     if not default_config.enabled then
-        logger:info("TCP服务器已禁用")
+        logger.info("TCP服务器已禁用")
         return false
     end
 
@@ -418,20 +418,20 @@ function RimeTcpServer.start(env, config)
 
     RimeTcpServer.set_rime_context(env)
 
-    logger:info("正在启动TCP服务器...")
+    logger.info("正在启动TCP服务器...")
 
     local err
     server, err = socket.bind(config.host, config.port)
 
     if not server then
-        logger:error("创建服务器失败: " .. (err or "未知错误"))
+        logger.error("创建服务器失败: " .. (err or "未知错误"))
         return false
     end
 
     -- 设置为非阻塞模式，避免卡死输入法
     server:settimeout(0)
 
-    logger:info(string.format("TCP服务器已启动在 http://%s:%d", config.host, config.port))
+    logger.info(string.format("TCP服务器已启动在 http://%s:%d", config.host, config.port))
     server_running = true
 
     return true
@@ -470,7 +470,7 @@ end
 -- 停止服务器
 function RimeTcpServer.stop()
     if not server_running then
-        logger:info("TCP服务器未在运行")
+        logger.info("TCP服务器未在运行")
         return
     end
 
@@ -480,7 +480,7 @@ function RimeTcpServer.stop()
     end
 
     server_running = false
-    logger:info("TCP服务器已停止")
+    logger.info("TCP服务器已停止")
 end
 
 -- 获取服务器状态
@@ -506,14 +506,14 @@ end
 function RimeTcpServer.set_rime_context(env)
     if env then
         rime_context.env = env
-        logger:info("Rime 已更新 env")
+        logger.info("Rime 已更新 env")
     end
 end
 
 -- 更新Rime状态（由输入法主程序调用）
 function RimeTcpServer.update_state(new_state)
     -- 这个函数用于外部更新状态，现在主要通过 rime_context 获取实时状态
-    logger:info("更新Rime状态: " .. json.encode(new_state))
+    logger.info("更新Rime状态: " .. json.encode(new_state))
 end
 
 -- 初始化函数（单例模式）
@@ -521,11 +521,11 @@ function RimeTcpServer.init(env)
     initialization_count = initialization_count + 1
 
     if not initialized then
-        logger:info("TCP Server: First initialization, starting server...")
+        logger.info("TCP Server: First initialization, starting server...")
         initialized = true
         return RimeTcpServer.start(env)
     else
-        logger:info("TCP Server: Already initialized (" .. initialization_count .. " times)")
+        logger.info("TCP Server: Already initialized (" .. initialization_count .. " times)")
         return server_running
     end
 end
@@ -545,7 +545,7 @@ end
 -- 检测是否作为主程序运行
 if arg and arg[0] and arg[0]:match("rime_socket_server%.lua$") then
     -- 作为独立脚本运行
-    logger:info("Rime Socket Server 启动中...")
+    logger.info("Rime Socket Server 启动中...")
 
     -- 解析命令行参数
     local host = arg[1] or "127.0.0.1"
@@ -560,19 +560,19 @@ if arg and arg[0] and arg[0]:match("rime_socket_server%.lua$") then
 
     -- 启动服务器
     if RimeTcpServer.start() then
-        logger:info(string.format("服务器已启动在 http://%s:%d", host, port))
-        logger:info("API端点:")
-        logger:info("  GET  /health - 健康检查")
-        logger:info("  GET  /rime/status - 获取Rime状态")
-        logger:info("  GET  /api/status - 获取Rime状态")
-        logger:info("  GET  /api/schema - 获取当前方案")
-        logger:info("  GET  /api/candidates - 获取候选词")
-        logger:info("  GET  /test - 测试端点")
-        logger:info("  POST /rime/option/<name> - 切换选项")
-        logger:info("  GET  /rime/config - 获取Rime配置")
-        logger:info("  POST /rime/config - 更新Rime配置")
-        logger:info("  POST /rime/restart - 重启Rime")
-        logger:info("\n按 Ctrl+C 停止服务器")
+        logger.info(string.format("服务器已启动在 http://%s:%d", host, port))
+        logger.info("API端点:")
+        logger.info("  GET  /health - 健康检查")
+        logger.info("  GET  /rime/status - 获取Rime状态")
+        logger.info("  GET  /api/status - 获取Rime状态")
+        logger.info("  GET  /api/schema - 获取当前方案")
+        logger.info("  GET  /api/candidates - 获取候选词")
+        logger.info("  GET  /test - 测试端点")
+        logger.info("  POST /rime/option/<name> - 切换选项")
+        logger.info("  GET  /rime/config - 获取Rime配置")
+        logger.info("  POST /rime/config - 更新Rime配置")
+        logger.info("  POST /rime/restart - 重启Rime")
+        logger.info("\n按 Ctrl+C 停止服务器")
 
         -- 保持主线程运行，处理请求
         local last_status_time = os.time()
@@ -590,7 +590,7 @@ if arg and arg[0] and arg[0]:match("rime_socket_server%.lua$") then
                 -- 每30秒显示一次状态
                 local current_time = os.time()
                 if current_time - last_status_time >= 30 then
-                    logger:info(string.format("[%s] 服务器运行中... 已处理 %d 次请求检查",
+                    logger.info(string.format("[%s] 服务器运行中... 已处理 %d 次请求检查",
                         os.date("%Y-%m-%d %H:%M:%S"), request_count))
                     last_status_time = current_time
                 end
@@ -611,20 +611,20 @@ if arg and arg[0] and arg[0]:match("rime_socket_server%.lua$") then
         local success, err = pcall(main_loop)
 
         if not success then
-            logger:info("\n服务器被中断或出现错误: " .. tostring(err))
+            logger.info("\n服务器被中断或出现错误: " .. tostring(err))
         end
 
-        logger:info("\n正在关闭服务器...")
+        logger.info("\n正在关闭服务器...")
         RimeTcpServer.stop()
-        logger:info("服务器已关闭")
+        logger.info("服务器已关闭")
         os.exit(0)
     else
-        logger:info("服务器启动失败")
+        logger.info("服务器启动失败")
         os.exit(1)
     end
 else
     -- 作为模块被 require 时的初始化
-    logger:info("作为模块加载 rime_socket_server")
+    logger.info("作为模块加载 rime_socket_server")
 end
 
 return RimeTcpServer

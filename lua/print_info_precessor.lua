@@ -14,10 +14,10 @@ function print_info_precessor.init(env)
     local engine = env.engine        
     local config = engine.schema.config
     -- 初始化时清空日志文件
-    logger:clear()
-    logger:info("云输入处理器初始化完成")
+    logger.clear()
+    logger.info("云输入处理器初始化完成")
     delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
-    logger:info("当前分隔符:" .. delimiter)
+    logger.info("当前分隔符:" .. delimiter)
 
 end
 
@@ -51,34 +51,34 @@ function print_info_precessor.func(key, env)
 
         -- 如果按键的值是Up 和 Down,则不进行处理
         if key:repr() == "space" then
-            logger:info("打印出这行,说明空格键走到这里了")
+            logger.info("打印出这行,说明空格键走到这里了")
             return kNoop
         end
 
         -- 如果不是触发键或不在组词状态,则不处理
-        logger:info("发送kNoop,交给下一个处理")
+        logger.info("发送kNoop,交给下一个处理")
         return kNoop
     end)
 
     -- 处理错误情况
     if not success then
         local error_message = tostring(result)
-        logger:error("云输入处理器发生错误: " .. error_message)
+        logger.error("云输入处理器发生错误: " .. error_message)
         
         -- 记录详细的错误信息用于调试
-        logger:error("错误堆栈信息: " .. debug.traceback())
+        logger.error("错误堆栈信息: " .. debug.traceback())
         
         -- 在发生错误时,安全地返回 kNoop,让其他处理器继续工作
         return kNoop
     end
     
     -- 成功执行,返回处理结果
-    logger:info("云输入处理器执行成功, 返回值: " .. tostring(result))
+    logger.info("云输入处理器执行成功, 返回值: " .. tostring(result))
     return result or kNoop
 end
 
 function print_info_precessor.fini(env)
-    logger:info("云输入处理器结束运行")
+    logger.info("云输入处理器结束运行")
 end
 
 

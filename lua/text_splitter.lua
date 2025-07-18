@@ -157,7 +157,7 @@ function text_splitter.replace_punct_skip_pos(text, chinese_pos_str, logger)
 
     -- 检查坐标字符串格式
     if not chinese_pos_str or not chinese_pos_str:match("^chinese_pos:") then
-        logger:info("坐标字符串格式不正确或为空，不进行替换")
+        logger.info("坐标字符串格式不正确或为空，不进行替换")
         return
     end
     -- 解析坐标范围
@@ -179,7 +179,7 @@ function text_splitter.replace_punct_skip_pos(text, chinese_pos_str, logger)
     for i, range in ipairs(ranges) do
         local start_num = range.start
         local end_num = range._end
-        logger:info("start_num: " .. start_num .. " end_num: " .. end_num)
+        logger.info("start_num: " .. start_num .. " end_num: " .. end_num)
 
         -- 如果是第一段, 如果不是从1开始的,说明前边是英文段. 如果是从1开始的,则不用判断前边英文段了
         -- 如果第一段是中文, 那么对于后面的英文来说,第一段应该不存在
@@ -191,14 +191,14 @@ function text_splitter.replace_punct_skip_pos(text, chinese_pos_str, logger)
             -- 两种情况会进入这里, 第一种情况: 从英文开始的, 这种情况下chinese_first = false,那么应该从1开始取到这里
             if not chinese_first then
                 english_str = text_splitter.utf8_utils_sub(text, 1, start_num - 1)
-                logger:info("english_str: " .. english_str)
+                logger.info("english_str: " .. english_str)
             else
                 -- 进入这里说明, 第一段是中文, start_num ~= 1 那么一定不是第一段中文, 这时候应该使用上一段的结尾和这一段的开头
                 english_str = text_splitter.utf8_utils_sub(text, last_end_num + 1, start_num - 1)
-                logger:info("english_str: " .. english_str)
+                logger.info("english_str: " .. english_str)
             end
             final_text = final_text .. english_str
-            logger:info("final_text: " .. final_text)
+            logger.info("final_text: " .. final_text)
 
         end
 
@@ -212,7 +212,7 @@ function text_splitter.replace_punct_skip_pos(text, chinese_pos_str, logger)
             chinese_str, double_quote_open = text_splitter.replace_quotes_record_single(chinese_str, double_quote_open)
         end
 
-        logger:debug("chinese_str: " .. chinese_str)
+        logger.debug("chinese_str: " .. chinese_str)
         final_text = final_text .. chinese_str
         last_end_num = end_num
 
@@ -238,7 +238,7 @@ function text_splitter.replace_punct_skip_backtick(text, logger)
 
     -- 1. 首先判断是否存在反引号，如果不存在，就使用原来的搜索方式
     if not string.find(result, "`") then
-        logger:info("未发现反引号, 使用原来的标点符号替换模式")
+        logger.info("未发现反引号, 使用原来的标点符号替换模式")
         -- 先处理成对引号
         result = text_splitter.replace_quotes(result)
 
@@ -248,7 +248,7 @@ function text_splitter.replace_punct_skip_backtick(text, logger)
         end
     else
         -- 如果有反引号，则进入反引号模式, 替换之前首先判断是否在反引号索引范围之内
-        logger:info("发现反引号, 使用跳过反引号的标点符号替换模式")
+        logger.info("发现反引号, 使用跳过反引号的标点符号替换模式")
 
         -- 针对中文字符串的反引号切分功能
         local segments = {} -- 存储切分后的段落
@@ -355,7 +355,7 @@ function text_splitter.has_punctuation(text, logger)
         return false
     end
 
-    logger:info("检测输入内容是否包含标点符号: " .. text)
+    logger.info("检测输入内容是否包含标点符号: " .. text)
 
     -- 简单检查是否包含常见标点符号
     local has_punct = false
@@ -365,7 +365,7 @@ function text_splitter.has_punctuation(text, logger)
         has_punct = true
     end
 
-    logger:info("has_punct: " .. tostring(has_punct))
+    logger.info("has_punct: " .. tostring(has_punct))
 
     return has_punct
 end
@@ -376,7 +376,7 @@ function text_splitter.has_punctuation_no_backtick(text, logger)
         return false
     end
 
-    logger:info("检测输入内容是否包含标点符号(不含反引号): " .. text)
+    logger.info("检测输入内容是否包含标点符号(不含反引号): " .. text)
 
     -- 只检查英文标点（不包含反引号）
     local has_punct = false
@@ -384,7 +384,7 @@ function text_splitter.has_punctuation_no_backtick(text, logger)
         has_punct = true
     end
 
-    logger:info("has_punct(no backtick): " .. tostring(has_punct))
+    logger.info("has_punct(no backtick): " .. tostring(has_punct))
 
     return has_punct
 end
@@ -687,13 +687,13 @@ end
 
 -- 带日志记录的版本
 function text_splitter.split_and_convert_input_with_log(input, logger, replace_punct_enabled)
-    logger:info("开始处理输入: " .. input)
+    logger.info("开始处理输入: " .. input)
 
     local segments = text_splitter.split_and_convert_input(input, replace_punct_enabled)
 
-    logger:info("切分结果:")
+    logger.info("切分结果:")
     for i, seg in ipairs(segments) do
-        logger:info(string.format("  片段%d: 类型=%s, 内容='%s'", i, seg.type, seg.content))
+        logger.info(string.format("  片段%d: 类型=%s, 内容='%s'", i, seg.type, seg.content))
     end
 
     return segments
@@ -702,16 +702,16 @@ end
 -- 带日志记录和分隔符的版本
 function text_splitter.split_and_convert_input_with_log_and_delimiter(input, logger, backtick_delimiter_before,
     backtick_delimiter_after, replace_punct_enabled)
-    logger:info("开始处理输入: " .. input .. "，反引号分隔符: '" .. (backtick_delimiter_before or "") ..
+    logger.info("开始处理输入: " .. input .. "，反引号分隔符: '" .. (backtick_delimiter_before or "") ..
                     "' '" .. (backtick_delimiter_after or "") .. "'")
-    logger:info("标点符号替换开关: " .. tostring(replace_punct_enabled or false))
+    logger.info("标点符号替换开关: " .. tostring(replace_punct_enabled or false))
 
     local segments = text_splitter.split_and_convert_input_with_delimiter(input, backtick_delimiter_before,
         backtick_delimiter_after, replace_punct_enabled)
 
-    logger:info("切分结果:")
+    logger.info("切分结果:")
     for i, seg in ipairs(segments) do
-        logger:info(string.format("  片段%d: 类型=%s, 内容='%s'", i, seg.type, seg.content))
+        logger.info(string.format("  片段%d: 类型=%s, 内容='%s'", i, seg.type, seg.content))
     end
 
     return segments
@@ -719,15 +719,15 @@ end
 
 -- 带日志记录的split_by_backtick函数
 function text_splitter.split_by_backtick_with_log(input, delimiter_before, delimiter_after, logger)
-    logger:info(
+    logger.info(
         "开始使用split_by_backtick处理输入: " .. input .. "，分隔符: '" .. (delimiter_before or "") .. "' '" ..
             (delimiter_after or "") .. "'")
 
     local segments = text_splitter.split_by_backtick(input, delimiter_before, delimiter_after)
 
-    logger:info("split_by_backtick切分结果:")
+    logger.info("split_by_backtick切分结果:")
     for i, seg in ipairs(segments) do
-        logger:info(string.format("  片段%d: 类型=%s, 内容='%s'", i, seg.type, seg.content))
+        logger.info(string.format("  片段%d: 类型=%s, 内容='%s'", i, seg.type, seg.content))
     end
 
     return segments
@@ -744,17 +744,17 @@ function text_splitter.find_text_skip_backticks(input, search_str, start_pos, lo
 
     start_pos = start_pos or 1
 
-    logger:info(string.format("开始搜索: 输入='%s', 搜索字符串='%s', 起始位置=%d", input, search_str,
+    logger.info(string.format("开始搜索: 输入='%s', 搜索字符串='%s', 起始位置=%d", input, search_str,
         start_pos))
 
     -- 1. 首先判断是否存在反引号，如果不存在，就使用原来的搜索方式
     if not string.find(input, "`") then
-        logger:info("未发现反引号，使用原来的搜索方式")
+        logger.info("未发现反引号，使用原来的搜索方式")
         local found_pos = string.find(input, search_str, start_pos, true)
         if found_pos then
-            logger:info(string.format("找到匹配: 位置=%d", found_pos))
+            logger.info(string.format("找到匹配: 位置=%d", found_pos))
         else
-            logger:info("未找到匹配")
+            logger.info("未找到匹配")
         end
         return found_pos
     end
@@ -768,25 +768,25 @@ function text_splitter.find_text_skip_backticks(input, search_str, start_pos, lo
 
         if not found_pos then
             -- 没有找到匹配
-            logger:info("未找到匹配")
+            logger.info("未找到匹配")
             return nil
         end
 
-        logger:info(string.format("string.find找到候选位置: %d", found_pos))
+        logger.info(string.format("string.find找到候选位置: %d", found_pos))
 
         -- 判断是否处于反引号范围当中
         if not text_splitter.if_in_backtick(input, found_pos) then
             -- 如果不处于反引号当中，返回对应索引值
-            logger:info(string.format("找到有效匹配: 位置=%d", found_pos))
+            logger.info(string.format("找到有效匹配: 位置=%d", found_pos))
             return found_pos
         else
             -- 如果处于反引号当中，则从搜索到的光标位置继续向后搜索
-            logger:info(string.format("位置%d处于反引号区域内，继续搜索", found_pos))
+            logger.info(string.format("位置%d处于反引号区域内，继续搜索", found_pos))
             current_search_pos = found_pos + 1
         end
     end
 
-    logger:info("未找到匹配")
+    logger.info("未找到匹配")
     return nil
 end
 
@@ -795,7 +795,7 @@ function text_splitter.find_text_skip_backticks_with_wrap(input, search_str, sta
 
     start_pos = start_pos or 1
 
-    logger:info(string.format("开始循环搜索: 输入='%s', 搜索字符串='%s', 起始位置=%d", input,
+    logger.info(string.format("开始循环搜索: 输入='%s', 搜索字符串='%s', 起始位置=%d", input,
         search_str, start_pos))
 
     -- 先从指定位置搜索
@@ -807,7 +807,7 @@ function text_splitter.find_text_skip_backticks_with_wrap(input, search_str, sta
 
     -- 如果没找到且起始位置不是1，从头开始搜索
     if start_pos > 1 then
-        logger:info("从指定位置未找到，从头开始搜索")
+        logger.info("从指定位置未找到，从头开始搜索")
         return text_splitter.find_text_skip_backticks(input, search_str, 1, logger)
     end
 

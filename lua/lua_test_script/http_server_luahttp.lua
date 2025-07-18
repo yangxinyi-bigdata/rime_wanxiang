@@ -210,14 +210,14 @@ end
 local function handle_request(stream)
     local request_headers = stream:get_headers()
     if not request_headers then
-        logger:error("无法获取请求头")
+        logger.error("无法获取请求头")
         return
     end
 
     local method = request_headers:get(":method") or "GET"
     local path = request_headers:get(":path") or "/"
 
-    logger:info(string.format("API请求: %s %s", method, path))
+    logger.info(string.format("API请求: %s %s", method, path))
 
        
     -- 处理OPTIONS请求（CORS预检）
@@ -235,9 +235,9 @@ local function handle_request(stream)
         end)
         
         if success then
-            logger:info("OPTIONS响应发送成功")
+            logger.info("OPTIONS响应发送成功")
         else
-            logger:error("OPTIONS响应发送失败: " .. err)
+            logger.error("OPTIONS响应发送失败: " .. err)
         end
         return
     end
@@ -257,7 +257,7 @@ local function handle_request(stream)
 
     if method == "GET" then
         if path == "/status" then
-            logger:info("/status 开始执行:", method, path)
+            logger.info("/status 开始执行:", method, path)
             response_data = get_rime_status()
         else
             status_code = 404
@@ -292,7 +292,7 @@ local function handle_request(stream)
     stream:write_headers(headers, false)
     stream:write_chunk(response_body, true)
 
-    logger:info("Response sent successfully for:", method, path)
+    logger.info("Response sent successfully for:", method, path)
 
 
 end
@@ -301,16 +301,16 @@ end
 function HttpServer.start_server()
     -- 检查是否已经运行
     if running then
-        logger:info("HTTP Server already running on " .. config.host .. ":" .. config.port)
+        logger.info("HTTP Server already running on " .. config.host .. ":" .. config.port)
         return true
     end
 
     if not config.enabled then
-        logger:info("HTTP Server is disabled")
+        logger.info("HTTP Server is disabled")
         return false
     end
 
-    logger:info("Starting HTTP Server on " .. config.host .. ":" .. config.port)
+    logger.info("Starting HTTP Server on " .. config.host .. ":" .. config.port)
 
     -- 创建服务器
     local err
@@ -322,12 +322,12 @@ function HttpServer.start_server()
     })
 
     if not srv then
-        logger:error("创建服务器失败: " .. (err or "未知错误"))
+        logger.error("创建服务器失败: " .. (err or "未知错误"))
         return false
     end
 
     running = true
-    logger:info(string.format("HTTP服务器已启动在 http://%s:%d", config.host, config.port))
+    logger.info(string.format("HTTP服务器已启动在 http://%s:%d", config.host, config.port))
 
     -- 在后台运行服务器
     local function run_server()
@@ -336,7 +336,7 @@ function HttpServer.start_server()
         end)
         
         if not success then
-            logger:error("服务器循环出错: " .. err)
+            logger.error("服务器循环出错: " .. err)
             running = false
         end
     end
@@ -351,7 +351,7 @@ end
 -- 停止服务器
 function HttpServer.stop_server()
     if not running then
-        logger:info("HTTP Server is not running")
+        logger.info("HTTP Server is not running")
         return
     end
 
@@ -363,7 +363,7 @@ function HttpServer.stop_server()
     if server_thread then
         server_thread = nil
     end
-    logger:info("HTTP Server stopped")
+    logger.info("HTTP Server stopped")
 end
 
 -- 服务器循环 tick（需要在适当的地方调用）
@@ -383,11 +383,11 @@ function HttpServer.tick()
         if status == "suspended" then
             local ok, err = coroutine.resume(server_thread) -- 恢复协程执行
             if not ok then -- 如果协程执行失败
-                logger:info("HTTP Server thread error:", err) -- 打印错误信息
+                logger.info("HTTP Server thread error:", err) -- 打印错误信息
                 HttpServer.stop_server() -- 停止服务器
             end
         elseif status == "dead" then
-            logger:info("HTTP Server thread is dead, stopping server")
+            logger.info("HTTP Server thread is dead, stopping server")
             HttpServer.stop_server()
         end
     end
@@ -398,11 +398,11 @@ function HttpServer.init()
     initialization_count = initialization_count + 1
 
     if not initialized then
-        logger:info("HTTP Server: First initialization, starting server...")
+        logger.info("HTTP Server: First initialization, starting server...")
         initialized = true
         return HttpServer.start_server()
     else
-        logger:info("HTTP Server: Already initialized (" .. initialization_count .. " times)")
+        logger.info("HTTP Server: Already initialized (" .. initialization_count .. " times)")
         return running
     end
 end

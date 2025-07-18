@@ -70,11 +70,11 @@ local new_cand = Candidate("backtick_combo", segment.start, segment._end, final_
 ### 2. 识别逻辑
 ```lua
 if cand_comment:match("^chinese_pos:") then
-    logger:info("候选词为chinese_pos, 使用反引号替换")
+    logger.info("候选词为chinese_pos, 使用反引号替换")
     local chinese_pos = cand.comment
     new_text = text_splitter.replace_punct_skip_pos(cand_text, chinese_pos, logger)
 else
-    logger:info("候选词不是chinese_pos ,按照原来的处理即可")
+    logger.info("候选词不是chinese_pos ,按照原来的处理即可")
     new_text = text_splitter.replace_punct(cand_text)
 end
 ```

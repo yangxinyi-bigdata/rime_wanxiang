@@ -22,7 +22,7 @@ local replace_punct_enabled = false
 -- 只在选词完成后回调, 判断当前输入内容当中, 第一个字符是否反引号,
 -- 如果是反引号片段,则再次发送一次确认，确认当前第一个候选项.
 local function backtick_before(context)
-    -- logger:info("选择通知器: 处理反引号片段自动上屏开始")
+    -- logger.info("选择通知器: 处理反引号片段自动上屏开始")
     -- 防止递归
     if context:get_option("_bt_auto") then
         return
@@ -30,8 +30,8 @@ local function backtick_before(context)
     context:set_option("_bt_auto", true)
 
     -- 连续确认后续带有 backtick 标记的片段
-    logger:info("选择通知器: 开始处理反引号片段自动上屏")
-    logger:info("context:is_composing(): " .. tostring(context:is_composing()))
+    logger.info("选择通知器: 开始处理反引号片段自动上屏")
+    logger.info("context:is_composing(): " .. tostring(context:is_composing()))
     if context:is_composing() then
         local composition = context.composition
         local segment = composition:back() -- 当前光标所在段
@@ -40,16 +40,16 @@ local function backtick_before(context)
         local input = context.input
         -- 对input进行切片
         local segment_input = input:sub(segment.start + 1, segment._end) -- 获取当前段的输入内容
-        logger:info("当前段的输入内容: " .. segment_input)
+        logger.info("当前段的输入内容: " .. segment_input)
 
         -- 检查当前seg对应的input, 是否以反引号开头,如果是以反引号开头,则提取出反引号包裹的范围, 直接确认选择.
         if segment and segment_input:match("^`") then
-            logger:info("当前段是反引号片段，选择第一个候选项")
+            logger.info("当前段是反引号片段，选择第一个候选项")
             -- context:commit()
             if context:confirm_current_selection() then
-                logger:info("确认当前选择成功")
+                logger.info("确认当前选择成功")
             else
-                logger:error("确认当前选择失败")
+                logger.error("确认当前选择失败")
             end
         end
     end
@@ -58,9 +58,9 @@ local function backtick_before(context)
 end
 
 function script_backtick_translator.init(env)
-    logger:info("脚本反引号翻译器初始化开始")
+    logger.info("脚本反引号翻译器初始化开始")
     -- 清空日志文件
-    logger:clear()
+    logger.clear()
 
     local engine = env.engine
     local config = engine.schema.config
@@ -69,12 +69,12 @@ function script_backtick_translator.init(env)
     -- 获取输入法引擎和上下文   
     local config = env.engine.schema.config
     delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
-    logger:info("当前分隔符: " .. delimiter)
+    logger.info("当前分隔符: " .. delimiter)
 
     backtick_delimiter_before = config:get_string("translator/backtick_delimiter_before") or ""
     backtick_delimiter_after = config:get_string("translator/backtick_delimiter_after") or ""
     replace_punct_enabled = config:get_string("translator/replace_punct_enabled") or false
-    -- logger:info("反引号分隔符设置: '" .. backtick_delimiter_before .. "' '" .. backtick_delimiter_after .. "'")
+    -- logger.info("反引号分隔符设置: '" .. backtick_delimiter_before .. "' '" .. backtick_delimiter_after .. "'")
 
     env.single_fuzhu = config:get_bool("aux_code/single_fuzhu") or false
     -- fuzhu_mode : "before"   # 辅助模式有三种: 1.single只当input中有三个字符的时候进行匹配 2. all全部都匹配
@@ -85,18 +85,18 @@ function script_backtick_translator.init(env)
     env.user_dict_set_translator = Component.Translator(engine, "user_dict_set", "script_translator")
 
     if env.script_translator then
-        logger:info("成功创建script_translator组件")
+        logger.info("成功创建script_translator组件")
     else
-        logger:error("创建script_translator组件失败")
+        logger.error("创建script_translator组件失败")
     end
 
     if env.user_dict_set_translator then
-        logger:info("成功创建user_dict_set_translator组件")
+        logger.info("成功创建user_dict_set_translator组件")
     else
-        logger:error("创建user_dict_set_translator组件失败")
+        logger.error("创建user_dict_set_translator组件失败")
     end
 
-    logger:info("脚本反引号翻译器初始化完成")
+    logger.info("脚本反引号翻译器初始化完成")
 
     -- 监听选词事件
     engine.context.select_notifier:connect(backtick_before)
@@ -106,21 +106,21 @@ end
 -- 使用两个translator获取多个候选词，返回完整的Candidate列表
 local function get_candidates(input, seg, env, max_count, allow_fallback)
     if not env.script_translator or not env.user_dict_set_translator then
-        logger:error("script_translator 或 user_dict_set_translator未初始化")
+        logger.error("script_translator 或 user_dict_set_translator未初始化")
         return {}
     end
 
-    logger:info()
-    logger:info("开始使用get_candidates获取候选词, 最大候选词数max_count: " .. max_count ..
+    logger.info()
+    logger.info("开始使用get_candidates获取候选词, 最大候选词数max_count: " .. max_count ..
                     ", 允许长度不足补全: " .. tostring(allow_fallback))
-    logger:info("查询两个translator，输入: " .. input .. ", 最大候选词数: " .. max_count)
+    logger.info("查询两个translator，输入: " .. input .. ", 最大候选词数: " .. max_count)
 
     local valid_candidates = {} -- 存储长度匹配的候选词
     local fallback_candidates = {} -- 存储长度最长的候选词作为备选
     local segment_length = #input -- segment的长度就是input的长度
 
     -- 先尝试从 script_translator 获取候选词
-    logger:info("尝试从 script_translator 获取候选词...")
+    logger.info("尝试从 script_translator 获取候选词...")
     local success1, translation1 = pcall(function()
         return env.script_translator:query(input, seg)
     end)
@@ -130,16 +130,16 @@ local function get_candidates(input, seg, env, max_count, allow_fallback)
         for cand in translation1:iter() do
             count1 = count1 + 1
             local cand_length = cand._end - cand.start
-            logger:info(string.format("script_translator候选词 %d: '%s', 长度: %d, segment长度: %d", count1,
+            logger.info(string.format("script_translator候选词 %d: '%s', 长度: %d, segment长度: %d", count1,
                 cand.text, cand_length, segment_length))
 
             if cand_length == segment_length then
                 table.insert(valid_candidates, cand)
-                logger:info(string.format("script_translator候选词长度匹配，添加: '%s'", cand.text))
+                logger.info(string.format("script_translator候选词长度匹配，添加: '%s'", cand.text))
 
                 -- 如果已经找到足够的候选词，直接返回
                 if #valid_candidates >= max_count then
-                    logger:info("从script_translator已获取足够数量的候选词，直接返回")
+                    logger.info("从script_translator已获取足够数量的候选词，直接返回")
                     return valid_candidates, false -- 返回是否使用了fallback
                 end
             else
@@ -149,27 +149,27 @@ local function get_candidates(input, seg, env, max_count, allow_fallback)
                         cand = cand,
                         length = cand_length
                     })
-                    logger:info(string.format("script_translator候选词长度不匹配，添加到备选列表: '%s'",
+                    logger.info(string.format("script_translator候选词长度不匹配，添加到备选列表: '%s'",
                         cand.text))
                 else
-                    logger:info(string.format(
+                    logger.info(string.format(
                         "script_translator候选词长度不匹配，不允许fallback，跳过: '%s'", cand.text))
                 end
             end
 
             -- 限制遍历数量，只遍历前max_count个
             if count1 >= max_count then
-                logger:info("script_translator已遍历" .. max_count .. "个候选词，停止遍历")
+                logger.info("script_translator已遍历" .. max_count .. "个候选词，停止遍历")
                 break
             end
         end
     else
-        logger:error("调用script_translator失败: " .. tostring(translation1))
+        logger.error("调用script_translator失败: " .. tostring(translation1))
     end
 
     -- 如果第一个translator的候选词不足，尝试从 user_dict_set_translator 获取
     if #valid_candidates < max_count and env.user_dict_set_translator then
-        logger:info("script_translator候选词不足，尝试从 user_dict_set_translator 获取...")
+        logger.info("script_translator候选词不足，尝试从 user_dict_set_translator 获取...")
         local success2, translation2 = pcall(function()
             return env.user_dict_set_translator:query(input, seg)
         end)
@@ -179,16 +179,16 @@ local function get_candidates(input, seg, env, max_count, allow_fallback)
             for cand in translation2:iter() do
                 count2 = count2 + 1
                 local cand_length = cand._end - cand.start
-                logger:info(string.format("user_dict_set_translator候选词 %d: '%s', 长度: %d, segment长度: %d",
+                logger.info(string.format("user_dict_set_translator候选词 %d: '%s', 长度: %d, segment长度: %d",
                     count2, cand.text, cand_length, segment_length))
 
                 if cand_length == segment_length then
                     table.insert(valid_candidates, cand)
-                    logger:info(string.format("user_dict_set_translator候选词长度匹配，添加: '%s'", cand.text))
+                    logger.info(string.format("user_dict_set_translator候选词长度匹配，添加: '%s'", cand.text))
 
                     -- 如果已经找到足够的候选词，停止
                     if #valid_candidates >= max_count then
-                        logger:info("已获取足够数量的候选词，停止获取")
+                        logger.info("已获取足够数量的候选词，停止获取")
                         break
                     end
                 else
@@ -198,10 +198,10 @@ local function get_candidates(input, seg, env, max_count, allow_fallback)
                             cand = cand,
                             length = cand_length
                         })
-                        logger:info(string.format(
+                        logger.info(string.format(
                             "user_dict_set_translator候选词长度不匹配，添加到备选列表: '%s'", cand.text))
                     else
-                        logger:info(string.format(
+                        logger.info(string.format(
                             "user_dict_set_translator候选词长度不匹配，不允许fallback，跳过: '%s'",
                             cand.text))
                     end
@@ -209,22 +209,22 @@ local function get_candidates(input, seg, env, max_count, allow_fallback)
 
                 -- 限制遍历数量，只遍历前max_count个
                 if count2 >= max_count then
-                    logger:info("user_dict_set_translator已遍历" .. max_count .. "个候选词，停止遍历")
+                    logger.info("user_dict_set_translator已遍历" .. max_count .. "个候选词，停止遍历")
                     break
                 end
             end
         else
-            logger:error("调用user_dict_set_translator失败: " .. tostring(translation2))
+            logger.error("调用user_dict_set_translator失败: " .. tostring(translation2))
         end
     elseif not env.user_dict_set_translator then
-        logger:info("user_dict_set_translator未初始化")
+        logger.info("user_dict_set_translator未初始化")
     end
 
     local used_fallback = false
 
     -- 如果没有长度匹配的候选词，且允许fallback，使用长度最长的备选方案
     if #valid_candidates == 0 and #fallback_candidates > 0 and allow_fallback then
-        logger:info("没有长度匹配的候选词，使用长度最长的备选方案")
+        logger.info("没有长度匹配的候选词，使用长度最长的备选方案")
         used_fallback = true
 
         -- 按长度降序排序
@@ -235,21 +235,21 @@ local function get_candidates(input, seg, env, max_count, allow_fallback)
         -- 选择长度最长的max_count个候选词
         for i = 1, math.min(#fallback_candidates, max_count) do
             table.insert(valid_candidates, fallback_candidates[i].cand)
-            logger:info(string.format("使用备选候选词 %d: '%s', 长度: %d", i, fallback_candidates[i].cand.text,
+            logger.info(string.format("使用备选候选词 %d: '%s', 长度: %d", i, fallback_candidates[i].cand.text,
                 fallback_candidates[i].length))
         end
     end
 
     if #valid_candidates == 0 then
-        logger:info("未获取到任何候选词，返回空列表")
+        logger.info("未获取到任何候选词，返回空列表")
     else
-        logger:info("共获取到 " .. #valid_candidates .. " 个候选词" ..
+        logger.info("共获取到 " .. #valid_candidates .. " 个候选词" ..
                         (used_fallback and " (使用了fallback)" or ""))
         for i, cand in ipairs(valid_candidates) do
-            logger:info(string.format("最终候选词 %d: '%s'", i, cand.text))
+            logger.info(string.format("最终候选词 %d: '%s'", i, cand.text))
         end
     end
-    logger:info()
+    logger.info()
     return valid_candidates, used_fallback
 end
 
@@ -260,32 +260,40 @@ function script_backtick_translator.func(input, seg, env)
     -- 自动检查并清除过期的spans信息
     spans_manager.auto_clear_check(context, context_input)
 
-    logger:info("")
-    logger:info("")
-    logger:info("开始处理输入: " .. input)
+    logger.info("")
+    logger.info("")
+    logger.info("开始处理输入: " .. input)
 
-    -- 检查输入如果长度是1,则不处理
+    -- 检查输入如果长度是1, 而且只有一个反引号, 则单独进行处理, 如果不是反引号而且只有一个字符,则直接退出
     if #input == 1 then
-        logger:info("输入长度为1，不处理")
-        return
+        if input == "`" then
+            local candidate1 = Candidate("punct", seg.start, seg._end, "```", "")
+            candidate1.preedit = "`"
+            -- local candidate2 = Candidate("punct", seg.start, seg._end, "`", "")
+            yield(candidate1)
+            -- yield(candidate2)
+            return
+        else
+            logger.info("输入长度为1，不处理")
+            return
+        end
+
     end
-
-
 
     -- 检查输入是否包含反引号标签
     if not seg:has_tag("backtick") then
-        logger:info("没有包含backtick标签，不处理")
+        logger.info("没有包含backtick标签，不处理")
         return
     end
-    logger:info("含有backtick标签, 进入反引号translator")
+    logger.info("含有backtick标签, 进入反引号translator")
 
     -- 如果输入的是Enter回车键, context:set_option("cloud_translate", true)
     -- if context:get_option("cloud_translate") then
-    --     logger:info("百度云处理, 这个脚本跳过")
+    --     logger.info("百度云处理, 这个脚本跳过")
     --     return
     -- end
     -- if not input:match("`") then
-    --     logger:info("输入不包含反引号，不处理")
+    --     logger.info("输入不包含反引号，不处理")
     --     return
     -- end
 
@@ -295,7 +303,7 @@ function script_backtick_translator.func(input, seg, env)
         backtick_delimiter_after, logger)
 
     if not segments or #segments == 0 then
-        logger:error("切分失败或无结果")
+        logger.error("切分失败或无结果")
         return
     end
 
@@ -312,10 +320,10 @@ function script_backtick_translator.func(input, seg, env)
         local length = seg.length -- 片段长度
         local status = seg.status -- 片段状态
         -- 打印信息
-        logger:info(string.format("片段信息: start=%d, end=%d, length=%d, status=%s", start_pos, end_pos, length,
+        logger.info(string.format("片段信息: start=%d, end=%d, length=%d, status=%s", start_pos, end_pos, length,
             status))
         -- 打印开始和结束位置
-        logger:info(string.format("片段开始位置: %d, 结束位置: %d", segments[1].start, segments[1]._end))
+        logger.info(string.format("片段开始位置: %d, 结束位置: %d", segments[1].start, segments[1]._end))
         local cand_temp = Candidate("backtick_combo", seg.start, seg.start + segments[1].length, segments[1].content,
             "   [英文]")
         yield(cand_temp)
@@ -335,12 +343,12 @@ function script_backtick_translator.func(input, seg, env)
 
         if segment.type == "abc" then
             -- 文本片段：使用两个translator翻译
-            logger:info(string.format("处理文本片段 %d: '%s'", i, segment.content))
+            logger.info(string.format("处理文本片段 %d: '%s'", i, segment.content))
 
             -- 判断是否允许使用fallback：只有最后一个segment且类型为abc时允许
             local is_last_segment = (i == #segments)
             local allow_fallback = is_last_segment
-            logger:info(string.format("片段 %d, 是否最后一个: %s, 允许fallback: %s", i,
+            logger.info(string.format("片段 %d, 是否最后一个: %s, 允许fallback: %s", i,
                 tostring(is_last_segment), tostring(allow_fallback)))
 
             -- todo
@@ -355,21 +363,21 @@ function script_backtick_translator.func(input, seg, env)
                     local has_punctuation = segment_content:match("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-'\"']") ~= nil
 
                     if has_punctuation then
-                        logger:debug("有标点符号")
+                        logger.debug("有标点符号")
                         -- 删除segmente_input中的所有标点符号
                         local segment_content_nopunc = segment_content:gsub("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-'\"']", "")
-                        logger:debug("删除标点符号后的segment_content: " .. segment_content_nopunc)
+                        logger.debug("删除标点符号后的segment_content: " .. segment_content_nopunc)
 
                         if #segment_content_nopunc % 2 == 1 then
                             segment_content = segment_content:sub(1, -2)
                             delete_last_code = true
-                            logger:info("调整后segment_content: " .. segment_content)
+                            logger.info("调整后segment_content: " .. segment_content)
                         end
                     else
                         if #segment_content % 2 == 1 then
                             segment_content = segment_content:sub(1, -2)
                             delete_last_code = true
-                            logger:info("调整后segment_content: " .. segment_content)
+                            logger.info("调整后segment_content: " .. segment_content)
                         end
 
                     end
@@ -385,7 +393,7 @@ function script_backtick_translator.func(input, seg, env)
             else
                 local candidates, segment_used_fallback = get_candidates(segment_content, seg, env, 2, allow_fallback)
                 -- segment_used_fallback就是获取的候选项长度不足整个片段的长度. 当我把 wok 变成 wo传进去,长度应该还是满足的
-                logger:info("get_candidates返回segment_used_fallback: " .. tostring(segment_used_fallback))
+                logger.info("get_candidates返回segment_used_fallback: " .. tostring(segment_used_fallback))
 
                 -- 如果没有获取返回候选项, 说明传入的不是合并的拼音,则忽略这项
                 if #candidates == 0 then
@@ -397,7 +405,7 @@ function script_backtick_translator.func(input, seg, env)
                 -- 如果当前segment使用了fallback，更新全局fallback状态
                 if segment_used_fallback then
                     used_fallback = true
-                    logger:info("used_fallback: " .. tostring(used_fallback))
+                    logger.info("used_fallback: " .. tostring(used_fallback))
                     -- 计算长度差异（最长候选词长度 - segment长度）
 
                     -- 这个地方整个长度计算是错误的: 应该是长度 segment.length 大于 候选词长度, 
@@ -406,21 +414,21 @@ function script_backtick_translator.func(input, seg, env)
                         local cand = candidates[1]
                         local cand_length = cand._end - cand.start
                         fallback_length_diff = #segment.content - cand_length
-                        logger:info(string.format("使用fallback，fallback_length_diff差异: %d",
+                        logger.info(string.format("使用fallback，fallback_length_diff差异: %d",
                             fallback_length_diff))
                     end
                 end
 
                 -- 遍历candidates并打印属性值
-                logger:info("获取到 " .. #candidates .. " 个候选词" ..
+                logger.info("获取到 " .. #candidates .. " 个候选词" ..
                                 (segment_used_fallback and " (使用了fallback)" or "") .. ":")
                 for index, cand in ipairs(candidates) do
-                    logger:info(string.format("候选词 %d: '%s'", index, cand.text))
+                    logger.info(string.format("候选词 %d: '%s'", index, cand.text))
 
                     local test_spans = cand:spans()
                     local test_spans_vertices = test_spans.vertices
                     for i, vertex in ipairs(test_spans_vertices) do
-                        logger:info("test_spans_vertices Vertex " .. i .. ": " .. vertex)
+                        logger.info("test_spans_vertices Vertex " .. i .. ": " .. vertex)
                     end
 
                     -- 由于get_candidates已经完成长度检查，直接添加到候选列表
@@ -435,7 +443,7 @@ function script_backtick_translator.func(input, seg, env)
                         length = segment.length,
                         type = segment.type
                     })
-                    logger:info(string.format("候选词 %d 已添加到segment候选列表", index))
+                    logger.info(string.format("候选词 %d 已添加到segment候选列表", index))
                 end
 
                 -- -- 如果没有匹配的候选词，使用原内容
@@ -444,14 +452,14 @@ function script_backtick_translator.func(input, seg, env)
                 --         text = segment.content,
                 --         preedit = segment.content
                 --     })
-                --     logger:info("没有匹配的候选词，使用原内容")
+                --     logger.info("没有匹配的候选词，使用原内容")
                 -- end                
 
             end
 
         elseif segment.type == "backtick" then
             -- 反引号内容：固定一个候选项
-            logger:info(string.format("处理反引号片段 %d: '%s'", i, segment.content))
+            logger.info(string.format("处理反引号片段 %d: '%s'", i, segment.content))
             -- 对于反引号部分, 自己生成一个spans, backtick
             local backtick_spans = Spans()
             backtick_spans:add_span(segment.start, segment._end)
@@ -468,7 +476,7 @@ function script_backtick_translator.func(input, seg, env)
 
         else
             -- 其他类型：保持原样
-            logger:info(string.format("处理其他类型片段 %d: type=%s, content='%s'", i, segment.type,
+            logger.info(string.format("处理其他类型片段 %d: type=%s, content='%s'", i, segment.type,
                 segment.content))
             local other_spans = Spans()
             other_spans:add_span(segment.start, segment._end)
@@ -485,7 +493,7 @@ function script_backtick_translator.func(input, seg, env)
         end
 
         segment_candidates[i] = candidates_for_segment
-        logger:info(string.format("片段 %d 收集到 %d 个候选项", i, #candidates_for_segment))
+        logger.info(string.format("片段 %d 收集到 %d 个候选项", i, #candidates_for_segment))
 
         ::continue::
     end
@@ -516,7 +524,7 @@ function script_backtick_translator.func(input, seg, env)
     local all_combinations = {}
     generate_combinations(segment_candidates, {}, 1, all_combinations)
 
-    logger:info("共生成 " .. #all_combinations .. " 个组合")
+    logger.info("共生成 " .. #all_combinations .. " 个组合")
 
     -- 输出每个组合作为候选词，最多输出4个
     local output_count = 0
@@ -525,7 +533,7 @@ function script_backtick_translator.func(input, seg, env)
     for combo_index, combination in ipairs(all_combinations) do
         output_count = output_count + 1
         if output_count >= max_output then
-            logger:info("已达到最大输出数量限制 " .. max_output .. "，停止输出")
+            logger.info("已达到最大输出数量限制 " .. max_output .. "，停止输出")
             break
         end
 
@@ -569,8 +577,8 @@ function script_backtick_translator.func(input, seg, env)
                         local vertices = last_span.vertices
 
                         for i, vertex in ipairs(vertices) do
-                            -- logger:info("vertex: " .. i .. ": " .. vertex)
-                            -- logger:info("segment_cand.start: " .. tostring(one_cand.start))
+                            -- logger.info("vertex: " .. i .. ": " .. vertex)
+                            -- logger.info("segment_cand.start: " .. tostring(one_cand.start))
                             long_span:add_vertex(one_cand.start + vertex)
                         end
 
@@ -583,7 +591,7 @@ function script_backtick_translator.func(input, seg, env)
                 end)
 
                 if not success then
-                    logger:error("处理段落spans时出错: " .. tostring(err))
+                    logger.error("处理段落spans时出错: " .. tostring(err))
                     error("处理段落spans时出错: " .. tostring(err))
                 end
             end
@@ -594,22 +602,22 @@ function script_backtick_translator.func(input, seg, env)
             -- 将 vertices 转换为字符串格式保存到属性
             local vertices = long_span.vertices
             -- for i, vertex in ipairs(vertices) do
-            --     logger:info("long_span.vertices " .. i .. ": " .. vertex)
+            --     logger.info("long_span.vertices " .. i .. ": " .. vertex)
             -- end
 
             -- 使用spans_manager保存spans信息（最高优先级）
             spans_manager.save_spans(context, vertices, context_input, "script_backtick_translator")
 
-            logger:info("long_span 分割点信息已保存到spans_manager")
+            logger.info("long_span 分割点信息已保存到spans_manager")
 
             -- 检查spans信息是否保存成功
             local existing_spans = spans_manager.get_spans(context)
             if not existing_spans then
-                logger:error("spans_manager保存失败，spans信息可能丢失")
+                logger.error("spans_manager保存失败，spans信息可能丢失")
             end
         end
 
-        logger:info(string.format("组合 %d: text='%s', preedit='%s'", combo_index, final_text, final_preedit))
+        logger.info(string.format("组合 %d: text='%s', preedit='%s'", combo_index, final_text, final_preedit))
 
         -- 如果最终结果与原输入不同，则输出候选词
         if final_text ~= input and final_text ~= "" then
@@ -625,10 +633,10 @@ function script_backtick_translator.func(input, seg, env)
                 candidate_end = candidate_end - script_fail_code
             end
 
-            logger:info("used_fallback的值: " .. tostring(used_fallback) .. "  fallback_length_diff的值: " ..
+            logger.info("used_fallback的值: " .. tostring(used_fallback) .. "  fallback_length_diff的值: " ..
                             tostring(fallback_length_diff))
             if used_fallback and fallback_length_diff > 0 then
-                logger:info(string.format("使用了fallback，调整候选词结束位置: %d -> %d (差异: %d)",
+                logger.info(string.format("使用了fallback，调整候选词结束位置: %d -> %d (差异: %d)",
                     seg._end, candidate_end, fallback_length_diff))
                 candidate_end = seg._end - fallback_length_diff
             end
@@ -636,7 +644,7 @@ function script_backtick_translator.func(input, seg, env)
             -- local candidate = Candidate("sentence", seg.start, candidate_end, final_text,
             -- string.format("   [组合%d]", combo_index))
             -- 这是原来的候选词, 现在需要在第五个参数中传入反引号范围信息
-            logger:debug("output_count为: " .. output_count .. " 候选词: " .. final_text ..
+            logger.debug("output_count为: " .. output_count .. " 候选词: " .. final_text ..
                              "  生成backtick_pos值为: " .. chinese_pos)
             -- 如果final_text中有标点符号,才需要添加chinese_pos
             local candidate = ""
@@ -650,7 +658,7 @@ function script_backtick_translator.func(input, seg, env)
             candidate.preedit = final_preedit
             yield(candidate)
 
-            logger:info(string.format("输出组合候选词 %d: text='%s', preedit='%s' (第%d个输出), end=%d",
+            logger.info(string.format("输出组合候选词 %d: text='%s', preedit='%s' (第%d个输出), end=%d",
                 combo_index, final_text, final_preedit, output_count, candidate_end))
         end
     end
@@ -659,7 +667,7 @@ end
 
 function script_backtick_translator.fini(env)
     env.notifier:disconnect()
-    logger:info("脚本反引号翻译器结束运行")
+    logger.info("脚本反引号翻译器结束运行")
 end
 
 return script_backtick_translator

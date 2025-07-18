@@ -12,18 +12,18 @@ local logger = logger_module.create("backtick_segment", {
 local segmentor = {}
 
 function segmentor.init(env)
-    logger:clear()
-    logger:info("backtick_segment初始化完成")
-    logger:info("=" .. string.rep("=", 60))
+    logger.clear()
+    logger.info("backtick_segment初始化完成")
+    logger.info("=" .. string.rep("=", 60))
 end
 
 function segmentor.func(segmentation, env)
 
     local input = segmentation.input
-    logger:info("")
-    logger:info(">>> 新的分词处理 <<<")
-    logger:info("输入文本: '" .. input .. "'")
-    logger:info("输入整个input长度: " .. #input)
+    logger.info("")
+    logger.info(">>> 新的分词处理 <<<")
+    logger.info("输入文本: '" .. input .. "'")
+    logger.info("输入整个input长度: " .. #input)
 
     -- 使用debug_utils打印Segmentation信息
     debug_utils.print_segmentation_info(segmentation, logger)
@@ -41,8 +41,8 @@ function segmentor.func(segmentation, env)
     segment_input = input:sub(segment.start + 1, segment._end)
     -- end_position = #segmentation.input + 1
     end_position = #segmentation.input
-    logger:info("segment_input: " .. segment_input)
-    logger:info("segment.start: " .. segment.start .. " segment._end: " .. segment._end .. " end_position : " .. end_position)
+    logger.info("segment_input: " .. segment_input)
+    logger.info("segment.start: " .. segment.start .. " segment._end: " .. segment._end .. " end_position : " .. end_position)
 
     -- 检查是否包含反引号
     if segment_input:find("`") then
@@ -52,15 +52,15 @@ function segmentor.func(segmentation, env)
         new_segment.tags = Set{"backtick", "abc"}
         segmentation:forward()
         if segmentation:add_segment(new_segment) then
-            logger:info("成功将最后一个segment延长到末尾, 新的segment长度: " .. new_segment._end - new_segment.start)
+            logger.info("成功将最后一个segment延长到末尾, 新的segment长度: " .. new_segment._end - new_segment.start)
         else
-            logger:error("无法将最后一个segment延长到末尾")
+            logger.error("无法将最后一个segment延长到末尾")
             new_segment = Segment(segment.start, segment._end)
             new_segment.tags = Set{"backtick", "abc"}
             if segmentation:add_segment(new_segment) then
-                logger:info("使用segment._end添加成功, 新的segment长度: " .. new_segment._end - new_segment.start)
+                logger.info("使用segment._end添加成功, 新的segment长度: " .. new_segment._end - new_segment.start)
             else
-                logger:error("使用segment._end也无法成功添加segment")
+                logger.error("使用segment._end也无法成功添加segment")
             end
 
         end
@@ -70,8 +70,8 @@ function segmentor.func(segmentation, env)
     
 
         
-    logger:info("")
-    logger:info("=" .. string.rep("=", 60))
+    logger.info("")
+    logger.info("=" .. string.rep("=", 60))
     
     -- 返回true继续处理，false停止处理
     return true
@@ -80,7 +80,7 @@ end
 
 
 function segmentor.fini(env)
-    logger:info("调试分词器结束")
+    logger.info("调试分词器结束")
 end
 
 return segmentor

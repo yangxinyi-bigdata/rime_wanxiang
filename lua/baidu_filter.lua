@@ -26,7 +26,7 @@ local function setup_lua_paths()
     package.path = package.path .. ";/opt/homebrew/share/lua/5.4/?.lua;/opt/homebrew/share/lua/5.4/?/init.lua"
     package.cpath = package.cpath .. ";/opt/homebrew/lib/lua/5.4/?.so;/opt/homebrew/lib/lua/5.4/?/core.so"
 
-    logger:info("已添加 ARM64 Homebrew Lua 路径")
+    logger.info("已添加 ARM64 Homebrew Lua 路径")
 end
 
 setup_lua_paths()
@@ -62,33 +62,33 @@ local function set_cloud_translate_flag(cand, context)
     local preedit_text = cand.preedit
     -- 移除光标符号和后续的prompt内容
     local clean_text = preedit_text:gsub("‸.*$", "") -- 从光标符号开始删除到结尾
-    logger:info("当前预编辑文本: " .. clean_text)
+    logger.info("当前预编辑文本: " .. clean_text)
     local _, count = string.gsub(clean_text, delimiter, delimiter)
-    logger:info("当前输入内容分隔符数量: " .. count)
+    logger.info("当前输入内容分隔符数量: " .. count)
     -- local has_punct = has_punctuation(input)
 
     -- 触发状态改成,当数如字符超过4个,或者有标点且超过2个:
     if is_composing and count >= 3 then
-        logger:info("当前正在组词状态,检测到分隔符数量达到3,触发云输入提示")
+        logger.info("当前正在组词状态,检测到分隔符数量达到3,触发云输入提示")
         -- 只在值真正需要改变时才设置
         -- 先获取当前选项的值，避免不必要的更新
-        logger:info("当前云输入提示标志: " .. context:get_property("cloud_translate_flag"))
+        logger.info("当前云输入提示标志: " .. context:get_property("cloud_translate_flag"))
 
         if context:get_property("cloud_translate_flag") == "0" then
-            logger:info("云输入提示标志为 0, 设置为 1")
+            logger.info("云输入提示标志为 0, 设置为 1")
             context:set_property("cloud_translate_flag", "1")
             -- context:set_option("cloud_translate_prompt", true)
-            logger:info("cloud_translate_flag 已设置为 1")
+            logger.info("cloud_translate_flag 已设置为 1")
 
         end
 
     else
         -- 如果不在组词状态或没有达到触发条件,则重置提示选项
-        logger:info("当前不在组词状态或未达到触发条件,云输入提示已重置")
+        logger.info("当前不在组词状态或未达到触发条件,云输入提示已重置")
         if context:get_property("cloud_translate_flag") == "1" then
             -- context:set_option("cloud_translate_prompt", false)
             context:set_property("cloud_translate_flag", "0")
-            logger:info("cloud_translate_flag 已设置为 0")
+            logger.info("cloud_translate_flag 已设置为 0")
 
         end
     end
@@ -96,8 +96,8 @@ end
 
 function translator.init(env)
     -- 初始化时清空日志文件
-    logger:clear()
-    logger:info("云输入处理器初始化完成")
+    logger.clear()
+    logger.info("云输入处理器初始化完成")
 
     local engine = env.engine
     local context = engine.context
@@ -112,13 +112,13 @@ function translator.init(env)
     -- 获取输入法引擎和上下文   
     local config = env.engine.schema.config
     delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
-    logger:info("当前分隔符: " .. delimiter)
+    logger.info("当前分隔符: " .. delimiter)
 
     --  replace_punct_enabled = config:get_string("translator/replace_punct_enabled") or false
-    -- logger:info("反引号分隔符设置: '" .. backtick_delimiter_before .. "' '" .. backtick_delimiter_after .. "'")
+    -- logger.info("反引号分隔符设置: '" .. backtick_delimiter_before .. "' '" .. backtick_delimiter_after .. "'")
 
     -- if ziranma_mapping_config then
-    --    logger:info("开始打印自然码映射表...")
+    --    logger.info("开始打印自然码映射表...")
     --    local count = 0
     --    local success, error_msg = pcall(function()
     --       -- 创建一个新的表来存储映射
@@ -133,7 +133,7 @@ function translator.init(env)
     --             if value then
     --                local quanpin = value:get_string()
     --                temp_mapping[key] = quanpin
-    --                logger:info(string.format("自然码映射: %s -> %s", key, quanpin))
+    --                logger.info(string.format("自然码映射: %s -> %s", key, quanpin))
     --                count = count + 1
     --             end
     --          end
@@ -144,12 +144,12 @@ function translator.init(env)
     --    end)
 
     --    if success then
-    --       logger:info(string.format("自然码映射表加载完成，共 %d 项", count))
+    --       logger.info(string.format("自然码映射表加载完成，共 %d 项", count))
     --    else
-    --       logger:error(string.format("加载自然码映射表时发生错误: %s", error_msg))
+    --       logger.error(string.format("加载自然码映射表时发生错误: %s", error_msg))
     --    end
     -- else
-    --    logger:error("未找到自然码映射配置")
+    --    logger.error("未找到自然码映射配置")
     -- end
 end
 
@@ -177,7 +177,7 @@ local function double_pinyin_to_full_pinyin(input)
     if success then
         return result
     else
-        logger:error("双拼转全拼失败:  " .. tostring(result))
+        logger.error("双拼转全拼失败:  " .. tostring(result))
         return input -- 出错时返回原始输入
     end
 end
@@ -189,7 +189,7 @@ local function get_cloud_result(pinyin_text)
     end
 
     local full_pinyin = double_pinyin_to_full_pinyin(pinyin_text)
-    logger:info("片段 '" .. pinyin_text .. "' 转换后的全拼: " .. full_pinyin)
+    logger.info("片段 '" .. pinyin_text .. "' 转换后的全拼: " .. full_pinyin)
 
     local url = make_url(full_pinyin, 0, 5)
     local reply = http.request(url)
@@ -198,10 +198,10 @@ local function get_cloud_result(pinyin_text)
     if parse_success and baidu_response.status == "T" and baidu_response.result and baidu_response.result[1] and
         baidu_response.result[1][1] then
         local result = baidu_response.result[1][1][1]
-        logger:info("片段 '" .. pinyin_text .. "' 云输入结果: " .. result)
+        logger.info("片段 '" .. pinyin_text .. "' 云输入结果: " .. result)
         return result
     else
-        logger:info("片段 '" .. pinyin_text .. "' 云输入无结果，保持原样")
+        logger.info("片段 '" .. pinyin_text .. "' 云输入无结果，保持原样")
         return pinyin_text
     end
 end
@@ -248,10 +248,10 @@ function translator.func(translation, env)
 
     if not has_punctuation then
         -- 纯英文字母输入，使用原来的方式直接调用百度云接口
-        logger:info("检测到纯英文字母输入，使用传统百度云处理方式")
+        logger.info("检测到纯英文字母输入，使用传统百度云处理方式")
 
         local full_pinyin = double_pinyin_to_full_pinyin(input)
-        logger:info("输入 '" .. input .. "' 转换后的全拼: " .. full_pinyin)
+        logger.info("输入 '" .. input .. "' 转换后的全拼: " .. full_pinyin)
 
         local url = make_url(full_pinyin, 0, 5)
         local reply = http.request(url)
@@ -264,7 +264,7 @@ function translator.func(translation, env)
         local cand_type = nil
         local spans = nil
 
-        -- logger:info("parse_success: " .. tostring(parse_success)  .. "  baidu_response.status: "  .. tostring(baidu_response.status)  .. " baidu_response.result: " .. tostring(baidu_response.result) .. " baidu_response.result[1]: " .. tostring(baidu_response.result[1]))
+        -- logger.info("parse_success: " .. tostring(parse_success)  .. "  baidu_response.status: "  .. tostring(baidu_response.status)  .. " baidu_response.result: " .. tostring(baidu_response.result) .. " baidu_response.result[1]: " .. tostring(baidu_response.result[1]))
         if parse_success and baidu_response.status == "T" and baidu_response.result and baidu_response.result[1] then
             -- 先保存第一个原始候选词
             for cand in translation:iter() do
@@ -279,7 +279,7 @@ function translator.func(translation, env)
                 -- 获取所有分割点
                 local vertices = spans.vertices
                 -- for i, vertex in ipairs(vertices) do
-                --    logger:info("spans Vertex " .. i .. ": " .. vertex)
+                --    logger.info("spans Vertex " .. i .. ": " .. vertex)
                 -- end
 
                 -- 使用spans_manager保存spans信息
@@ -290,9 +290,9 @@ function translator.func(translation, env)
 
             -- 添加百度云候选词
             for candidate_index, candidate_data in ipairs(baidu_response.result[1]) do
-                logger:info("添加百度云候选词: " .. candidate_data[1])
-                logger:info("原始候选词preedit: " .. original_preedit)
-                logger:info(
+                logger.info("添加百度云候选词: " .. candidate_data[1])
+                logger.info("原始候选词preedit: " .. original_preedit)
+                logger.info(
                     "segment.start: " .. segment.start .. " segment._end: " .. segment._end .. " cand_start: " ..
                         cand_start .. " cand_end: " .. cand_end)
 
@@ -315,14 +315,14 @@ function translator.func(translation, env)
             end
 
         else
-            logger:info("百度云接口无结果，输出原始候选词")
+            logger.info("百度云接口无结果，输出原始候选词")
             for cand in translation:iter() do
                 yield(cand)
             end
         end
     else
         -- 包含标点符号或反引号，使用智能切分处理
-        logger:info("检测到标点符号或反引号，使用智能切分处理方式")
+        logger.info("检测到标点符号或反引号，使用智能切分处理方式")
 
         -- 切分并处理输入（添加错误捕获）
         local segments = {}
@@ -336,13 +336,13 @@ function translator.func(translation, env)
 
         if success and result then
             segments = result
-            logger:info("成功运行切分函数，获得 " .. #segments .. " 个片段")
+            logger.info("成功运行切分函数，获得 " .. #segments .. " 个片段")
             for i, seg in ipairs(segments) do
-                logger:info(string.format("片段 %d: type=%s, content='%s'", i, seg.type, seg.content))
+                logger.info(string.format("片段 %d: type=%s, content='%s'", i, seg.type, seg.content))
             end
         else
-            logger:error("切分函数运行失败: " .. tostring(result))
-            logger:info("降级到原始处理方式")
+            logger.error("切分函数运行失败: " .. tostring(result))
+            logger.info("降级到原始处理方式")
             -- 降级处理：将整个输入当作纯文本处理
             segments = {{
                 type = "abc",
@@ -355,18 +355,18 @@ function translator.func(translation, env)
             local segment_success, segment_result = pcall(function()
                 if segment.type == "abc" then
                     -- 文本片段：进行双拼转换和云输入
-                    logger:info(string.format("处理文本片段 %d: '%s'", i, segment.content))
+                    logger.info(string.format("处理文本片段 %d: '%s'", i, segment.content))
                     return get_cloud_result(segment.content)
                 elseif segment.type == "punct" then
                     -- 标点符号：直接添加
-                    logger:info(string.format("处理标点片段 %d: '%s'", i, segment.content))
+                    logger.info(string.format("处理标点片段 %d: '%s'", i, segment.content))
                     return segment.content
                 elseif segment.type == "backtick" then
                     -- 反引号内容：不处理，直接添加
-                    logger:info(string.format("处理反引号片段 %d: '%s'", i, segment.content))
+                    logger.info(string.format("处理反引号片段 %d: '%s'", i, segment.content))
                     return segment.content
                 else
-                    logger:info(string.format("未知片段类型 %d: type=%s, content='%s'", i, segment.type,
+                    logger.info(string.format("未知片段类型 %d: type=%s, content='%s'", i, segment.type,
                         segment.content))
                     return segment.content
                 end
@@ -374,15 +374,15 @@ function translator.func(translation, env)
 
             if segment_success and segment_result then
                 final_result = final_result .. segment_result
-                logger:info(string.format("片段 %d 处理成功，结果: '%s'", i, segment_result))
+                logger.info(string.format("片段 %d 处理成功，结果: '%s'", i, segment_result))
             else
-                logger:error(string.format("片段 %d 处理失败: %s", i, tostring(segment_result)))
+                logger.error(string.format("片段 %d 处理失败: %s", i, tostring(segment_result)))
                 -- 失败时使用原始内容
                 final_result = final_result .. (segment.content or "")
             end
         end
 
-        logger:info("智能切分最终结果: " .. final_result)
+        logger.info("智能切分最终结果: " .. final_result)
 
         local first_original_cand = nil
         local original_preedit = ""
@@ -411,20 +411,20 @@ function translator.func(translation, env)
                 local existing_spans = spans_manager.get_spans(context)
 
                 if existing_spans then
-                    logger:info("已存在spans信息，来源: " .. existing_spans.source)
+                    logger.info("已存在spans信息，来源: " .. existing_spans.source)
                 else
                     -- 尝试从候选词中提取spans信息
                     spans_manager.extract_and_save_from_candidate(context, cand, input, "baidu_filter")
                 end
                 -- for i, vertex in ipairs(vertices) do
-                --    logger:info("spans Vertex " .. i .. ": " .. vertex)
+                --    logger.info("spans Vertex " .. i .. ": " .. vertex)
                 -- end
 
                 break
             end
 
             -- 创建智能合成候选词
-            logger:info("创建智能合成候选词: " .. final_result)
+            logger.info("创建智能合成候选词: " .. final_result)
             -- local candidate = Candidate("baidu_cloud", cand_start, cand_end, final_result, "   [云输入]")
             -- 为了替换标点符号,把这个含有反引号片段的百度云返回值也标记成backtick_combo
             local candidate = Candidate("baidu_cloud", cand_start, cand_end, final_result, cand_comment)
@@ -441,7 +441,7 @@ function translator.func(translation, env)
             end
         else
             -- 没有智能合成结果，输出原有候选词
-            logger:info("没有智能合成结果，输出原始候选词")
+            logger.info("没有智能合成结果，输出原始候选词")
             for cand in translation:iter() do
                 yield(cand)
             end
@@ -450,7 +450,7 @@ function translator.func(translation, env)
 end
 
 function translator.fini(env)
-    logger:info("云输入处理器结束运行")
+    logger.info("云输入处理器结束运行")
 end
 
 return translator

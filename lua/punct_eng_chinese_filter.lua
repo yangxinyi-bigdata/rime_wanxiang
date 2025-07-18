@@ -17,12 +17,12 @@ local delimiter = ""
 
 function punct_eng_chinese_filter.init(env)
     -- 初始化时清空日志文件
-    logger:clear()
-    logger:info("云输入处理器初始化完成")
+    logger.clear()
+    logger.info("云输入处理器初始化完成")
     -- 获取输入法引擎和上下文   
     local config = env.engine.schema.config
     delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
-    logger:info("当前分隔符: " .. delimiter)
+    logger.info("当前分隔符: " .. delimiter)
 
 end
 
@@ -42,7 +42,7 @@ function punct_eng_chinese_filter.func(translation, env)
         -- 获得队尾的 Segment 对象
         segment = composition:back()
         if segment then
-            -- logger:info("当前cloud_translate_prompt状态: ".. tostring(context:get_option("cloud_translate_prompt")))
+            -- logger.info("当前cloud_translate_prompt状态: ".. tostring(context:get_option("cloud_translate_prompt")))
 
             -- 定义两种提示文本
             local cloud_prompt_text = "    ▶ [回车AI转换]  "
@@ -61,20 +61,20 @@ function punct_eng_chinese_filter.func(translation, env)
                 -- 为什么不能在 processor 里面添加？因为光标跳转触发的重新分词，并没有输入新字母。
                 local add_search_move_str = context:get_property("search_move_str")
                 segment.prompt = string.format(" ▶ [搜索模式:%s] ", add_search_move_str)
-                logger:info("更新搜索模式提示: " .. segment.prompt)
+                logger.info("更新搜索模式提示: " .. segment.prompt)
 
             elseif backtick_prompt == "1" then
                 -- backtick_prompt 优先级最高
                 if segment.prompt ~= backtick_prompt_text then
                     segment.prompt = backtick_prompt_text
-                    logger:info("设置反引号提示: " .. backtick_prompt_text)
+                    logger.info("设置反引号提示: " .. backtick_prompt_text)
                 end
             elseif cloud_translate_flag == "1" then
                 -- 只有在 backtick_prompt 为 0 时才显示 cloud_translate_flag 的提示
                 if segment.prompt ~= cloud_prompt_text then
-                    logger:info("segment.prompt: " .. segment.prompt .. " cloud_prompt_text: " .. cloud_prompt_text)
+                    logger.info("segment.prompt: " .. segment.prompt .. " cloud_prompt_text: " .. cloud_prompt_text)
                     segment.prompt = cloud_prompt_text
-                    logger:info("设置云输入提示: " .. cloud_prompt_text)
+                    logger.info("设置云输入提示: " .. cloud_prompt_text)
                 end
 
             end
@@ -87,7 +87,7 @@ function punct_eng_chinese_filter.func(translation, env)
 
     -- 使用 pcall 捕获所有可能的错误
     local success, error_msg = pcall(function()
-        logger:info("标点符号过滤器开始处理")
+        logger.info("标点符号过滤器开始处理")
 
         local count = 0 -- 用于计数，限制最多处理4个候选词
         -- 遍历所有候选词并进行标点符号替换
@@ -107,7 +107,7 @@ function punct_eng_chinese_filter.func(translation, env)
                         spans_manager.extract_and_save_from_candidate(context, cand, context.input,
                             "punct_eng_chinese_filter")
                     else
-                        logger:info("已存在spans信息，来源: " .. existing_spans.source)
+                        logger.info("已存在spans信息，来源: " .. existing_spans.source)
                     end
                 end
             end
@@ -120,34 +120,34 @@ function punct_eng_chinese_filter.func(translation, env)
                 local cand_comment = cand.comment
                 -- 反引号组合候选词backtick_combo
                 if cand_comment:match("^chinese_pos:") then
-                    logger:info("候选词为chinese_pos, 使用反引号替换")
+                    logger.info("候选词为chinese_pos, 使用反引号替换")
                     -- 我应该在cand里面附带上自己的信息, 也就是哪部分是通过backtick合并进来的, lua/script_backtick_translator.lua, 可以放在comment当中, 然后在这里再删除掉即可
                     -- 将反引号索引段的信息保存到了cand.comment
                     -- 当有多个索引的时候,应该判断
 
-                    logger:info("cand.comment: " .. cand.comment .. " cand_text: " .. cand_text)
+                    logger.info("cand.comment: " .. cand.comment .. " cand_text: " .. cand_text)
                     local chinese_pos = cand.comment
                     new_text = text_splitter.replace_punct_skip_pos(cand_text, chinese_pos, logger)
                 else
-                    logger:info("候选词不是chinese_pos ,按照原来的处理即可")
+                    logger.info("候选词不是chinese_pos ,按照原来的处理即可")
                     new_text = text_splitter.replace_punct(cand_text)
                 end
 
                 -- if not segment:has_tag("backtick") then
-                --     logger:info("没有包含backtick标签,按照原来的处理即可")
+                --     logger.info("没有包含backtick标签,按照原来的处理即可")
                 --     new_text = text_splitter.replace_punct(cand_text)
                 -- else
-                --     logger:info("包含backtick标签,反引号之内的部分需要跳过标点符号替换")
+                --     logger.info("包含backtick标签,反引号之内的部分需要跳过标点符号替换")
                 --     -- 我应该在cand里面附带上自己的信息, 也就是哪部分是通过backtick合并进来的, lua/script_backtick_translator.lua, 可以放在comment当中, 然后在这里再删除掉即可
                 --     -- 将反引号索引段的信息保存到了cand.comment
                 --     -- 当有多个索引的时候,应该判断
 
-                --     logger:info("cand.comment: " .. cand.comment .. " cand_text: " .. cand_text)
+                --     logger.info("cand.comment: " .. cand.comment .. " cand_text: " .. cand_text)
                 --     local chinese_pos = cand.comment
                 --     new_text = text_splitter.replace_punct_skip_pos(cand_text, chinese_pos, logger)
                 -- end
 
-                logger:info("标点替换: " .. cand_text .. " -> " .. new_text)
+                logger.info("标点替换: " .. cand_text .. " -> " .. new_text)
                 -- 根据文档，使用Candidate构造方法创建新候选项
                 -- Candidate(type, start, end, text, comment)
                 if cand_type == "baidu_cloud" then
@@ -172,16 +172,16 @@ function punct_eng_chinese_filter.func(translation, env)
             end
         end
 
-        logger:info("标点符号过滤器处理完成")
+        logger.info("标点符号过滤器处理完成")
     end)
 
     -- 处理错误情况
     if not success then
         local error_message = tostring(error_msg)
-        logger:error("标点符号过滤器发生错误: " .. error_message)
+        logger.error("标点符号过滤器发生错误: " .. error_message)
 
         -- 记录详细的错误信息用于调试
-        logger:error("错误堆栈信息: " .. debug.traceback())
+        logger.error("错误堆栈信息: " .. debug.traceback())
 
         -- 在发生错误时,安全地输出原始候选词
         for cand in translation:iter() do
@@ -191,7 +191,7 @@ function punct_eng_chinese_filter.func(translation, env)
 end
 
 function punct_eng_chinese_filter.fini(env)
-    logger:info("punct_eng_chinese_filter结束运行")
+    logger.info("punct_eng_chinese_filter结束运行")
 end
 
 return punct_eng_chinese_filter

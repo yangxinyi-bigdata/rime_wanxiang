@@ -35,15 +35,15 @@ local ziranma_mapping_config = {}  -- 自然码映射表
 
 function translator.init(env)
    -- 初始化时清空日志文件
-   logger:clear()
-   logger:info("云输入处理器初始化完成")
+   logger.clear()
+   logger.info("云输入处理器初始化完成")
 
    local config = env.engine.schema.config
    -- 加载自然码映射表
    ziranma_mapping_config = config:get_map("speller/ziranma_to_quanpin")
 
    -- if ziranma_mapping_config then
-   --    logger:info("开始打印自然码映射表...")
+   --    logger.info("开始打印自然码映射表...")
    --    local count = 0
    --    local success, error_msg = pcall(function()
    --       -- 创建一个新的表来存储映射
@@ -58,7 +58,7 @@ function translator.init(env)
    --             if value then
    --                local quanpin = value:get_string()
    --                temp_mapping[key] = quanpin
-   --                logger:info(string.format("自然码映射: %s -> %s", key, quanpin))
+   --                logger.info(string.format("自然码映射: %s -> %s", key, quanpin))
    --                count = count + 1
    --             end
    --          end
@@ -69,12 +69,12 @@ function translator.init(env)
    --    end)
       
    --    if success then
-   --       logger:info(string.format("自然码映射表加载完成，共 %d 项", count))
+   --       logger.info(string.format("自然码映射表加载完成，共 %d 项", count))
    --    else
-   --       logger:error(string.format("加载自然码映射表时发生错误: %s", error_msg))
+   --       logger.error(string.format("加载自然码映射表时发生错误: %s", error_msg))
    --    end
    -- else
-   --    logger:error("未找到自然码映射配置")
+   --    logger.error("未找到自然码映射配置")
    -- end
 end
 
@@ -102,7 +102,7 @@ local function double_pinyin_to_full_pinyin(input)
    if success then
       return result
    else
-      logger:error("双拼转全拼失败:  " .. tostring(result))
+      logger.error("双拼转全拼失败:  " .. tostring(result))
       return input  -- 出错时返回原始输入
    end
 end
@@ -121,10 +121,10 @@ function translator.func(translation, env)
       -- 获得队尾的 Segment 对象
       segment = composition:back()
       if segment then
-         -- logger:info("当前cloud_translate_prompt状态: ".. tostring(context:get_option("cloud_translate_prompt")))
+         -- logger.info("当前cloud_translate_prompt状态: ".. tostring(context:get_option("cloud_translate_prompt")))
          local prompt_text = "▶ 回车AI转换"
          if context:get_property("cloud_translate_flag") == "1" then
-            logger:info("云输入法转换提示已启用")
+            logger.info("云输入法转换提示已启用")
             if segment.prompt ~= prompt_text then
                -- 使用更醒目的格式，添加视觉分隔符
                -- segment.prompt = "[     🤖 回车AI转换]"
@@ -134,7 +134,7 @@ function translator.func(translation, env)
                -- segment.prompt = "    [AI] 回车转换"
                -- segment.prompt = " → AI转换"
                -- segment.prompt = " ⚡ AI转换"
-               -- logger:info("通过segmentation成功设置prompt")
+               -- logger.info("通过segmentation成功设置prompt")
             end
                
          else
@@ -158,11 +158,11 @@ function translator.func(translation, env)
 
    -- 将双拼转换成全拼
    local full_pinyin = double_pinyin_to_full_pinyin(input)
-   logger:info("转换后的全拼: " .. full_pinyin)
+   logger.info("转换后的全拼: " .. full_pinyin)
    -- 如果input当中存在标点符号,则对input进行切分处理,以标点符号为边界
    local url = make_url(full_pinyin, 0, 5)
    
-   logger:info("构建的百度云输入法API请求URL: " .. url)
+   logger.info("构建的百度云输入法API请求URL: " .. url)
    -- 发送HTTP请求获取云端候选词
    -- local reply = http_get(url) -- curl的方法
    local reply = http.request(url)
@@ -189,11 +189,11 @@ function translator.func(translation, env)
          -- candidate_data[2]: 拼音长度
          -- 当前有候选词,还有env,context上下文这里是想要提交一个候选词, 候选词对应录入拼音片段的哪一部分,如何获取呢? 
          -- 应该对应的是整个片段吧? 也就是^ 这个符号前边的所有片段,也就是segment
-         logger:info("处理候选词: " .. candidate_data[1] .. ", 拼音长度: " .. candidate_data[2] .. ", 拼音: " .. candidate_data[3].pinyin)
+         logger.info("处理候选词: " .. candidate_data[1] .. ", 拼音长度: " .. candidate_data[2] .. ", 拼音: " .. candidate_data[3].pinyin)
          local candidate = Candidate("sentence", segment.start, segment._end, candidate_data[1], "   [百度云]")
          
          -- 检查拼音是否匹配输入的前缀
-         logger:info("检查拼音前缀匹配: " .. candidate_data[3].pinyin)
+         logger.info("检查拼音前缀匹配: " .. candidate_data[3].pinyin)
 
          -- "小酸瓜和小黄瓜的故事" "xiao'suan'gua'he'xiao'huang'gua'de'gu'shi" 32个字母,但原来input中的字母数量并不是
          -- 这行代码是要干什么?  从总的输入字母当中切片出候选词对应的部分? 但在双拼和全拼的关系中这个代码不对了
@@ -224,7 +224,7 @@ end
 
 
 function translator.fini(env)
-    logger:info("云输入处理器结束运行")
+    logger.info("云输入处理器结束运行")
 end
 
 

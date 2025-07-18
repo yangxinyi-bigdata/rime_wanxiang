@@ -75,7 +75,7 @@ end
 
 -- API路由处理
 local function handle_api_request(method, path, body)
-    logger:info(string.format("API请求: %s %s", method, path))
+    logger.info(string.format("API请求: %s %s", method, path))
     
     -- 健康检查
     if path == "/health" then
@@ -118,7 +118,7 @@ local function handle_api_request(method, path, body)
         end
         
         -- 这里应该实际更新Rime配置
-        logger:info("接收到配置更新请求: " .. (body or "空"))
+        logger.info("接收到配置更新请求: " .. (body or "空"))
         
         return create_json_response({
             message = "配置更新成功",
@@ -129,7 +129,7 @@ local function handle_api_request(method, path, body)
     -- 重启Rime
     if path == "/rime/restart" and method == "POST" then
         -- 这里可以调用Rime的重启API
-        logger:info("接收到重启请求")
+        logger.info("接收到重启请求")
         return create_json_response({
             message = "Rime重启指令已发送"
         })
@@ -147,14 +147,14 @@ end
 local function handle_request(srv, stream)
     local req_headers = stream:get_headers()
     if not req_headers then
-        logger:error("无法获取请求头")
+        logger.error("无法获取请求头")
         return
     end
     
     local method = req_headers:get(":method") or "UNKNOWN"
     local path = req_headers:get(":path") or "/"
     
-    logger:info(string.format("收到请求: %s %s", method, path))
+    logger.info(string.format("收到请求: %s %s", method, path))
     
     -- 处理OPTIONS请求（CORS预检）
     if method == "OPTIONS" then
@@ -171,9 +171,9 @@ local function handle_request(srv, stream)
         end)
         
         if success then
-            logger:info("OPTIONS响应发送成功")
+            logger.info("OPTIONS响应发送成功")
         else
-            logger:error("OPTIONS响应发送失败: " .. err)
+            logger.error("OPTIONS响应发送失败: " .. err)
         end
         return
     end
@@ -209,16 +209,16 @@ local function handle_request(srv, stream)
     end)
     
     if success then
-        logger:info("响应发送成功")
+        logger.info("响应发送成功")
     else
-        logger:error("响应发送失败: " .. err)
+        logger.error("响应发送失败: " .. err)
     end
 end
 
 -- 启动服务器
 function HttpServer.start(config)
     if server_running then
-        logger:info("HTTP服务器已在运行")
+        logger.info("HTTP服务器已在运行")
         return true
     end
     
@@ -229,7 +229,7 @@ function HttpServer.start(config)
         end
     end
     
-    logger:info("正在启动HTTP服务器...")
+    logger.info("正在启动HTTP服务器...")
     
     local err
     srv, err = server.listen({
@@ -240,11 +240,11 @@ function HttpServer.start(config)
     })
     
     if not srv then
-        logger:error("创建服务器失败: " .. (err or "未知错误"))
+        logger.error("创建服务器失败: " .. (err or "未知错误"))
         return false
     end
     
-    logger:info(string.format("HTTP服务器已启动在 http://%s:%d", config.host, config.port))
+    logger.info(string.format("HTTP服务器已启动在 http://%s:%d", config.host, config.port))
     server_running = true
     
     -- 在后台运行服务器
@@ -254,7 +254,7 @@ function HttpServer.start(config)
         end)
         
         if not success then
-            logger:error("服务器循环出错: " .. err)
+            logger.error("服务器循环出错: " .. err)
             server_running = false
         end
     end
@@ -269,7 +269,7 @@ end
 -- 停止服务器
 function HttpServer.stop()
     if not server_running then
-        logger:info("HTTP服务器未在运行")
+        logger.info("HTTP服务器未在运行")
         return
     end
     
@@ -279,7 +279,7 @@ function HttpServer.stop()
     end
     
     server_running = false
-    logger:info("HTTP服务器已停止")
+    logger.info("HTTP服务器已停止")
 end
 
 -- 获取服务器状态

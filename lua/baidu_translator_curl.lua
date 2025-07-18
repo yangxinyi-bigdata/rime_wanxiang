@@ -43,8 +43,8 @@ local translator = {}
 
 function translator.init(env)
     -- 初始化时清空日志文件
-    logger:clear()
-    logger:info("云输入处理器初始化完成")
+    logger.clear()
+    logger.info("云输入处理器初始化完成")
 end
 
 function translator.func(input, seg, env)
@@ -74,7 +74,7 @@ function translator.func(input, seg, env)
                   -- segment.prompt = "    [AI] 回车转换"
                   -- segment.prompt = " → AI转换"
                   -- segment.prompt = " ⚡ AI转换"
-                  -- logger:info("通过segmentation成功设置prompt")
+                  -- logger.info("通过segmentation成功设置prompt")
                end 
                 
             elseif not context:get_option("cloud_translate_prompt") then
@@ -86,7 +86,7 @@ function translator.func(input, seg, env)
    
       end
 
-   --  logger:info("处理输入: " .. tostring(context:get_option("cloud_translate")))
+   --  logger.info("处理输入: " .. tostring(context:get_option("cloud_translate")))
     if not context:get_option("cloud_translate") then
       -- 查看有没有云翻译的标识, 没有的话直接退出
       return
@@ -96,7 +96,7 @@ function translator.func(input, seg, env)
 
     -- 如果input当中存在标点符号,则对input进行切分处理,以标点符号为边界
    local url = make_url(input, 0, 5)
-   logger:info("构建的百度云输入法API请求URL: " .. url)
+   logger.info("构建的百度云输入法API请求URL: " .. url)
    -- local reply = http.request(url)
    local reply = http_get(url)
    -- 安全解析JSON响应数据
@@ -109,15 +109,15 @@ function translator.func(input, seg, env)
          -- candidate_data[1]: 汉字文本
          -- candidate_data[2]: 拼音长度
          -- seg.start: 输入起始位置
-         logger:info("处理候选词: " .. candidate_data[1] .. ", 拼音长度: " .. candidate_data[2] .. ", 拼音: " .. candidate_data[3].pinyin)
+         logger.info("处理候选词: " .. candidate_data[1] .. ", 拼音长度: " .. candidate_data[2] .. ", 拼音: " .. candidate_data[3].pinyin)
          local candidate = Candidate("baidu_cloud", seg.start, seg.start + candidate_data[2], candidate_data[1], "   [百度云]")
          candidate.quality = 2  -- 设置候选词优先级
          
          -- 检查拼音是否匹配输入的前缀
-         logger:info("检查拼音前缀匹配: " .. candidate_data[3].pinyin)
+         logger.info("检查拼音前缀匹配: " .. candidate_data[3].pinyin)
          local pinyin_without_apostrophe = string.gsub(candidate_data[3].pinyin, "'", "")
          local input_prefix = string.sub(input, 1, candidate_data[2])
-         logger:info("输入前缀: " .. input_prefix .. ", 拼音无单引号: " .. pinyin_without_apostrophe)
+         logger.info("输入前缀: " .. input_prefix .. ", 拼音无单引号: " .. pinyin_without_apostrophe)
          if pinyin_without_apostrophe == input_prefix then
             -- 设置预编辑文本，将单引号替换为空格便于显示
             candidate.preedit = string.gsub(candidate_data[3].pinyin, "'", " ")
@@ -131,7 +131,7 @@ end
 
 
 function translator.fini(env)
-    logger:info("云输入处理器结束运行")
+    logger.info("云输入处理器结束运行")
 end
 
 

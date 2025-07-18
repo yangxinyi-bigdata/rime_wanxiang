@@ -5,21 +5,21 @@ local logger_module = require("logger")
 local debug_utils = require("debug_utils")
 
 -- 创建当前模块的日志记录器
-local logger = logger_module.create("cloud_input_precessor", {
+local logger = logger_module.create("cloud_input_processor", {
     enabled = true -- 可以通过这里控制日志开关
 })
 
-local cloud_input_precessor = {}
+local cloud_input_processor = {}
 local delimiter = " " -- 默认分隔符
 
-function cloud_input_precessor.init(env)
+function cloud_input_processor.init(env)
     -- 获取输入法引擎和上下文   
     local config = env.engine.schema.config
     -- 初始化时清空日志文件
-    logger:clear()
-    logger:info("云输入处理器初始化完成")
+    logger.clear()
+    logger.info("云输入处理器初始化完成")
     delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
-    logger:info("当前分隔符: " .. delimiter)
+    logger.info("当前分隔符: " .. delimiter)
     --  fixed 设置一个变量
     -- context:set_property只能设置字符串类型
     env.engine.context:set_property("cloud_translate_flag", "0")
@@ -35,33 +35,33 @@ local function set_cloud_translate_flag(context)
     local preedit_text = preedit.text
     -- 移除光标符号和后续的prompt内容
     local clean_text = preedit_text:gsub("‸.*$", "") -- 从光标符号开始删除到结尾
-    logger:info("当前预编辑文本: " .. clean_text)
+    logger.info("当前预编辑文本: " .. clean_text)
     local _, count = string.gsub(clean_text, delimiter, delimiter)
-    logger:info("当前输入内容分隔符数量: " .. count)
+    logger.info("当前输入内容分隔符数量: " .. count)
     -- local has_punct = has_punctuation(input)
 
     -- 触发状态改成,当数如字符超过4个,或者有标点且超过2个:
     if is_composing and count >= 3 then
-        logger:info("当前正在组词状态,检测到分隔符数量达到3,触发云输入提示")
+        logger.info("当前正在组词状态,检测到分隔符数量达到3,触发云输入提示")
         -- 只在值真正需要改变时才设置
         -- 先获取当前选项的值，避免不必要的更新
-        logger:info("当前云输入提示标志: " .. context:get_property("cloud_translate_flag"))
+        logger.info("当前云输入提示标志: " .. context:get_property("cloud_translate_flag"))
 
         if context:get_property("cloud_translate_flag") == "0" then
-            logger:info("云输入提示标志为 0, 设置为 1")
+            logger.info("云输入提示标志为 0, 设置为 1")
             context:set_property("cloud_translate_flag", "1")
             -- context:set_option("cloud_translate_prompt", true)
-            logger:info("cloud_translate_flag 已设置为 1")
+            logger.info("cloud_translate_flag 已设置为 1")
 
         end
 
     else
         -- 如果不在组词状态或没有达到触发条件,则重置提示选项
-        logger:info("当前不在组词状态或未达到触发条件,云输入提示已重置")
+        logger.info("当前不在组词状态或未达到触发条件,云输入提示已重置")
         if context:get_property("cloud_translate_flag") == "1" then
             -- context:set_option("cloud_translate_prompt", false)
             context:set_property("cloud_translate_flag", "0")
-            logger:info("cloud_translate_flag 已设置为 0")
+            logger.info("cloud_translate_flag 已设置为 0")
 
         end
     end
@@ -69,7 +69,7 @@ end
 
 -- 按键处理器函数
 -- 负责监听按键事件,判断是否应该触发翻译器
-function cloud_input_precessor.func(key, env)
+function cloud_input_processor.func(key, env)
     local engine = env.engine
     local context = engine.context
     -- 返回值常量定义
@@ -89,7 +89,7 @@ function cloud_input_precessor.func(key, env)
         local input = context.input
 
         if #input <= 1 then
-            logger:info("input为1, 不判断直接退出")
+            logger.info("input为1, 不判断直接退出")
             return kNoop
         end
 
@@ -106,10 +106,10 @@ function cloud_input_precessor.func(key, env)
 
         -- 如果输入的按键是一个反引号,则判断这个反引号是不是一个和前边的反引号配对的闭合单引号
         -- 如果是则直接将当前第一个候选项上屏.
-        logger:info("")
-        logger:info("=== 开始分析lua/cloud_input_precessor.lua ===")
-        logger:info("当前按键: " .. key:repr())
-        logger:info("当前input: " .. input)
+        logger.info("")
+        logger.info("=== 开始分析lua/cloud_input_processor.lua ===")
+        logger.info("当前按键: " .. key:repr())
+        logger.info("当前input: " .. input)
         -- 首先打印seg的信息
         -- 使用debug_utils打印Segmentation信息
         -- debug_utils.print_segmentation_info(segmentation, logger)
@@ -121,21 +121,21 @@ function cloud_input_precessor.func(key, env)
         local current_start = segmentation:get_current_start_position()
         local current_end = segmentation:get_current_end_position()
         local segmente_input = input:sub(current_start + 1, current_end)
-        logger:info("segmente_input: " .. segmente_input)
+        logger.info("segmente_input: " .. segmente_input)
         -- 已经上屏的部分也会被影响吗?  这里的input是所有的,包含已经上屏确认的部分,应该提取出剩余的
         -- 这个有没有可能通过标签处理，当前便有反引号片段,是不是应该已经打了标签? 但标签不能判断是以反引号开通的, 除非是那个切割函数
         if #segmente_input >= 3 and segmente_input:sub(1, 1) == "`" and segmente_input:sub(-2, -2) == "`" then
             if context:confirm_current_selection() then
-                logger:info("确认当前选择成功")
+                logger.info("确认当前选择成功")
             else
-                logger:error("确认当前选择失败")
+                logger.error("确认当前选择失败")
             end
         end
 
         -- 这里segmentation.input获取到的应该是上一轮结束之后, 当前的segmentation.input
         -- 
         -- local segmentation_input = segmentation.input
-        -- logger:info("segmentation_input: " .. segmentation_input)
+        -- logger.info("segmentation_input: " .. segmentation_input)
         -- 检查反引号的数量是否为奇数(说明有未闭合的反引号)
 
         -- 如果当前输入的就是反引号,会有一个延迟,单独判断一下.
@@ -146,24 +146,24 @@ function cloud_input_precessor.func(key, env)
         if key:repr() == "grave" then
             -- segmente_input 后面追加一个反引号字符
             segmente_input = segmente_input .. "`"
-            logger:info("检测到反引号输入，segmente_input 更新为: " .. segmente_input)
+            logger.info("检测到反引号输入，segmente_input 更新为: " .. segmente_input)
         elseif key:repr() == "BackSpace" then
             -- 删除按键之后,如果删除掉的是一个反引号,也应该马上触发
             segmente_input = segmente_input:sub(1, -2)
         end
         local _, backtick_count = segmente_input:gsub("`", "")
         if backtick_count % 2 == 1 then
-            logger:info(
+            logger.info(
                 "检测到奇数个反引号,存在未闭合情况: " .. segmente_input .. " (反引号数量: " ..
                     backtick_count .. ")")
             -- 只在值真正需要改变时才设置
             -- 先获取当前选项的值，避免不必要的更新
-            logger:info("当前云输入提示标志: " .. context:get_property("backtick_prompt"))
+            logger.info("当前云输入提示标志: " .. context:get_property("backtick_prompt"))
 
             if context:get_property("backtick_prompt") == "0" then
-                logger:info("backtick_prompt提示标志为 0, 设置为 1")
+                logger.info("backtick_prompt提示标志为 0, 设置为 1")
                 context:set_property("backtick_prompt", "1")
-                logger:info("backtick_prompt 已设置为 1")
+                logger.info("backtick_prompt 已设置为 1")
             end
 
             -- 定义需要转换为普通字符的按键
@@ -206,8 +206,6 @@ function cloud_input_precessor.func(key, env)
                 ["grave"] = "`", -- 反引号
 
                 -- 标点符号的Shift版本
-                ["Shift+period"] = ">", -- >
-                ["Shift+comma"] = "<", -- <
                 ["Shift+semicolon"] = ":", -- :
                 ["Shift+apostrophe"] = "\"", -- "
                 ["Shift+bracketleft"] = "{", -- {
@@ -219,6 +217,7 @@ function cloud_input_precessor.func(key, env)
                 ["Shift+grave"] = "~", -- ~
 
                 -- 直接映射的符号键
+                ["minus"] = "-", -- 冒号
                 ["colon"] = ":", -- 冒号
                 ["question"] = "?", -- 问号
                 ["exclam"] = "!", -- 感叹号
@@ -266,8 +265,9 @@ function cloud_input_precessor.func(key, env)
 
             }
             local key_repr = key:repr()
+            logger.info("key_repr: " .. key_repr)
             if handle_keys[key_repr] then
-                logger:info("处于反引号状态，将按键转为普通字符: " .. key_repr)
+                logger.info("处于反引号状态，将按键转为普通字符: " .. key_repr)
 
                 -- 将按键对应的字符添加到输入中
                 local char_to_add = handle_keys[key_repr]
@@ -280,15 +280,15 @@ function cloud_input_precessor.func(key, env)
 
         else
             -- 如果不在组词状态或没有达到触发条件,则重置提示选项
-            logger:info("当前不在反引号当中backtick提示已重置")
+            logger.info("当前不在反引号当中backtick提示已重置")
             if context:get_property("backtick_prompt") == "1" then
                 context:set_property("backtick_prompt", "0")
-                logger:info("backtick_prompt 已设置为 0")
+                logger.info("backtick_prompt 已设置为 0")
             end
         end
 
-        logger:info("=== 结束分析lua/cloud_input_precessor.lua ===")
-        logger:info("")
+        logger.info("=== 结束分析lua/cloud_input_processor.lua ===")
+        logger.info("")
 
         -- 定义需要跳过处理的按键
         local skip_keys = {
@@ -309,7 +309,7 @@ function cloud_input_precessor.func(key, env)
         -- 如果按键需要跳过,则不进行处理
         local key_repr = key:repr()
         if skip_keys[key_repr] then
-            logger:info("按键为上下键、空格键或数字键, 不进行处理")
+            logger.info("按键为上下键、空格键或数字键, 不进行处理")
             return kNoop
         end
 
@@ -318,7 +318,7 @@ function cloud_input_precessor.func(key, env)
 
         -- 检查当前按键是否为预设的触发键
         if key:repr() == "Return" and context:get_property("cloud_translate_flag") == "1" then
-            logger:info("触发云输入处理cloud_translate, 添加option")
+            logger.info("触发云输入处理cloud_translate, 添加option")
             context:set_option("cloud_translate", true)
 
             -- 返回已处理,阻止其他处理器处理这个按键
@@ -331,22 +331,22 @@ function cloud_input_precessor.func(key, env)
     -- 处理错误情况
     if not success then
         local error_message = tostring(result)
-        logger:error("云输入处理器发生错误: " .. error_message)
+        logger.error("云输入处理器发生错误: " .. error_message)
 
         -- 记录详细的错误信息用于调试
-        logger:error("错误堆栈信息: " .. debug.traceback())
+        logger.error("错误堆栈信息: " .. debug.traceback())
 
         -- 在发生错误时,安全地返回 kNoop,让其他处理器继续工作
         return kNoop
     end
 
     -- 成功执行,返回处理结果
-    logger:info("云输入处理器执行成功, 返回值: " .. tostring(result))
+    logger.info("云输入处理器执行成功, 返回值: " .. tostring(result))
     return result or kNoop
 end
 
-function cloud_input_precessor.fini(env)
-    logger:info("云输入处理器结束运行")
+function cloud_input_processor.fini(env)
+    logger.info("云输入处理器结束运行")
 end
 
-return cloud_input_precessor
+return cloud_input_processor

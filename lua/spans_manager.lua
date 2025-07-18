@@ -32,7 +32,7 @@ local SOURCE_PRIORITY = {
 -- @param source: 来源脚本名称
 function spans_manager.save_spans(context, vertices, input, source)
     if not context or not vertices or not input then
-        logger:error("save_spans: 参数不能为空")
+        logger.error("save_spans: 参数不能为空")
         return false
     end
     
@@ -48,14 +48,14 @@ function spans_manager.save_spans(context, vertices, input, source)
         local new_priority = SOURCE_PRIORITY[source] or 99
         
         if new_priority > existing_priority then
-            logger:info(string.format("save_spans: 跳过保存，已有更高优先级的spans (现有:%s[%d] vs 新:%s[%d])", 
+            logger.info(string.format("save_spans: 跳过保存，已有更高优先级的spans (现有:%s[%d] vs 新:%s[%d])", 
                 existing_source, existing_priority, source, new_priority))
             return false
         end
         
         -- 如果输入内容相同且优先级相同，也跳过
         if existing_input == input and new_priority == existing_priority then
-            logger:debug("save_spans: 跳过保存，输入内容和优先级相同")
+            logger.debug("save_spans: 跳过保存，输入内容和优先级相同")
             return false
         end
     end
@@ -75,7 +75,7 @@ function spans_manager.save_spans(context, vertices, input, source)
     context:set_property(SPANS_SOURCE_KEY, source)
     context:set_property(SPANS_TIMESTAMP_KEY, tostring(os.time()))
     
-    logger:info(string.format("save_spans: 保存成功 [来源:%s] [输入:%s] [分割点:%s]", 
+    logger.info(string.format("save_spans: 保存成功 [来源:%s] [输入:%s] [分割点:%s]", 
         source, input, vertices_str))
     
     return true
@@ -86,7 +86,7 @@ end
 -- @return: {vertices_str, input, source, timestamp} 或 nil
 function spans_manager.get_spans(context)
     -- if not context then
-    --     logger:error("get_spans: context 不能为空")
+    --     logger.error("get_spans: context 不能为空")
     --     return nil
     -- end
     
@@ -96,7 +96,7 @@ function spans_manager.get_spans(context)
     local timestamp = context:get_property(SPANS_TIMESTAMP_KEY) or ""
     
     if vertices_str == "" or input == "" then
-        logger:debug("vertices_str == 空")
+        logger.debug("vertices_str == 空")
         return nil
     end
     
@@ -133,7 +133,7 @@ end
 -- @param reason: 清除原因
 function spans_manager.clear_spans(context, reason)
     if not context then
-        logger:error("clear_spans: context 不能为空")
+        logger.error("clear_spans: context 不能为空")
         return
     end
     
@@ -141,7 +141,7 @@ function spans_manager.clear_spans(context, reason)
     
     local existing_spans = spans_manager.get_spans(context)
     if existing_spans then
-        logger:info(string.format("clear_spans: 清除spans信息 [原因:%s] [原输入:%s] [原来源:%s]", 
+        logger.info(string.format("clear_spans: 清除spans信息 [原因:%s] [原输入:%s] [原来源:%s]", 
             reason, existing_spans.input, existing_spans.source))
     end
     
@@ -213,7 +213,7 @@ end
 -- @return: 是否成功保存
 function spans_manager.extract_and_save_from_candidate(context, candidate, input, source)
     if not candidate then
-        logger:error("extract_and_save_from_candidate: candidate 不能为空")
+        logger.error("extract_and_save_from_candidate: candidate 不能为空")
         return false
     end
     
@@ -222,16 +222,16 @@ function spans_manager.extract_and_save_from_candidate(context, candidate, input
     end)
     
     if not success or not spans then
-        logger:debug("extract_and_save_from_candidate: 候选词无spans信息")
+        logger.debug("extract_and_save_from_candidate: 候选词无spans信息")
         return false
     end
     
     local vertices = spans.vertices
     if not vertices or #vertices == 0 then
-        logger:debug("extract_and_save_from_candidate: spans中无vertices信息")
+        logger.debug("extract_and_save_from_candidate: spans中无vertices信息")
         return false
     end
-    logger:debug("extract_and_save_from_candidate函数中执行save_spans")
+    logger.debug("extract_and_save_from_candidate函数中执行save_spans")
     return spans_manager.save_spans(context, vertices, input, source)
 end
 
@@ -301,17 +301,17 @@ end
 function spans_manager.debug_info(context)
     local spans_info = spans_manager.get_spans(context)
     if spans_info then
-        logger:info("=== Spans Debug Info ===")
-        logger:info("输入: " .. spans_info.input)
-        logger:info("来源: " .. spans_info.source)
-        logger:info("时间戳: " .. spans_info.timestamp)
-        logger:info("分割点: " .. spans_info.vertices_str)
-        logger:info("分割点数组: " .. table.concat(spans_info.vertices, ","))
-        logger:info("========================")
+        logger.info("=== Spans Debug Info ===")
+        logger.info("输入: " .. spans_info.input)
+        logger.info("来源: " .. spans_info.source)
+        logger.info("时间戳: " .. spans_info.timestamp)
+        logger.info("分割点: " .. spans_info.vertices_str)
+        logger.info("分割点数组: " .. table.concat(spans_info.vertices, ","))
+        logger.info("========================")
     else
-        logger:info("=== Spans Debug Info ===")
-        logger:info("无spans信息")
-        logger:info("========================")
+        logger.info("=== Spans Debug Info ===")
+        logger.info("无spans信息")
+        logger.info("========================")
     end
 end
 
