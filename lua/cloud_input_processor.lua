@@ -6,7 +6,8 @@ local debug_utils = require("debug_utils")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("cloud_input_processor", {
-    enabled = true -- 可以通过这里控制日志开关
+    enabled = true, -- 可以通过这里控制日志开关
+    unified_log = false -- 启用日志以便测试
 })
 
 local cloud_input_processor = {}
@@ -72,6 +73,7 @@ end
 function cloud_input_processor.func(key, env)
     local engine = env.engine
     local context = engine.context
+    logger.info("测试虚拟按键: " .. key:repr())
     -- 返回值常量定义
     local kRejected = 0 -- 表示按键被拒绝
     local kAccepted = 1 -- 表示按键已被处理
@@ -87,6 +89,7 @@ function cloud_input_processor.func(key, env)
         local engine = env.engine
         local context = engine.context
         local input = context.input
+        
 
         if #input <= 1 then
             logger.info("input为1, 不判断直接退出")
@@ -110,6 +113,9 @@ function cloud_input_processor.func(key, env)
         logger.info("=== 开始分析lua/cloud_input_processor.lua ===")
         logger.info("当前按键: " .. key:repr())
         logger.info("当前input: " .. input)
+
+        logger.info("context:get_property:backtick_prompt " .. context:get_property("backtick_prompt"))
+        
         -- 首先打印seg的信息
         -- 使用debug_utils打印Segmentation信息
         -- debug_utils.print_segmentation_info(segmentation, logger)
@@ -142,12 +148,12 @@ function cloud_input_processor.func(key, env)
         -- 如果输入的是反引号,那么segmente_input是前边的内容, 
         -- 这就有两种情况, 一种是 wo` 一种是wo`ok`
         -- 如果是前边的情况, segmente_input为 input, 后面的情况 segmente_input为 wo`ok
-        -- 
-        if key:repr() == "grave" then
+        local key_repr = key:repr()
+        if key_repr == "grave" then
             -- segmente_input 后面追加一个反引号字符
             segmente_input = segmente_input .. "`"
             logger.info("检测到反引号输入，segmente_input 更新为: " .. segmente_input)
-        elseif key:repr() == "BackSpace" then
+        elseif key_repr == "BackSpace" then
             -- 删除按键之后,如果删除掉的是一个反引号,也应该马上触发
             segmente_input = segmente_input:sub(1, -2)
         end
@@ -164,6 +170,11 @@ function cloud_input_processor.func(key, env)
                 logger.info("backtick_prompt提示标志为 0, 设置为 1")
                 context:set_property("backtick_prompt", "1")
                 logger.info("backtick_prompt 已设置为 1")
+            end
+
+            if key_repr:match("^Release%+") then
+                logger.info("反引号状态下跳过按键事件: " .. key_repr)
+                return kAccepted
             end
 
             -- 定义需要转换为普通字符的按键
@@ -264,7 +275,6 @@ function cloud_input_processor.func(key, env)
                 ["Shift+bar"] = "|"
 
             }
-            local key_repr = key:repr()
             logger.info("key_repr: " .. key_repr)
             if handle_keys[key_repr] then
                 logger.info("处于反引号状态，将按键转为普通字符: " .. key_repr)
@@ -290,28 +300,28 @@ function cloud_input_processor.func(key, env)
         logger.info("=== 结束分析lua/cloud_input_processor.lua ===")
         logger.info("")
 
-        -- 定义需要跳过处理的按键
-        local skip_keys = {
-            ["Up"] = true,
-            ["Down"] = true,
-            ["space"] = true,
-            ["1"] = true,
-            ["2"] = true,
-            ["3"] = true,
-            ["4"] = true,
-            ["5"] = true,
-            ["6"] = true,
-            ["7"] = true,
-            ["8"] = true,
-            ["9"] = true,
-            ["0"] = true
-        }
-        -- 如果按键需要跳过,则不进行处理
-        local key_repr = key:repr()
-        if skip_keys[key_repr] then
-            logger.info("按键为上下键、空格键或数字键, 不进行处理")
-            return kNoop
-        end
+        -- -- 定义需要跳过处理的按键
+        -- local skip_keys = {
+        --     ["Up"] = true,
+        --     ["Down"] = true,
+        --     ["space"] = true,
+        --     ["1"] = true,
+        --     ["2"] = true,
+        --     ["3"] = true,
+        --     ["4"] = true,
+        --     ["5"] = true,
+        --     ["6"] = true,
+        --     ["7"] = true,
+        --     ["8"] = true,
+        --     ["9"] = true,
+        --     ["0"] = true
+        -- }
+        -- -- 如果按键需要跳过,则不进行处理
+        -- local key_repr = key:repr()
+        -- if skip_keys[key_repr] then
+        --     logger.info("按键为上下键、空格键或数字键, 不进行处理")
+        --     return kNoop
+        -- end
 
         -- 设置云输入法表示标
         set_cloud_translate_flag(context)

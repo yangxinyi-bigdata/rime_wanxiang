@@ -271,7 +271,7 @@ function ZH.func(input, env)
         index = index + 1
 
         -- 豁免百度云和反引号组合候选词backtick_combo
-        if cand.type == "baidu_cloud" or cand.type == "backtick_combo" then
+        if cand.type == "baidu_cloud" or cand.type == "ai_cloud" or cand.type == "backtick_combo" then
             yield(cand)
             goto continue
         end

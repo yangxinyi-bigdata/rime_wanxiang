@@ -7,7 +7,7 @@ symbol_table:
   full_shape:
     ' ' : { commit: '　' }
     ',' : { commit: ， }
-    '.' : { commit: 。 }
+    '.' : '。'
     '<' : [ 《, 〈, «, ‹ ]
     '>' : [ 》, 〉, », › ]
     '/' : [ ／, ÷ ]

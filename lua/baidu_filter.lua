@@ -32,7 +32,7 @@ end
 setup_lua_paths()
 
 local http = require("simplehttp")
-http.TIMEOUT = 0.5
+http.TIMEOUT = 0.3
 
 local function make_url(input, bg, ed)
     return 'https://olime.baidu.com/py?input=' .. input .. '&inputtype=py&bg=' .. bg .. '&ed=' .. ed ..

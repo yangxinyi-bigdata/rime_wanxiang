@@ -11,7 +11,9 @@ aux_code:
   single_fuzhu: true      # 单字母辅助码开关，true开启，false关闭
   fuzhu_mode : "all"     # 辅助模式有三种:0. all 匹配候选词中的所有字 1.single只当input中有三个字符的时候进行匹配 2.before,最后一个辅助码和最前边两个 input 字母进行匹配 3. after,最后一个辅助码和最后两个 input 字母进行匹配
   shuangpin_zrm_txt : "20250612_phrases_shuangpin_org.txt"
-  
+cloud_ai_filter:
+  max_cloud_candidates: 3
+  max_ai_candidates: 1
 
 super_comment:                 # 超级注释模块，子项配置 true 开启，false 关闭
   candidate_length: 1          # 候选词辅助码提醒的生效长度，0为关闭  但同时清空其它，应当使用上面开关来处理
@@ -36,9 +38,12 @@ schema:
     - wanxiang_lookup    #辅助码拆分注释、翻译注释、行政区划匹配、车牌、等等注释类显示滤镜，Lua专用：super_comment
     - wanxiang_en        #英文输入
     - wanxiang_charset   #字符集过滤器
+  my_shuru_schema: 自然码  #输入方案，必须与 set_shuru_schema 一致
 
 # 开关
-# reset: 默认状态。注释掉后，切换窗口时不会重置到默认状态。
+# reset註釋掉: 注释掉后，切换窗口时不会重置到默认状态。
+# reset:0 每次启动输入法或切换到该方案时，该开关都会被重置为第一个状态. 
+# reset:1 每次启动输入法或切换到该方案时，该开关都会被重置为第二个状态
 # states: 方案选单显示的名称。可以注释掉，仍可以通过快捷键切换。
 # abbrev: 默认的缩写取 states 的第一个字符，abbrev 可自定义一个字符
 switches:
@@ -46,7 +51,7 @@ switches:
     states: [ 中, 英 ]
     reset: 0
   - name: ascii_punct                  # 中英标点
-    states: [ 。, . ]
+    states: [ 。,. ]
     reset: 1
   - name: full_shape                   #全角、半角字符输出
     states: [ 半, 全 ]
@@ -57,6 +62,7 @@ switches:
     states: [ 译, 翻 ]
   - name: tone_display                 #开启后在输入编码的位置实时转换为带声调全拼，不开启则采用系统配置，快捷键配套ctrl+s,影响的是preedit_format,归属：super_preedit.lua
     states: [ 调, 声 ]
+    reset: 0
   - name: chaifen_switch               #开启后在候选的注释里面实时显示辅助码的拆分提醒优先级高于普通辅助提醒，不开启则采用系统配置，快捷键配套ctrl+c,影响的是comment_format，归属：super_comment.lua
     states: [ 分, 拆 ]
   - name: charset_filter               #字符集过滤，默认开启8105通规显示，即小字集，可通过开关实时开启全字集，快捷键配套ctrl+g,归属：chars_filter.lua
@@ -151,8 +157,9 @@ engine:
     - lua_filter@*super_tips*M                      #超级提示模块：表情、简码、翻译、化学式、等等靠你想象
     - lua_filter@*super_comment                     #超级注释模块，支持错词提示、辅助码显示，部件组字读音注释，支持个性化配置和关闭相应的功能，详情搜索super_comment进行详细配置
     - lua_filter@*text_formatting                   #给自定义用户词扩展一个换行:\n, 制表符：\t, 回车符：\r, 空格：\s
-    - lua_filter@*baidu_filter                      #百度云输入法API调用，支持百度云输入法的候选词获取   
-    - lua_filter@*punct_eng_chinese_filter          # 将候选项当中的英文标点转换为中文标点 
+    # - lua_filter@*baidu_filter                      #百度云输入法API调用，支持百度云输入法的候选词获取
+    - lua_filter@*cloud_ai_filter                   #AI大模型转换的候选词
+    - lua_filter@*punct_eng_chinese_filter          # 将候选项当中的英文标点转换为中文标点
     - uniquifier                                    #去重
 
 
@@ -364,7 +371,13 @@ recognizer:
     gregorian_to_lunar: "^N[0-9]{1,8}"  # 脚本将自动获取第 2 个字符 N 作为触发前缀，响应 lua_translator@lunar，公历转农历，输入 N20240115 得到「二〇二三年腊月初五」
     calculator: "^V.*$"                 #计算器功能引导，，，，
     quick_symbol: "^;.*$"  # 快符引导，例如输入;q 后自动上屏快速符号，双击;;重复上屏
-    
+    # email: "^[A-Za-z][-_.0-9A-Za-z]*@.*$"                            # email @ 之后不上屏
+    # url: "^(www[.]|https?:|ftp[.:]|mailto:|file:).*$|^[a-z]+[.].+$"  # URL
+    # underscore: "^[A-Za-z]+_.*"  # 下划线不上屏
+    # url_2: "^[A-Za-z]+[.].*"   # 句号不上屏，支持 google.com abc.txt 等网址或文件名，使用句号翻页时需要注释掉
+    # colon: "^[A-Za-z]+:.*"     # 冒号不上屏
+
+  
 # 标点符号
 # punctuator 下面有三个子项：
 # 设置为一个映射，就自动上屏；设置为多个映射，如 '/' : [ '/', ÷ ] 则进行复选。
@@ -375,7 +388,8 @@ recognizer:
 #              '`'（反引号）没有改成 '·'（间隔号）。
 #   symbols    Rime 的预设配置是以 '/' 前缀开头输出一系列字符，自定义的修改 symbols.yaml
 punctuator:
-  digit_separators: ":,."  #数字分隔符（移除逗号避免冲突）
+  digit_separators: ""  #数字分隔符,.（移除逗号避免冲突）
+  # digit_separator_action: "commit"  # 输入分隔符后立即提交
   __include: wanxiang_symbols:/symbol_table         # 从 symbols.yaml 导入配置
 
 # 从 default 继承快捷键
@@ -482,7 +496,7 @@ speller:
 #  auto_select: true
 #  auto_select_pattern: ^[a-z]+/|^[a-df-zA-DF-Z]\w{3}|^e\w{4}
   # 如果不想让什么标点直接上屏，可以加在 alphabet，或者编辑标点符号为两个及以上的映射
-  alphabet: zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA1234567890`,.?!-;:'"()<>[]{}@#$%^&*+=_/\|~  # <> 加入 ` 作为辅码引导符 # ，。“”：；『』【】（）
+  alphabet: zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA1234567890`,.:-?!;'"()<>[]{}@#$%^&*+=_/\|~  # <> 加入 ` 作为辅码引导符 # ，。“”：；『』【】（）
   # initials 定义仅作为始码的按键，排除 ` 让单个的 ` 可以直接上屏
   initials: zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA`
   delimiter: " '"  # 第一位<空格>是拼音之间的分隔符；第二位<'>表示可以手动输入单引号来分割拼音。

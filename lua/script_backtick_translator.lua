@@ -9,7 +9,7 @@ local spans_manager = require("spans_manager")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("script_backtick_translator", {
-    enabled = true -- 启用日志以便调试
+    enabled = false -- 启用日志以便调试
 })
 
 local script_backtick_translator = {}
@@ -324,8 +324,11 @@ function script_backtick_translator.func(input, seg, env)
             status))
         -- 打印开始和结束位置
         logger.info(string.format("片段开始位置: %d, 结束位置: %d", segments[1].start, segments[1]._end))
+        -- 在这里也应该添加chinese_pos数据, 后面标点符号替换的时候才能豁免.
+        -- chinese_pos里面添加的是什么来着？应该是中文的部分,也就是说,如果第一段就是英文的话,应该只有一个候选词.
+        local chinese_pos = "chinese_pos:" .. seg.start + segments[1].length .. "," .. seg.start + segments[1].length .. ","
         local cand_temp = Candidate("backtick_combo", seg.start, seg.start + segments[1].length, segments[1].content,
-            "   [英文]")
+            chinese_pos)
         yield(cand_temp)
 
         return

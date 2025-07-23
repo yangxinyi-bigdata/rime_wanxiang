@@ -384,6 +384,11 @@ function text_splitter.has_punctuation_no_backtick(text, logger)
         has_punct = true
     end
 
+    -- 中文标点也添加进来
+    if string.find(text, "[， 。 ？ ！ ： ； （ ）【 】 ｛ ｝ 《 》 “ ”‘ ’ 、 …… — · 〈 〉「 」 『 』 〔 〕 〖 〗]") then
+        has_punct = true
+    end
+
     logger.info("has_punct(no backtick): " .. tostring(has_punct))
 
     return has_punct

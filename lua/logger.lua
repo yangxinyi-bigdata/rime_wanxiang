@@ -7,8 +7,21 @@
 -- 2. 统一模式：所有模块输出到同一个日志文件
 --    将 default_config.unified_log 设置为 true
 --    可通过 default_config.unified_log_file 自定义文件名
+-- 3. 控制台输出：可以通过 default_config.console_output 设置为 true
+--    来同时将日志输出到控制台，便于调试
+-- 4. 日志级别控制：通过 logger.set_log_level() 设置日志输出级别
+--    可用级别：DEBUG < INFO < WARN < ERROR
+--    只有大于等于设置级别的日志才会被输出
 
 local logger = {}
+
+-- 日志级别定义
+local LOG_LEVELS = {
+    DEBUG = 1,
+    INFO = 2,
+    WARN = 3,
+    ERROR = 4
+}
 
 -- 默认配置
 local default_config = {
@@ -16,7 +29,9 @@ local default_config = {
     log_dir = "/Users/yangxinyi/Library/Rime/log/",
     timestamp_format = "%Y-%m-%d %H:%M:%S",
     unified_log = true,  -- 是否统一输出到同一个日志文件
-    unified_log_file = "all_modules.log"  -- 统一日志文件名
+    unified_log_file = "all_modules.log",  -- 统一日志文件名
+    console_output = false,  -- 是否同时输出到控制台
+    log_level = "INFO"  -- 日志输出级别：DEBUG, INFO, WARN, ERROR
 }
 
 -- 配置管理函数
@@ -24,6 +39,18 @@ function logger.set_unified_mode(enabled, filename)
     default_config.unified_log = enabled
     if filename then
         default_config.unified_log_file = filename
+    end
+end
+
+function logger.set_console_output(enabled)
+    default_config.console_output = enabled
+end
+
+function logger.set_log_level(level)
+    if LOG_LEVELS[level] then
+        default_config.log_level = level
+    else
+        error("无效的日志级别: " .. tostring(level) .. "。可用级别: DEBUG, INFO, WARN, ERROR")
     end
 end
 
@@ -61,7 +88,9 @@ function logger.create(module_name, config)
         module_name = module_name,
         log_file_path = log_file_path,
         timestamp_format = log_config.timestamp_format,
-        unified_log = log_config.unified_log
+        unified_log = log_config.unified_log,
+        console_output = log_config.console_output,
+        log_level = log_config.log_level
     }
     
     -- 清空日志文件函数
@@ -120,6 +149,16 @@ function logger.create(module_name, config)
             return
         end
         
+        -- 检查日志级别过滤
+        level = level or "INFO"
+        local current_level_value = LOG_LEVELS[log_instance.log_level] or LOG_LEVELS["INFO"]
+        local message_level_value = LOG_LEVELS[level] or LOG_LEVELS["INFO"]
+        
+        -- 如果消息级别低于当前设置的级别，不输出
+        if message_level_value < current_level_value then
+            return
+        end
+        
         -- 如果message是nil，替换成空字符串
         if message == nil then
             message = ""
@@ -130,6 +169,13 @@ function logger.create(module_name, config)
         local log_message = string.format("[%s] [%s] [%s] %s\n", 
             timestamp, level, log_instance.module_name, message)
         
+        -- 如果启用了控制台输出，同时输出到控制台
+        if log_instance.console_output then
+            print(string.format("[%s] [%s] [%s] %s", 
+                timestamp, level, log_instance.module_name, message))
+        end
+        
+        -- 写入到文件
         local success, error_msg = pcall(function()
             local file = io.open(log_instance.log_file_path, "a")
             if file then
@@ -141,7 +187,8 @@ function logger.create(module_name, config)
         end)
         
         if not success then
-            print("写入日志失败: " .. tostring(error_msg))
+            local error_info = "写入日志失败: " .. tostring(error_msg)
+            print(error_info)
         end
     end
     

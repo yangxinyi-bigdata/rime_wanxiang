@@ -4,7 +4,7 @@
 --]]
 
 local logger_module = require("logger")
-local json = require("json")  -- 如果可用
+local json = require("json")  -- 这个处理json
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("named_pipe_cached_sync", {
@@ -21,8 +21,13 @@ end
 
 -- 命名管道缓存系统
 local pipe_cache_system = {
+    -- 原有管道：Lua写入，Python读取
     pipe_name = "/tmp/rime_state_pipe",
     pipe_handle = nil,
+    
+    -- 反向管道：Python写入，Lua读取
+    reverse_pipe_name = "/tmp/rime_reverse_pipe",
+    reverse_pipe_handle = nil,
     
     -- 应用层缓存
     state_cache = {},
@@ -42,8 +47,17 @@ local pipe_cache_system = {
     -- 添加写入失败计数
     write_failure_count = 0,
     max_failure_count = 3,
+    
+    -- 反向管道相关
+    has_python_writer = nil,
+    last_writer_check = 0,
+    reverse_read_buffer = {},
+    last_reverse_read = 0,
+    reverse_read_interval = 100,  -- 100ms读取间隔
+    
     -- 状态
-    is_initialized = false
+    is_initialized = false,
+    reverse_initialized = false
 }
 
 
@@ -69,6 +83,30 @@ function M.init_pipe_cache()
     end
     
     logger.error("命名管道缓存系统初始化失败")
+    return false
+end
+
+-- 初始化反向管道（Python写入，Lua读取）
+function M.init_reverse_pipe()
+    logger.info("pipe_cache_system.reverse_initialized: " .. tostring(pipe_cache_system.reverse_initialized))
+    if pipe_cache_system.reverse_initialized then
+        return true
+    end
+    
+    -- 创建反向命名管道
+    local success = os.execute("mkfifo " .. pipe_cache_system.reverse_pipe_name .. " 2>/dev/null")
+    
+    -- 以非阻塞读取模式打开管道
+    pipe_cache_system.reverse_pipe_handle = io.open(pipe_cache_system.reverse_pipe_name, "r+")
+    if pipe_cache_system.reverse_pipe_handle then
+        -- 设置非阻塞模式
+        pipe_cache_system.reverse_pipe_handle:setvbuf("no")
+        pipe_cache_system.reverse_initialized = true
+        logger.info("反向管道初始化成功")
+        return true
+    end
+    
+    logger.error("反向管道初始化失败")
     return false
 end
 
@@ -171,7 +209,7 @@ function M.has_pipe_reader()
     
     -- 构建命令，使用 grep -c 直接返回计数
     local cmd = string.format(
-        "lsof -p $(pgrep -f python3) 2>/dev/null | grep -c '%s'",
+        "pgrep python | xargs -I {} lsof -p {} 2>/dev/null | grep -c %s",
         pipe_cache_system.pipe_name
     )
     local handle = io.popen(cmd)
@@ -185,6 +223,34 @@ function M.has_pipe_reader()
     pipe_cache_system.last_reader_check = current_time
     
     return pipe_cache_system.has_python_reader
+end
+
+-- 检查反向管道的Python写入端
+function M.has_reverse_pipe_writer()
+    local current_time = get_current_time_ms()
+    
+    -- 使用缓存的检测结果
+    if pipe_cache_system.has_python_writer ~= nil and 
+       (current_time - pipe_cache_system.last_writer_check) < pipe_cache_system.reader_check_interval then
+        return pipe_cache_system.has_python_writer
+    end
+    
+    -- 检查Python进程是否在写入反向管道
+    local cmd = string.format(
+        "pgrep python | xargs -I {} lsof -p {} 2>/dev/null | grep -c %s",
+        pipe_cache_system.reverse_pipe_name
+    )
+    local handle = io.popen(cmd)
+    local result = handle:read("*a")
+    handle:close()
+    
+    local writer_count = tonumber(result) or 0
+    -- 更新缓存
+    pipe_cache_system.has_python_writer = writer_count > 0
+    pipe_cache_system.last_writer_check = current_time
+    logger.warn("存在Python进程是否在写入反向管道")
+    
+    return pipe_cache_system.has_python_writer
 end
 
 -- 安全写入
@@ -216,6 +282,100 @@ function M.flush_batch_to_pipe()
     end
 end
 
+-- 从反向管道读取数据
+function M.read_from_reverse_pipe()
+    if not pipe_cache_system.reverse_initialized then
+        return nil
+    end
+    
+    -- 检查是否有写入端
+    if not M.has_reverse_pipe_writer() then
+        return nil
+    end
+    
+    if not pipe_cache_system.reverse_pipe_handle then
+        return nil
+    end
+    
+    -- 尝试读取所有可用数据
+    local data = pipe_cache_system.reverse_pipe_handle:read("*a")  -- 读取所有可用数据
+    
+    if data and #data > 0 then
+        -- 按行分割数据，支持多条命令
+        local lines = {}
+        for line in data:gmatch("[^\r\n]+") do
+            if #line > 0 then
+                table.insert(lines, line)
+            end
+        end
+        
+        -- 返回第一个完整的JSON行（如果有多行，其他的会在下次调用时处理）
+        if #lines > 0 then
+            local json_line = lines[1]
+            logger.info("从反向管道读取到数据: " .. json_line)
+            return json_line
+        end
+    end
+    
+    return nil
+end
+
+-- 解析从Python端接收的数据
+function M.parse_reverse_data(data)
+    if not data or #data == 0 then
+        return nil
+    end
+    
+    local success, parsed_data = pcall(json.decode, data)
+    
+    if success and parsed_data then
+        logger.info("解析反向数据成功: " .. tostring(parsed_data.command or "unknown"))
+        return parsed_data
+    else
+        logger.error("解析反向数据失败: " .. tostring(data))
+        return nil
+    end
+end
+
+-- 处理从Python端接收的命令
+function M.handle_reverse_command(parsed_data)
+    if not parsed_data or not parsed_data.command then
+        return false
+    end
+    
+    local command = parsed_data.command
+    logger.info("处理反向命令: " .. command)
+    
+    if command == "ping" then
+        -- 响应ping命令
+        logger.info("收到ping命令")
+        return true
+    elseif command == "get_status" then
+        -- 返回当前状态
+        logger.info("收到状态查询命令")
+        return true
+    elseif command == "clear_cache" then
+        -- 清理缓存
+        M.force_flush_cache()
+        logger.info("收到清理缓存命令")
+        return true
+    else
+        logger.warn("未知的反向命令: " .. command)
+        return false
+    end
+end
+
+-- 定期处理反向管道数据
+function M.process_reverse_pipe()
+    local data = M.read_from_reverse_pipe()
+    if data then
+        local parsed_data = M.parse_reverse_data(data)
+        if parsed_data then
+            M.handle_reverse_command(parsed_data)
+        end
+    end
+end
+
 -- 状态更新（集成缓存）
 function M.update_state_cached(context)
     local success, error_msg = pcall(function()
@@ -234,6 +394,12 @@ function M.update_state_cached(context)
         
         -- 写入缓存管道
         M.write_to_pipe_cached(json_data)
+        
+        -- 只有在反向管道初始化成功时才处理反向管道数据
+        if pipe_cache_system.reverse_initialized then
+            M.process_reverse_pipe()
+        end
+        
         -- logger.info("状态更新成功: " .. tostring(json_data))
     end)
     
@@ -247,15 +413,25 @@ end
 
 -- 序列化状态数据
 function M.serialize_state(state)
-    local json_str = "{\n"
-    json_str = json_str .. '  "is_composing": ' .. tostring(state.is_composing) .. ',\n'
-    json_str = json_str .. '  "input_mode": "' .. state.input_mode .. '",\n'
-    json_str = json_str .. '  "input_text": "' .. state.input_text .. '",\n'
-    json_str = json_str .. '  "timestamp": ' .. state.timestamp .. '\n'
-    json_str = json_str .. "}"
-    
-    return json_str
+    -- local json_str = "{\n"
+    -- json_str = json_str .. '  "is_composing": ' .. tostring(state.is_composing) .. ',\n'
+    -- json_str = json_str .. '  "input_mode": "' .. state.input_mode .. '",\n'
+    -- json_str = json_str .. '  "input_text": "' .. state.input_text .. '",\n'
+    -- json_str = json_str .. '  "timestamp": ' .. state.timestamp .. '\n'
+    -- json_str = json_str .. "}"
+    -- logger.debug("手工处理json_str: " .. tostring(json_str))
+    local success, json_str = pcall(json.encode, state)
+    if success then
+        logger.debug("JSON序列化成功")
+        logger.debug("json_str: " .. tostring(json_str))
+        return json_str
+    else
+        logger.error("JSON序列化失败")
+        logger.debug("json_str: " .. tostring(json_str))
+        return nil
+    end
 end
+
 
 -- 强制刷新缓存
 function M.force_flush_cache()
@@ -277,7 +453,10 @@ function M.get_cache_stats()
         cache_size = 0,
         batch_size = #pipe_cache_system.batch_buffer,
         hit_ratio = 0,
-        is_initialized = pipe_cache_system.is_initialized
+        is_initialized = pipe_cache_system.is_initialized,
+        reverse_initialized = pipe_cache_system.reverse_initialized,
+        has_python_reader = pipe_cache_system.has_python_reader,
+        has_python_writer = pipe_cache_system.has_python_writer
     }
     
     for _ in pairs(pipe_cache_system.state_cache) do
@@ -298,6 +477,11 @@ function M.init()
         logger.error("管道缓存初始化失败")
         return false
     end
+    
+    -- 初始化反向管道
+    if not M.init_reverse_pipe() then
+        logger.warn("反向管道初始化失败，但不影响主要功能")
+    end
 
     logger.info("命名管道缓存系统初始化完成")
     return true
@@ -311,15 +495,36 @@ function M.fini(env)
     -- 强制刷新缓存
     M.force_flush_cache()
     
-    -- 关闭管道
+    -- 关闭原有管道
     if pipe_cache_system.pipe_handle then
         pipe_cache_system.pipe_handle:close()
     end
     
+    -- 关闭反向管道
+    if pipe_cache_system.reverse_pipe_handle then
+        pipe_cache_system.reverse_pipe_handle:close()
+    end
+    
     -- 清理管道文件
     os.remove(pipe_cache_system.pipe_name)
+    os.remove(pipe_cache_system.reverse_pipe_name)
     
     logger.info("命名管道缓存系统清理完成")
+end
+
+-- 公开接口：手动处理反向管道数据
+function M.manual_process_reverse_pipe()
+    return M.process_reverse_pipe()
+end
+
+-- 公开接口：获取反向管道名称
+function M.get_reverse_pipe_name()
+    return pipe_cache_system.reverse_pipe_name
+end
+
+-- 公开接口：检查反向管道状态
+function M.is_reverse_pipe_ready()
+    return pipe_cache_system.reverse_initialized and M.has_reverse_pipe_writer()
 end
 
 return M

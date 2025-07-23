@@ -12,11 +12,12 @@ import sys
 from typing import Dict, Optional
 
 class RimeStateTestReader:
-    def __init__(self, pipe_path: str = "/tmp/rime_state_pipe"):
+    def __init__(self, pipe_path: str = "/tmp/rime_state_pipe", debug: bool = False):
         self.pipe_path = pipe_path
         self.pipe_fd = None
         self.running = True
         self.message_count = 0
+        self.debug = debug
         
     def signal_handler(self, signum, frame):
         """处理 Ctrl+C 信号"""
@@ -56,16 +57,39 @@ class RimeStateTestReader:
                 if line:
                     line = line.strip()
                     if line:
+                        if self.debug:
+                            print(f"[DEBUG] 读取行: {line}")
+                        
                         buffer += line + "\n"
                         
-                        # 尝试解析 JSON（当遇到完整的 JSON 对象时）
+                        # 检查是否是单行JSON（包含完整的JSON对象）
+                        if line.startswith("{") and line.endswith("}"):
+                            try:
+                                if self.debug:
+                                    print(f"[DEBUG] 尝试解析单行JSON: {line}")
+                                # 直接解析单行JSON
+                                json_data = json.loads(line)
+                                self.process_message(json_data)
+                                buffer = ""  # 清空缓冲区
+                                continue
+                            except json.JSONDecodeError as e:
+                                if self.debug:
+                                    print(f"[DEBUG] 单行JSON解析失败: {e}")
+                                # 如果单行解析失败，继续用多行模式
+                                pass
+                        
+                        # 尝试解析 JSON（当遇到完整的 JSON 对象时）- 多行模式
                         if line == "}":
                             try:
+                                if self.debug:
+                                    print(f"[DEBUG] 尝试解析多行JSON缓冲区: {buffer.strip()}")
                                 # 解析累积的 JSON 数据
                                 json_data = json.loads(buffer.strip())
                                 self.process_message(json_data)
                                 buffer = ""  # 清空缓冲区
-                            except json.JSONDecodeError:
+                            except json.JSONDecodeError as e:
+                                if self.debug:
+                                    print(f"[DEBUG] 多行JSON解析失败: {e}")
                                 # JSON 不完整，继续累积
                                 pass
                 else:
@@ -107,7 +131,12 @@ def main():
     print("按 Ctrl+C 停止读取")
     print()
     
-    reader = RimeStateTestReader()
+    # 支持调试模式
+    debug_mode = len(sys.argv) > 1 and sys.argv[1] == "--debug"
+    if debug_mode:
+        print("启用调试模式")
+    
+    reader = RimeStateTestReader(debug=debug_mode)
     
     if not reader.connect():
         print("无法连接到 Rime 状态管道")

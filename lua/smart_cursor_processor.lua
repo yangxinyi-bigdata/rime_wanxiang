@@ -12,7 +12,27 @@ local logger = logger_module.create("smart_cursor_processor", {
     unified_log = false -- 启用日志以便测试
 })
 
-local sync_module = require("named_pipe_cached_sync")
+local tcp_socket = nil
+local ok, err = pcall(function()
+    tcp_socket = require("tcp_socket_sync")
+end)
+if not ok then
+    logger.error("加载 tcp_socket_sync 失败: " .. tostring(err))
+else
+    logger.info("加载 tcp_socket_sync 成功")
+    if tcp_socket then
+        local ok_init, err = pcall(function()
+            tcp_socket.init()
+        end)
+        if not ok_init then
+            logger.error("sync_module.init() 执行失败: " .. tostring(err))
+        else
+            logger.info("sync_module.init() 执行成功")
+        end
+    else
+        logger.error("sync_module为nil，尽管require没有报错")
+    end
+end
 
 -- local RimeTcpServer = require("rime_socket_server")
 
@@ -60,14 +80,20 @@ function smart_cursor_processor.init(env)
         ['"'] = true
     }
 
-    -- 初始化同步系统
-    local ok_init, err = pcall(function()
-
-        sync_module.init()
-    end)
-    if not ok_init then
-        logger.error("sync_module.init() 执行失败: " .. tostring(err))
-    end
+    -- -- 初始化同步系统
+    -- if not context:get_option("tcp_socket") and tcp_socket then
+    --     local ok_init, err = pcall(function()
+    --         tcp_socket.init()
+    --     end)
+    --     if not ok_init then
+    --         logger.error("sync_module.init() 执行失败: " .. tostring(err))
+    --     else
+    --         logger.info("sync_module.init() 执行成功")
+    --     end
+    --     context:set_option("tcp_socket", true)
+    -- else
+    --     logger.error("sync_module为nil，跳过初始化")
+    -- end
     -- if not context:get_option("http_server") then
 
     --     RimeTcpServer.init(env)
@@ -127,36 +153,86 @@ function smart_cursor_processor.init(env)
 
     -- end)
 
-    -- -- update_notifier每次都检查http服务器是否有收到新的消息
-    -- env.http_server_update_notifier = context.update_notifier:connect(function()
-    --     -- 测试 HTTP 服务器模块
-
-    --     -- logger.debug("触发http_server_update_notifier context更新通知")
-    --     RimeTcpServer:process()
-    --     logger.debug("HTTP消息处理成功")
-    --     -- 将env传入
-    --     -- local engine = env.engine
-    --     -- local context = engine.context
-    --     -- if not context:is_composing() then
-    --     --     -- 使用静态变量确保只初始化一次
-    --     --     if rime_http_server then
-    --     --         rime_http_server.set_rime_context(env)
-    --     --     end
-    --     -- end
-
-    -- end)
-
     -- env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function()
     --     -- logger.debug("触发unhandled_key_notifier更新通知")
     --     RimeTcpServer:process()
     --     logger.debug("unhandled_key_notifier更新通知HTTP消息处理成功")
     -- end)
 
-    env.custom_update_notifier = context.update_notifier:connect(function(context)
-        -- 自定义处理逻辑
-        logger.info("状态更新: " .. context.input)
-        -- 调用同步系统
-        sync_module.update_state_cached(context)
+    -- env.custom_update_notifier = context.update_notifier:connect(function(context)
+    --     -- 防止递归调用的标志
+    --     if context:get_property("tcp_sync_in_progress") == "true" then
+    --         logger.debug("tcp_socket.sync_with_server() 正在进行中，跳过本次调用")
+    --         return
+    --     end
+
+    --     if tcp_socket then
+    --         -- 设置标志，表示正在进行同步
+    --         context:set_property("tcp_sync_in_progress", "true")
+
+    --         local success, err = pcall(function()
+    --             tcp_socket.sync_with_server()
+    --         end)
+
+    --         if not success then
+    --             logger.error("tcp_socket.sync_with_server() 调用失败: " .. tostring(err))
+    --         end
+
+    --         -- 清除标志
+    --         context:set_property("tcp_sync_in_progress", "false")
+    --     else
+    --         logger.debug("sync_module为nil，跳过状态更新")
+    --     end
+    -- end)
+
+    env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
+        if tcp_socket then
+            tcp_socket.sync_with_server(context)
+        else
+            logger.debug("sync_module为nil，跳过状态更新")
+        end
+    end)
+
+    env.new_update_notifier = context.update_notifier:connect(function(context)
+        -- 防止递归调用的标志
+        if context:get_property("tcp_sync_in_progress") == "true" then
+            logger.debug("tcp_socket.sync_with_server() 正在进行中，跳过本次调用")
+            return
+        end
+
+        -- 判断is_composing状态是否发生了变化
+        local current_is_composing = context:is_composing()
+        local previous_is_composing = context:get_property("previous_is_composing")
+
+        -- 如果没有记录过previous状态，则初始化
+        if previous_is_composing == "" then
+            context:set_property("previous_is_composing", tostring(current_is_composing))
+            logger.debug("初始化 previous_is_composing: " .. tostring(current_is_composing))
+            return
+        end
+
+        -- 转换字符串为布尔值
+        local prev_state = (previous_is_composing == "true")
+
+        -- 检查状态是否发生变化
+        if current_is_composing ~= prev_state then
+            logger.debug("is_composing状态发生变化: " .. tostring(prev_state) .. " -> " ..
+                             tostring(current_is_composing))
+            logger.debug("从输入状态变化，触发发送当前开关信息.")
+            if tcp_socket then
+                -- 传递option信息
+                tcp_socket.sync_with_server(context, true)
+            else
+                logger.debug("sync_module为nil，跳过状态更新")
+            end
+            -- 更新记录的状态
+            context:set_property("previous_is_composing", tostring(current_is_composing))
+        else
+            -- 发送普通状态信息
+            tcp_socket.sync_with_server(context)
+        end
+        -- 清除标志
+        context:set_property("tcp_sync_in_progress", "false")
     end)
 
 end
@@ -650,12 +726,31 @@ end
 
 function smart_cursor_processor.fini(env)
     logger.info("智能光标移动处理器结束运行")
+
+    -- 清理TCP同步标志
+    local context = env.engine.context
+    if context then
+        context:set_property("tcp_sync_in_progress", "false")
+    end
+
     if env.update_notifier then
         env.update_notifier:disconnect()
     end
 
     if env.custom_update_notifier then
         env.custom_update_notifier:disconnect()
+    end
+
+    if env.new_update_notifier then
+        env.new_update_notifier:disconnect()
+    end
+
+    if env.custom_commit_notifier then
+        env.custom_commit_notifier:disconnect()
+    end
+
+    if env.unhandled_key_notifier then
+        env.unhandled_key_notifier:disconnect()
     end
 
     if env.http_server_update_notifier then

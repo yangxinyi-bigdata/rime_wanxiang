@@ -9,7 +9,7 @@ local spans_manager = require("spans_manager")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("punct_eng_chinese_filter", {
-    enabled = true -- 可以通过这里控制日志开关
+    enabled = false -- 可以通过这里控制日志开关
 })
 
 local punct_eng_chinese_filter = {}
@@ -97,15 +97,19 @@ function punct_eng_chinese_filter.func(translation, env)
             -- 当 count 等于 1 的时候，这个时候判断是否有标点符号，如果没有则后面不用判断了。
             if count == 1 then
 
-                -- todo: 这个地方可能要修改,应该是判断去掉反引号部分的其他内容是否含有标点符号,反引号里面的是不需要替换的
+                logger.info("text_splitter.has_punctuation_no_backtick(cand.text, logger): " .. tostring(text_splitter.has_punctuation_no_backtick(cand.text, logger)))
+                logger.info("cand.text: " .. cand.text)
                 if cand.text and text_splitter.has_punctuation_no_backtick(cand.text, logger) then
                     punch_flag = true
-                    -- 检查是否已有spans信息，如果没有则尝试保存
+                    logger.info("cand.text: " .. cand.text)
+                    -- 检查是否已有spans信息，如果没有则尝试保存, 
                     local existing_spans = spans_manager.get_spans(context)
+                    logger.info("existing_spans: " .. tostring(existing_spans))
                     if not existing_spans then
                         -- 尝试从候选词中提取并保存spans信息
                         spans_manager.extract_and_save_from_candidate(context, cand, context.input,
                             "punct_eng_chinese_filter")
+                            logger.info("existing_spans: " .. tostring(existing_spans))
                     else
                         logger.info("已存在spans信息，来源: " .. existing_spans.source)
                     end
@@ -114,7 +118,7 @@ function punct_eng_chinese_filter.func(translation, env)
 
             -- 检查输入是否包含反引号标签
             local new_text = ""
-            if punch_flag and count < 5 then
+            if punch_flag and count < 10 then
                 local cand_text = cand.text
                 local cand_type = cand.type
                 local cand_comment = cand.comment
@@ -152,6 +156,8 @@ function punct_eng_chinese_filter.func(translation, env)
                 -- Candidate(type, start, end, text, comment)
                 if cand_type == "baidu_cloud" then
                     cand_comment = "   [云输入]"
+                elseif cand_type == "ai_cloud" then
+                    cand_comment = "   [AI识别]"
                 elseif cand_type == "backtick_combo" then
                     cand_comment = ""
                 end
