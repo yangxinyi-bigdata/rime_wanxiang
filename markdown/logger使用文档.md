@@ -93,7 +93,7 @@ local log = logger.create("my_module", {
     enabled = true,           -- 是否启用日志
     log_level = "DEBUG",      -- 日志级别
     console_output = true,    -- 是否输出到控制台
-    unified_log = false,      -- 是否使用统一日志文件
+    unique_file_log = false,      -- 是否使用统一日志文件
     log_dir = "/custom/path/" -- 自定义日志目录
 })
 ```

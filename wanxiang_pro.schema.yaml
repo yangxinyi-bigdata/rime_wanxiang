@@ -1,27 +1,5 @@
 # Rime schema
 # encoding: utf-8
-#############DIY你想要的方案组合,试试搭配一个自然码+墨奇辅助的方案吧！###########################
-set_shuru_schema:              #配置此项就是选择什么输入法,同时拆分反查和中英文混输也将匹配该输入方案
-  __include:  自然码            #可选解码规则有   全拼,自然码, 自然龙, 汉心龙, 小鹤双拼, 搜狗双拼, 微软双拼, 智能ABC, 紫光双拼， 国标双拼， 龙三 选择一个填入
-set_fuzhu_schema:              #配置此项就是选择什么输入法,同时拆分反查和中英文混输也将匹配该输入方案
-  __include: 间接辅助           #可选解码规则有:  直接辅助, 间接辅助  选择一个填入
-set_cn_en:                     #中英混输
-  user_dict: en_dicts/zrm      #可选的值有：en_dicts/pinyin， en_dicts/zrm， en_dicts/flypy ，en_dicts/mspy， en_dicts/sogou， en_dicts/pinyin
-aux_code:
-  single_fuzhu: true      # 单字母辅助码开关，true开启，false关闭
-  fuzhu_mode : "all"     # 辅助模式有三种:0. all 匹配候选词中的所有字 1.single只当input中有三个字符的时候进行匹配 2.before,最后一个辅助码和最前边两个 input 字母进行匹配 3. after,最后一个辅助码和最后两个 input 字母进行匹配
-  shuangpin_zrm_txt : "20250612_phrases_shuangpin_org.txt"
-cloud_ai_filter:
-  max_cloud_candidates: 3
-  max_ai_candidates: 1
-
-super_comment:                 # 超级注释模块，子项配置 true 开启，false 关闭
-  candidate_length: 1          # 候选词辅助码提醒的生效长度，0为关闭  但同时清空其它，应当使用上面开关来处理
-  corrector_type: "{comment}"  # 换一种显示类型，比如"({comment})" 
-  fuzhu_type: fuzhu          # 分包这是一个固定搭配，声调可以使用开关控制
-__include: octagram            #启用语言模型
-#__include: set_chord_composer  #启用并击处理，不懂得不要开启就是了
-########################以下是方案配置######################################################
 
 # 方案说明
 schema:
@@ -40,6 +18,30 @@ schema:
     - wanxiang_charset   #字符集过滤器
   my_shuru_schema: 自然码  #输入方案，必须与 set_shuru_schema 一致
 
+#############DIY你想要的方案组合,试试搭配一个自然码+墨奇辅助的方案吧！###########################
+set_shuru_schema:              #配置此项就是选择什么输入法,同时拆分反查和中英文混输也将匹配该输入方案
+  __include: 自然码            #可选解码规则有   全拼,自然码, 自然龙, 汉心龙, 小鹤双拼, 搜狗双拼, 微软双拼, 智能ABC, 紫光双拼， 国标双拼， 龙三 选择一个填入
+set_fuzhu_schema:              #配置此项就是选择什么输入法,同时拆分反查和中英文混输也将匹配该输入方案
+  __include: 间接辅助           #可选解码规则有:  直接辅助, 间接辅助  选择一个填入
+set_cn_en:                     #中英混输
+  user_dict: en_dicts/zrm      #可选的值有：en_dicts/pinyin， en_dicts/zrm， en_dicts/flypy ，en_dicts/mspy， en_dicts/sogou， en_dicts/pinyin
+aux_code:
+  single_fuzhu: true      # 单字母辅助码开关，true开启，false关闭
+  fuzhu_mode: "all"      # 辅助模式有三种:0. all 匹配候选词中的所有字 1.single只当input中有三个字符的时候进行匹配 2.before,最后一个辅助码和最前边两个 input 字母进行匹配 3. after,最后一个辅助码和最后两个 input 字母进行匹配
+  shuangpin_zrm_txt: "20250612_phrases_shuangpin_org.txt"
+cloud_ai_filter:
+  max_cloud_candidates: 3
+  max_ai_candidates: 1
+
+super_comment:                 # 超级注释模块，子项配置 true 开启，false 关闭
+  candidate_length: 1          # 候选词辅助码提醒的生效长度，0为关闭  但同时清空其它，应当使用上面开关来处理
+  corrector_type: "{comment}"  # 换一种显示类型，比如"({comment})" 
+  fuzhu_type: fuzhu          # 分包这是一个固定搭配，声调可以使用开关控制
+__include: octagram            #启用语言模型
+#__include: set_chord_composer  #启用并击处理，不懂得不要开启就是了
+########################以下是方案配置######################################################
+
+
 # 开关
 # reset註釋掉: 注释掉后，切换窗口时不会重置到默认状态。
 # reset:0 每次启动输入法或切换到该方案时，该开关都会被重置为第一个状态. 
@@ -48,34 +50,35 @@ schema:
 # abbrev: 默认的缩写取 states 的第一个字符，abbrev 可自定义一个字符
 switches:
   - name: ascii_mode                   # 中英输入状态
-    states: [ 中, 英 ]
+    states: [中, 英]
     reset: 0
   - name: ascii_punct                  # 中英标点
-    states: [ 。,. ]
+    states: [。, .]
     reset: 1
   - name: full_shape                   #全角、半角字符输出
-    states: [ 半, 全 ]
+    states: [半, 全]
     reset: 0
   - name: emoji                        #候选出现emoji滤镜，会显示在相应的候选后面，万象侧重于tips提示，避免候选被占用，因此默认为reset: 0，归属opencc emoji滤镜
-    states: [ 🙃, 😄 ]
+    states: [🙃, 😄]
   - name: chinese_english              #候选进入翻译模式滤镜，会显示在相应的候选后面，万象侧重于tips提示，避免候选被占用，快捷键配套ctrl+e,归属opencc 翻译滤镜
-    states: [ 译, 翻 ]
+    states: [译, 翻]
   - name: tone_display                 #开启后在输入编码的位置实时转换为带声调全拼，不开启则采用系统配置，快捷键配套ctrl+s,影响的是preedit_format,归属：super_preedit.lua
-    states: [ 调, 声 ]
+    states: [调, 声]
     reset: 0
   - name: chaifen_switch               #开启后在候选的注释里面实时显示辅助码的拆分提醒优先级高于普通辅助提醒，不开启则采用系统配置，快捷键配套ctrl+c,影响的是comment_format，归属：super_comment.lua
-    states: [ 分, 拆 ]
+    states: [分, 拆]
   - name: charset_filter               #字符集过滤，默认开启8105通规显示，即小字集，可通过开关实时开启全字集，快捷键配套ctrl+g,归属：chars_filter.lua
-    states: [ 小, 大 ]
+    states: [小, 大]
   - name: super_tips                   #开启后在输入编码后面的提示区显示实时的提示数据，受tips数据库影响，表情、翻译、车牌、符号等对应关系数据，并可实现句号上屏，不开启则默认，影响的是segment.prompt参数，归属：super_tips.lua
-    states: [ off, tips ]
+    states: [off, tips]
     reset: 0
-  - options: [ comment_off, fuzhu_hint, tone_hint ]  #开启后在候选的注释里面实时显示辅助码或者全拼声调，不开启则采用系统配置，影响的是comment_format，快捷键配套ctrl+a,归属：super_comment.lua
-    states: [ 注关, 辅开, 调开 ]
-  - options: [ s2s, s2t, s2hk, s2tw ]  # 简繁转换开关组，可以在一个空选项和多个实际“- simplifier@s2hk”引入的项目之前切换，这是一个开关组，你可以将其中任意一个s2s等设置为toggle快捷键，多次按下将轮询
-    states: [ 简体, 通繁, 港繁, 臺繁 ]
+  - options: [comment_off, fuzhu_hint, tone_hint]    #开启后在候选的注释里面实时显示辅助码或者全拼声调，不开启则采用系统配置，影响的是comment_format，快捷键配套ctrl+a,归属：super_comment.lua
+    states: [注关, 辅开, 调开]
+  - options: [s2s, s2t, s2hk, s2tw]    # 简繁转换开关组，可以在一个空选项和多个实际“- simplifier@s2hk”引入的项目之前切换，这是一个开关组，你可以将其中任意一个s2s等设置为toggle快捷键，多次按下将轮询
+    states: [简体, 通繁, 港繁, 臺繁]
+    reset: 0
   - name: prediction                   #开启后输入上屏后继续弹出预测数据候选展示例如输入：你在 ，预测候选： 哪里 干嘛 吗 做等等，predictor配置区可设置详细参数，归属：predict内置插件
-    states: [ 测, 预 ]
+    states: [测, 预]
   - name: search_single_char          #多体现在编码重合但候选有单字或者多字的情况`引导的辅码查词时是否单字优先，全拼常见，类似于特定编码情况下、反查状态下的调序能力。归属：search.lua
     abbrev: [词, 单]
     states: [正常, 单字]
@@ -111,6 +114,7 @@ engine:
     # - lua_segmentor@*debug_segmentor     #添加调试分词器
     - ascii_segmentor                      #标识英文段落〔譬如在英文模式下〕字母直接上屛
     - matcher                              #配合 recognizer 标识符合特定规则的段落，如网址、反查等，加上特定 tag
+    - lua_segmentor@*ai_assistant_segmentor     #AI对话自定义分词器，分割 a: 和拼音部分
     - abc_segmentor                        #标识常规的文字段落，加上 abc 这个 tag
     - lua_segmentor@*backtick_segment      #添加反引号分词器
     - affix_segmentor@radical_lookup       #部件拆字自定义 tag
@@ -122,7 +126,8 @@ engine:
 
   translators:
     # - lua_translator@*debug_translator     #调试翻译器，打印输入、分词、环境等信息
-    - lua_translator@*script_backtick_translator # 反引号翻译器，对于带有反引号内的内容单独处理
+    - lua_translator@*backtick_translator # 反引号翻译器，对于带有反引号内的内容单独处理
+    - lua_translator@*ai_assistant_translator   #AI对话前缀翻译器
     - predict_translator                   #预测候选的生成器
     - punct_translator                     #配合 punct_segmentor 转换标点符号
     - script_translator                    #脚本翻译器，用于拼音、粤拼等基于音节表的输入方案
@@ -145,7 +150,6 @@ engine:
     - lua_filter@*chars_filter                      #字符集过滤
     - lua_filter@*super_sequence*F                  #手动排序放在assist_sort 后面，高亮候选 ctrl+j左移动 ctrl+k 右移动 ctrl+0 移除位移
     - lua_filter@*autocap_filter                    #英文自动大写，当输入一个大写那么候选首字母大写，当输入两个大写那么候选全为大写
-    - lua_filter@*aux_code_filter_v3                #辅助码处理器，读取txt文件，匹配输入的最后三个字母，返回候选词
     - reverse_lookup_filter@radical_reverse_lookup  #部件拆字滤镜，放在super_comment前面，进一步被超级注释处理以获得拼音编码的提示
     - lua_filter@*super_preedit                     #输入码显示全拼并带上音调
     - simplifier@emoji                              #Emoji滤镜
@@ -158,10 +162,67 @@ engine:
     - lua_filter@*super_comment                     #超级注释模块，支持错词提示、辅助码显示，部件组字读音注释，支持个性化配置和关闭相应的功能，详情搜索super_comment进行详细配置
     - lua_filter@*text_formatting                   #给自定义用户词扩展一个换行:\n, 制表符：\t, 回车符：\r, 空格：\s
     # - lua_filter@*baidu_filter                      #百度云输入法API调用，支持百度云输入法的候选词获取
-    - lua_filter@*cloud_ai_filter                   #AI大模型转换的候选词
+    - lua_filter@*aux_code_filter_v3                #辅助码处理器，读取txt文件，匹配输入的最后三个字母，返回候选词
+    - lua_filter@*cloud_ai_filter_v2                 #AI大模型转换的候选词
     - lua_filter@*punct_eng_chinese_filter          # 将候选项当中的英文标点转换为中文标点
     - uniquifier                                    #去重
 
+ai_assistant:
+  enabled: true
+  behavior:
+      commit_input: true         # 是否将用户提问问题上屏
+      auto_commit: false        # 是否自动上屏
+      clipboard_mode: true      # 是否使用剪贴板模式
+      prompt_chat: "a"  # 触发提示消息的字母
+  # 触发器配置：定义所有AI助手的前缀    
+  chat_triggers:
+    simple_ai_chat: "a:"          # 简单对话
+    normal_ai_chat: "ai:"                # AI对话
+    context_ai_chat: "c:"           # 上下文对话
+    role_ai_chat: "ar:"              # 角色扮演对话
+    queen_ai_chat: "aq:"             # 女王对话
+    cat_ai_chat: "ac:"               # 猫娘对话
+    translate_ai_chat: "at:"     # 中英翻译
+    trans_ai_chat: "t:"     # 中英翻译
+    code_ai_chat: "code:"       # 编程助手
+    write_ai_chat: "write:"     # 写作助手
+    search_ai_chat: "as:"        # 搜索助手
+    summarize_ai_chat: "sum:"             # 总结工具
+    explain_ai_chat: "exp:"               # 解释工具
+    improve_ai_chat: "imp:"               # 改进工具
+  # 定义每个触发器对应的显示消息
+  chat_names:
+    simple_ai_chat: "AI提问:"
+    normal_ai_chat: "AI提问:"
+    context_ai_chat: "AI提问:"
+    role_ai_chat: "角色对话:"
+    cat_ai_chat: "猫娘对话:"
+    queen_ai_chat: "与女王对话:"
+    translate_ai_chat: "AI翻译:"
+    trans_ai_chat: "AI翻译:"
+    code_ai_chat: "AI编程:"
+    write_ai_chat: "AI写作:"
+    search_ai_chat: "AI搜索:"
+    summarize_ai_chat: "AI总结:"
+    explain_ai_chat: "AI解释:"
+    improve_ai_chat: "AI改进:"
+  # 回复消息配置：回复消息时候使用的名称
+  reply_messages_preedit:
+    simple_ai_chat: "AI回复:"
+    normal_ai_chat: "AI回复:"
+    context_ai_chat: "AI回复:"
+    role_ai_chat: "角色:"
+    cat_ai_chat: "猫娘:"
+    queen_ai_chat: "女王:"
+    translate_ai_chat: "AI翻译:"
+    trans_ai_chat: "AI翻译:"
+    code_ai_chat: "AI编程:"
+    write_ai_chat: "AI写作:"
+    search_ai_chat: "AI搜索:"
+    summarize_ai_chat: "AI总结:"
+    explain_ai_chat: "AI解释:"
+    improve_ai_chat: "AI改进:"
+  
 
 predictor:
   db: wanxiang-lts-zh-predict.db
@@ -252,14 +313,13 @@ translator:
   initial_quality: 3       # 初始质量拼音的权重应该比英文大
   spelling_hints: 50             # 将注释以词典字符串形式完全暴露，通过super_comment.lua完全接管，灵活配置。
   always_show_comments: true    # Rime 默认在 preedit 等于 comment 时取消显示 comment，这里强制一直显示，供super_comment.lua做判断用。
-  comment_format: {comment}  #将注释以词典字符串形式完全暴露，通过super_comment.lua完全接管，灵活配置。
+  comment_format: {comment: null} #将注释以词典字符串形式完全暴露，通过super_comment.lua完全接管，灵活配置。
   backtick_delimiter_before: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
   backtick_delimiter_after: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
   replace_punct_enabled: true  # 是否启用中文标点替换功能，true 为启用，false 为禁用
   preedit_format:     #影响到输入框的显示和“Shift+回车”上屏的字符，交给super_preedit处理
     # __patch:
     #   - 自然码渲染   # 引用
-      
 
 
 # 自定义短语
@@ -320,7 +380,7 @@ s2t:
   option_name: s2t
   opencc_config: s2t.json  # s2t.json | s2hk.json | s2tw.json | s2twp.json
   tips: none               # 转换提示: all 都显示 | char 仅单字显示 | none 不显示。
-  tags: [ abc ]  # 限制在对应 tag，不对其他如反查的内容做简繁转换
+  tags: [abc]    # 限制在对应 tag，不对其他如反查的内容做简繁转换
 
 s2hk:
   opencc_config: s2hk.json
@@ -354,7 +414,7 @@ reverse_stroke:
 
 # 部件拆字滤镜
 radical_reverse_lookup:
-  tags: [ radical_lookup,reverse_stroke ]
+  tags: [radical_lookup, reverse_stroke]
   overwrite_comment: true
   dictionary: wanxiang_pro #带音调的词典
 
@@ -377,7 +437,6 @@ recognizer:
     # url_2: "^[A-Za-z]+[.].*"   # 句号不上屏，支持 google.com abc.txt 等网址或文件名，使用句号翻页时需要注释掉
     # colon: "^[A-Za-z]+:.*"     # 冒号不上屏
 
-  
 # 标点符号
 # punctuator 下面有三个子项：
 # 设置为一个映射，就自动上屏；设置为多个映射，如 '/' : [ '/', ÷ ] 则进行复选。
@@ -405,31 +464,31 @@ key_binder:
   search_move_cursor: "Super+f"  # 搜索移动光标
   bindings:             # 也可以再增加方案专有的
     #- { when: composing, accept: Tab, send: '[' } ## 取消注释后：tab引导辅助码
-    - { when: composing, accept: Control+w, send: Control+BackSpace }
+    - {when: composing, accept: Control+w, send: Control+BackSpace}
 #分号用于次选，微软、搜狗双拼不可启用
     #- { when: has_menu, accept: semicolon, send: 2 }
 #使用Control+e进入翻译模式
-    - { when: has_menu, accept: "Control+e", toggle: chinese_english }
+    - {when: has_menu, accept: "Control+e", toggle: chinese_english}
 #使用快捷键Control+c拆分显示
     # - { when: has_menu, accept: "Control+c", toggle: chaifen_switch }
 #使用快捷键Control+a开启和关闭辅助码显示
-    - { when: has_menu, accept: "Control+a", toggle: fuzhu_hint }
+    - {when: has_menu, accept: "Control+a", toggle: fuzhu_hint}
 #通过快捷键Control+s使得输入码显示音调
-    - { when: has_menu, accept: "Control+s", toggle: tone_display }
+    - {when: has_menu, accept: "Control+s", toggle: tone_display}
 #通过快捷键Control+t开启超级tips
-    - { when: has_menu, accept: "Control+t", toggle: super_tips }
+    - {when: has_menu, accept: "Control+t", toggle: super_tips}
 #通过快捷键Control+g开启字符集过滤
-    - { when: has_menu, accept: "Control+g", toggle: charset_filter }
+    - {when: has_menu, accept: "Control+g", toggle: charset_filter}
 #当tab第一个字补码正确后，可以使用Ctrl+tab进行上屏并依次补码
     # - { when: composing, accept: "Control+Tab", send_sequence: '{Home}{Shift+Right}{1}{Shift+Right}' }
 #启用光标回退至特定音节后、补充辅助码的功能。补充完辅助码后，可以再按一次tab回到整句检查
-    - { when: composing, accept: Control+1, send_sequence: '{Home}{Shift+Right}' }
-    - { when: composing, accept: Control+2, send_sequence: '{Home}{Shift+Right}{Shift+Right}' }
-    - { when: composing, accept: Control+3, send_sequence: '{Home}{Shift+Right}{Shift+Right}{Shift+Right}' }
-    - { when: composing, accept: Control+4, send_sequence: '{Home}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}' }
-    - { when: composing, accept: Control+5, send_sequence: '{Home}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}' }
-    - { when: composing, accept: Control+6, send_sequence: '{Home}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}' }
-    - { when: composing, accept: Control+7, send_sequence: '{Home}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}' }
+    - {when: composing, accept: Control+1, send_sequence: '{Home}{Shift+Right}'}
+    - {when: composing, accept: Control+2, send_sequence: '{Home}{Shift+Right}{Shift+Right}'}
+    - {when: composing, accept: Control+3, send_sequence: '{Home}{Shift+Right}{Shift+Right}{Shift+Right}'}
+    - {when: composing, accept: Control+4, send_sequence: '{Home}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}'}
+    - {when: composing, accept: Control+5, send_sequence: '{Home}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}'}
+    - {when: composing, accept: Control+6, send_sequence: '{Home}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}'}
+    - {when: composing, accept: Control+7, send_sequence: '{Home}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}{Shift+Right}'}
 #当输入编码后发现没有词，则通过双击``进入造词模式而且不需要删除编码，这个功能与``直接引导相呼应相配合
     # - { match: "^.*`$", accept: "`", send_sequence: '{BackSpace}{Home}{`}{`}{End}' }
 
@@ -442,23 +501,22 @@ key_binder:
     # - { when: paging, accept: bracketleft, send: Page_Up }
     # - { when: has_menu, accept: bracketright, send: Page_Down }
 #③ 翻页 - =
-    - { when: has_menu, accept: minus, send: Page_Up }
-    - { when: has_menu, accept: equal, send: Page_Down }
+    - {when: has_menu, accept: minus, send: Page_Up}
+    - {when: has_menu, accept: equal, send: Page_Down}
 # 翻页 > <　
-    - { when: has_menu, accept: Shift+less, send: Page_Up }
-    - { when: has_menu, accept: Shift+greater, send: Page_Down }
+    - {when: has_menu, accept: Shift+less, send: Page_Up}
+    - {when: has_menu, accept: Shift+greater, send: Page_Down}
 
     # 使用 tab 在不同音节之间跳转
     # - { when: has_menu, accept: "Tab", send: "Control+Right" }
     # - { when: composing, accept: "Tab", send: "Control+Right" }
-    - { when: has_menu, accept: "Tab", send: "Shift+Right" }
-    - { when: composing, accept: "Tab", send: "Shift+Right" }
+    - {when: has_menu, accept: "Tab", send: "Shift+Right"}
+    - {when: composing, accept: "Tab", send: "Shift+Right"}
     # 在标点符号分割的句子之间移动 - 使用智能光标移动
     # 智能移动：光标会在标点符号处停止
     # Control+comma: 向左移动到前一个标点符号
     # Control+period: 向右移动到下一个标点符号
     # 注意：这些快捷键需要配合 smart_cursor_processor.lua 使用
-    
     # 原有的简单移动（保留作为备选）
     # - { when: has_menu, accept: "Super+f", send: "Left" }
     # - { when: composing, accept: "Super+f", send: "Left" }
@@ -468,18 +526,17 @@ key_binder:
     # - { when: composing, accept: "Control+bracketleft", send: "Left" }
     # - { when: has_menu, accept: "Control+bracketright", send: "Right" }
     # - { when: composing, accept: "Control+bracketright", send: "Right" }
-    
 # Option/Alt + ←/→ 切换光标至下/上一个拼音
-    - { when: composing, accept: Alt+Left, send: Shift+Left }
-    - { when: composing, accept: Alt+Right, send: Shift+Right }
-    - { when: always, accept: Control+Shift+3, toggle: ascii_punct }              # 切换中英标点
-    - { when: always, accept: Control+Shift+numbersign, toggle: ascii_punct }     # 切换中英标点
-    - { when: always, accept: Control+Shift+4, toggle: s2t }       # 切换简繁
-    - { when: always, accept: Control+Shift+dollar, toggle: s2t }  # 切换简繁
+    - {when: composing, accept: Alt+Left, send: Shift+Left}
+    - {when: composing, accept: Alt+Right, send: Shift+Right}
+    - {when: always, accept: Control+Shift+3, toggle: ascii_punct}                # 切换中英标点
+    - {when: always, accept: Control+Shift+numbersign, toggle: ascii_punct}       # 切换中英标点
+    - {when: always, accept: Control+Shift+4, toggle: s2t}         # 切换简繁
+    - {when: always, accept: Control+Shift+dollar, toggle: s2t}    # 切换简繁
 
 editor:
    bindings:
-     space: confirm                        # 空格键：上屏候选项 confirm
+     space: confirm                        # 空格键：上屏候选项
      Return: commit_raw_input              # 回车键：上屏原始输入
      Control+Return: commit_script_text    # Ctrl+回车键：上屏变换后输入（经过 preedit转换的）
      Control+Shift+Return: commit_comment  # Ctrl+Shift+回车键：上屏 comment
@@ -508,9 +565,11 @@ speller:
       - set_shuru_schema     #拼音转双拼码
       - set_fuzhu_schema     #辅助码部分
 #      - mohuyin             #模糊音选择性开启
+
+
 ###############################以下是拼写运算规则中全拼转双拼码以及形码的过程，按照不同的方案规则划分段落###########################
-全拼: 
-  __append: 
+全拼:
+  __append:
     - xform/^([a-z]+)(;.*)$/$1④$2/
     - xform/^(.*)ā(.*)(;.*)$/$1a$2①$3/
     - xform/^(.*)á(.*)(;.*)$/$1a$2②$3/
@@ -544,7 +603,7 @@ speller:
     - derive/^ng(\d)(;.*)$/eng$1$2/
     - xform/^n(\d)(;.*)/en$1$2/
 
-自然码: 
+自然码:
   __append:
     - xform/^([a-z]+)(;.*)$/$1④$2/
     - xform/^(.*)ā(.*)(;.*)$/$1a$2①$3/
@@ -848,7 +907,7 @@ speller:
     - xform/^(.)(èn|en|iàn|ian|óu|ǒu|uān)(;.*)$/$1N$3/
     - xform/^(.)(à|a|ēn|īn|óng|ǒng)(;.*)$/$1M$3/
     - xlit/QWERTYUIOPASDFGHMJCKLZXVBN¥&/qwertyuiopasdfghmjcklzxvbnfc/
-小鹤双拼: 
+小鹤双拼:
   __append:
     - xform/^([a-z]+)(;.*)$/$1④$2/
     - xform/^(.*)ā(.*)(;.*)$/$1a$2①$3/
@@ -913,7 +972,7 @@ speller:
     - xform/^zh/Ⓥ/
     - xlit/ⓆⓌⓇⓉⓎⓊⒾⓄⓅⓈⒹⒻⒼⒽⒿⓀⓁⓏⓍⒸⓋⒷⓃⓂ/qwrtyuiopsdfghjklzxcvbnm/
 
-微软双拼: 
+微软双拼:
   __append:
     - xform/^([a-z]+)(;.*)$/$1④$2/
     - xform/^(.*)ā(.*)(;.*)$/$1a$2①$3/
@@ -980,7 +1039,7 @@ speller:
     - xform/^ch/Ⓘ/
     - xform/^zh/Ⓥ/
     - xlit/ⓆⓌⓇⓉⓎⓊⒾⓄⓅⓈⒹⒻⒼⒽⓂⒿⒸⓀⓁⓏⓍⓋⒷⓃ/qwrtyuiopsdfghmjcklzxvbn/
-搜狗双拼: 
+搜狗双拼:
   __append:
     - xform/^([a-z]+)(;.*)$/$1④$2/
     - xform/^(.*)ā(.*)(;.*)$/$1a$2①$3/
@@ -1047,7 +1106,7 @@ speller:
     - xform/^zh/Ⓥ/
     - xlit/ⓆⓌⓇⓉⓎⓊⒾⓄⓅⓈⒹⒻⒼⒽⓂⒿⒸⓀⓁⓏⓍⓋⒷⓃ/qwrtyuiopsdfghmjcklzxvbn/
 
-紫光双拼: 
+紫光双拼:
   __append:
     - xform/^([a-z]+)(;.*)$/$1④$2/
     - xform/^(.*)ā(.*)(;.*)$/$1a$2①$3/
@@ -1113,7 +1172,7 @@ speller:
     - xform/^ch/Ⓐ/
     - xlit/ⓌⓉⓎⓊⒾⓄⓅⒶⒼⓈⒹⒻⒽⒿⓀⓁⓏⓍⒷⓃⓂⓆⓇ/wtyuiopagsdfhjklzxbnmqr/
 
-智能ABC: 
+智能ABC:
   __append:
     - xform/^([a-z]+)(;.*)$/$1④$2/
     - xform/^(.*)ā(.*)(;.*)$/$1a$2①$3/
@@ -1345,7 +1404,7 @@ user_dict_set:
     - xform/8/2/
     - xform/9/3/
     - xform/0/4/
-  enable_user_dict: true 
+  enable_user_dict: true
   user_dict: zc
 
 

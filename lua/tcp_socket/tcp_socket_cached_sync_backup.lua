@@ -20,7 +20,7 @@ local json = require("json") -- 项目中的json模块
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("tcp_socket_cached_sync", {
     enabled = true,
-    unified_log = false, -- 启用日志以便测试
+    unique_file_log = false, -- 启用日志以便测试
     -- console_output = true -- 为特定实例启用控制台输出
 })
 

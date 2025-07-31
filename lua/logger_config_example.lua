@@ -7,7 +7,7 @@ local logger = require("logger")
 -- logger.set_unified_mode(true, "all_modules.log")
 
 -- 方式2: 直接修改 logger.lua 文件中的 default_config
--- 将 default_config.unified_log 设置为 true
+-- 将 default_config.unique_file_log 设置为 true
 
 -- 示例使用：
 -- 

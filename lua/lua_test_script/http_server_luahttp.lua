@@ -25,7 +25,7 @@ local logger_module = require("logger")
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("http_server_luahttp", {
     enabled = true,
-    unified_log = false -- 启用日志以便测试
+    unique_file_log = false -- 启用日志以便测试
 })
 -- 单例模式的 HTTP 服务器
 local HttpServer = {}

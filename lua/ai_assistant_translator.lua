@@ -1,0 +1,384 @@
+-- AI对话前缀翻译器
+-- 处理 ai_talk 标签，显示 "〔AI对话〕" 提示
+local logger_module = require("logger")
+local debug_utils = require("debug_utils")
+local logger = logger_module.create("ai_assistant_translator", {
+    enabled = true,
+    unique_file_log = false,
+    log_level = "DEBUG"
+})
+
+-- 添加 ARM64 Homebrew 的 Lua 路径
+local function setup_lua_paths()
+    -- 保存原始路径
+    local original_path = package.path
+    local original_cpath = package.cpath
+
+    -- 添加 ARM64 Homebrew 路径
+    package.path = package.path .. ";/opt/homebrew/share/lua/5.4/?.lua;/opt/homebrew/share/lua/5.4/?/init.lua"
+    package.cpath = package.cpath .. ";/opt/homebrew/lib/lua/5.4/?.so;/opt/homebrew/lib/lua/5.4/?/core.so"
+
+    logger.info("已添加 ARM64 Homebrew Lua 路径")
+end
+
+setup_lua_paths()
+
+local tcp_socket = nil
+local ok, err = pcall(function()
+    tcp_socket = require("tcp_socket_sync")
+end)
+if not ok then
+    logger.error("加载 tcp_socket_sync 失败: " .. tostring(err))
+else
+    logger.info("加载 tcp_socket_sync 成功")
+    if tcp_socket then
+        logger.info("sync_module不为nil")
+    else
+        logger.error("sync_module为nil，尽管require没有报错")
+    end
+end
+
+-- 配置缓存机制
+local config_cache = {}
+local last_schema_id = nil
+
+-- 读取配置的辅助函数
+local function load_ai_config(env)
+    local schema = env.engine.schema
+    local config = schema.config
+    local schema_id = schema.schema_id
+    
+    -- 如果schema没有变化且已有缓存，直接使用缓存
+    if last_schema_id == schema_id and config_cache.ai_assistant_config then
+        logger.info("使用缓存的AI助手配置 (schema: " .. schema_id .. ")")
+        return config_cache.ai_assistant_config
+    end
+    
+    logger.info("重新加载AI助手配置 (schema: " .. schema_id .. ")")
+    
+    -- 读取AI助手配置
+    local ai_assistant_config = {}
+    ai_assistant_config.reply_tags = {}
+    ai_assistant_config.chat_triggers = {}
+    ai_assistant_config.reply_messages = {}
+    ai_assistant_config.reply_messages_preedit = {}
+    ai_assistant_config.chat_names = {}
+    
+    -- 动态读取 chat_triggers 配置
+    local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
+    if chat_triggers_config then
+        -- 获取所有键名
+        local trigger_keys = chat_triggers_config:keys()
+        logger.info("找到 " .. #trigger_keys .. " 个触发器配置")
+        
+        -- 遍历配置中的所有触发器
+        for _, trigger_name in ipairs(trigger_keys) do
+            local trigger_value = config:get_string("ai_assistant/chat_triggers/" .. trigger_name)
+            local reply_message = config:get_string("ai_assistant/reply_messages/" .. trigger_name)
+            local reply_message_preedit = config:get_string("ai_assistant/reply_messages_preedit/" .. trigger_name)
+            local chat_name = config:get_string("ai_assistant/chat_names/" .. trigger_name)
+            
+            if trigger_value then
+                ai_assistant_config.chat_triggers[trigger_name] = trigger_value
+                logger.info("AI触发器 - " .. trigger_name .. ": " .. trigger_value)
+            end
+            
+            if reply_message then
+                ai_assistant_config.reply_messages[trigger_name] = reply_message
+                logger.info("AI回复消息 - " .. trigger_name .. ": " .. reply_message)
+            end
+            
+            if reply_message_preedit then
+                ai_assistant_config.reply_messages_preedit[trigger_name] = reply_message_preedit
+                logger.info("AI回复预编辑消息 - " .. trigger_name .. ": " .. reply_message_preedit)
+            end
+            
+            if chat_name then
+                ai_assistant_config.chat_names[trigger_name] = chat_name
+                logger.info("AI聊天名称 - " .. trigger_name .. ": " .. chat_name)
+            end
+            
+            -- 动态生成回复标签（触发器名称 + "_reply"）
+            local reply_tag = trigger_name .. "_reply"
+            ai_assistant_config.reply_tags[trigger_name] = reply_tag
+            logger.info("动态生成AI回复标签 - " .. trigger_name .. ": " .. reply_tag)
+        end
+    else
+        logger.warning("未找到 chat_triggers 配置")
+    end
+    
+    -- 创建标签到触发器的反向映射
+    ai_assistant_config.tag_to_trigger = {}
+    for trigger, tag in pairs(ai_assistant_config.reply_tags) do
+        ai_assistant_config.tag_to_trigger[tag] = trigger
+    end
+    
+    -- 缓存配置
+    config_cache.ai_assistant_config = ai_assistant_config
+    last_schema_id = schema_id
+    
+    return ai_assistant_config
+end
+
+local translator = {}
+
+function translator.init(env)
+    -- logger.clear()
+    logger.info("AI对话翻译器初始化完成")
+
+    -- 使用配置加载函数
+    env.ai_assistant_config = load_ai_config(env)
+
+    -- 添加commit_notifier通知器，参考 smart_cursor_processor.lua 的写法
+    local engine = env.engine
+    local context = engine.context
+
+    env.select_notifier = context.select_notifier:connect(function(context)
+        if not context:is_composing() then
+            -- logger.info("select_notifier, not context:is_composing()")
+            -- local composition = context.composition
+            -- local segmentation = composition:toSegmentation()
+            -- debug_utils.print_segmentation_info(segmentation, logger)
+            -- debug_utils.print_context_info(context, logger)
+            local ai_talk_option = context:get_property("ai_talk_option")
+            if ai_talk_option == "true" then
+                logger.debug("选词通知中发现ai_talk_option开关, 重新输入input为'AI回复'这类触发词.")
+                
+                logger.debug("设置get_ai_stream属性开关true")
+                context:set_property("get_ai_stream", "true")
+
+                logger.debug("设置ai_talk_option属性开关false")
+                context:set_property("ai_talk_option", "false")
+            end
+        end
+    end)
+
+    env.my_commit_notifier = context.commit_notifier:connect(function(context)
+        local input = context.input
+
+        -- 检查是否匹配任何AI触发器
+        local matched_trigger = nil
+        local matched_prefix = nil
+        
+        if env.ai_assistant_config and env.ai_assistant_config.chat_triggers then
+            -- 使用已经读取的触发器配置
+            for trigger_name, trigger_prefix in pairs(env.ai_assistant_config.chat_triggers) do
+                if input:match("^" .. trigger_prefix:gsub("[%(%)%.%+%-%*%?%[%]%^%$%%]", "%%%1") .. ".") then
+                    matched_trigger = trigger_name
+                    matched_prefix = trigger_prefix
+                    logger.info("检测到AI对话输入，触发器: " .. trigger_name .. " (" .. trigger_prefix .. ")")
+                    break
+                end
+            end
+        end
+
+        if matched_trigger then
+            logger.info("检测到AI对话输入: " .. matched_trigger)
+
+            local ok, err = pcall(function()
+                local commit_text = context:get_commit_text()
+                logger.info("给服务端发送对话请求: " .. commit_text .. " (类型: " .. matched_trigger .. ")")
+                
+                -- 读取最新消息（丢弃积压的旧消息，保留最新的有用消息）
+                local flushed_bytes = tcp_socket.flush_ai_socket_buffer()
+                if flushed_bytes and flushed_bytes > 0 then
+                    logger.info("清理了积压的AI消息: " .. flushed_bytes .. " 字节")
+                else
+                    logger.info("无积压的AI消息需要处理")
+                end
+
+                -- 清理上次的候选词
+                local current_content = context:get_property("ai_replay_steam")
+                if current_content ~= "" and current_content ~= "等待AI回复..." then
+                    context:set_property("ai_replay_steam", "等待AI回复...")
+                end
+
+                -- 发送聊天消息，包含对话类型信息
+                tcp_socket.send_chat_message(commit_text, matched_trigger)
+
+                local ai_talk_option = context:get_property("ai_talk_option")
+                if ai_talk_option ~= "true" then
+                    logger.debug("设置ai_talk_option属性开关true")
+                    context:set_property("ai_talk_option", "true")
+                end
+            end)
+            if not ok then
+                logger.error("AI对话请求处理出错: " .. tostring(err))
+            end
+
+        end
+    end)
+end
+
+function translator.func(input, segment, env)
+    logger.info("ai_talk_translator.lua开始执行")
+    
+    -- 检查是否是任何AI相关标签（统一处理逻辑）
+    local matched_reply_tag = nil
+    local matched_trigger = nil
+    local reply_message = nil
+    local is_prefix_display = false
+    
+    -- 检查所有配置的AI触发器标签
+    if env.ai_assistant_config and env.ai_assistant_config.chat_triggers then
+
+        for trigger_name, trigger_prefix in pairs(env.ai_assistant_config.chat_triggers) do
+            if segment:has_tag(trigger_name) then
+                matched_reply_tag = trigger_name
+                matched_trigger = trigger_name
+                is_prefix_display = true  -- 这是前缀显示
+                -- 从配置中获取聊天名称，如果没有则使用触发器前缀
+                reply_message = env.ai_assistant_config.chat_names[trigger_name] or (trigger_prefix .. " AI助手")
+                logger.info("检测到AI触发器标签: " .. trigger_name .. " (前缀显示)")
+                break
+            end
+        end
+    end
+    
+    -- 检查所有配置的AI回复标签
+    if not matched_reply_tag and env.ai_assistant_config and env.ai_assistant_config.tag_to_trigger then
+        for tag, trigger in pairs(env.ai_assistant_config.tag_to_trigger) do
+            if segment:has_tag(tag) then
+                matched_reply_tag = tag
+                matched_trigger = trigger
+                is_prefix_display = false  -- 这是回复显示
+                -- 从配置中获取回复预编辑消息
+                reply_message = env.ai_assistant_config.reply_messages_preedit[trigger] or "AI助手:"
+                logger.info("检测到AI回复标签: " .. tag .. " (触发器: " .. trigger .. ")")
+                break
+            end
+        end
+    end
+    
+    -- 只处理AI相关标签的段落
+    if not matched_reply_tag then
+        return
+    end
+    
+    -- 前缀显示的处理（显示触发器前缀候选词）
+    if is_prefix_display then
+        logger.info("处理AI触发器前缀段落: " .. input)
+        local candidate = Candidate(matched_trigger, segment.start, segment._end, reply_message, "")
+        candidate.quality = 1000
+        
+        -- 为触发器前缀候选词设置 preedit（可选，通常前缀显示不需要特殊的 preedit）
+        -- candidate.preedit = reply_message  -- 前缀显示通常不需要额外的 preedit
+        
+        yield(candidate)
+        logger.info("生成AI触发器前缀候选词: " .. reply_message)
+        return
+    end
+    
+    -- AI回复标签的处理（流式获取和显示AI回复）
+    logger.info("处理AI回复段落，标签: " .. matched_reply_tag .. "，触发器: " .. matched_trigger)
+    local context = env.engine.context
+    
+    -- 检查是否停止流式获取
+    if context:get_property("get_ai_stream") == "false" then
+        logger.info("get_ai_stream == false, 直接获取历史记录.")
+        
+        local current_content = context:get_property("ai_replay_steam")
+        if not current_content or current_content == "" then
+            current_content = "等待AI回复..."
+        end
+        
+        local candidate = Candidate(matched_reply_tag, segment.start, segment._end, current_content, "")
+        candidate.quality = 1000
+        -- candidate.comment = "〔" .. reply_message:gsub("[:：]", "") .. "〕"
+        -- logger.info("为AI回复添加注释: " .. reply_message)
+        
+        yield(candidate)
+        return
+    end
+    
+    -- 执行流式获取AI回复
+    logger.debug("read_latest_from_ai_socket执行")
+    local stream_result = tcp_socket.read_latest_from_ai_socket()
+
+    -- 根据优化后的返回结构判断是否继续获取数据
+    if stream_result and stream_result.status == "success" and stream_result.data then
+        local stream_data = stream_result.data
+        logger.debug("成功获取到AI数据，状态: " .. stream_result.status .. " stream_data.is_final: " .. tostring(stream_data.is_final))
+
+        if stream_data.error then
+            -- 发生错误，停止获取
+            context:set_property("get_ai_stream", "false")
+            logger.debug("发生错误，停止流式获取: " .. tostring(stream_data.error))
+        elseif stream_data.is_final then
+            -- 最终数据，停止获取
+            context:set_property("get_ai_stream", "false")
+            logger.debug("intercept_select_key: 1")
+            context:set_property("intercept_select_key", "1")
+            logger.debug("收到最终数据(is_final=true)，停止流式获取")
+        else
+            -- 非最终数据，继续获取
+            context:set_property("get_ai_stream", "true")
+            logger.debug("继续流式获取，内容长度: " .. (stream_data.content and #stream_data.content or 0))
+        end
+
+        -- 更新AI回复内容
+        if stream_data.content and stream_data.content ~= "" then
+            context:set_property("ai_replay_steam", stream_data.content)
+            logger.debug("更新AI回复内容: " .. stream_data.content)
+        end
+
+    elseif stream_result and stream_result.status == "timeout" then
+        -- 超时是正常的，继续等待，不停止流式获取
+        logger.debug("AI服务超时(正常) - 服务端可能还没发送数据，继续保持流式获取状态")
+        context:set_property("get_ai_stream", "true")
+
+    elseif stream_result and stream_result.status == "no_data" then
+        -- 接收到数据但没有有效消息行，继续等待
+        logger.debug("接收到数据但没有有效消息，继续保持流式获取状态")
+        context:set_property("get_ai_stream", "true")
+
+    elseif stream_result and stream_result.status == "error" then
+        -- 连接错误，停止获取
+        context:set_property("get_ai_stream", "false")
+        logger.error("AI服务连接错误，停止流式获取: " .. tostring(stream_result.error_msg))
+
+    else
+        -- 其他未知情况，保持当前状态不变
+        logger.debug("未知的stream_result状态，保持当前流式获取状态")
+    end
+
+    logger.info("进入ai_reply标签重新生成候选词")
+
+    -- 获取当前保存的AI回复内容，如果没有则显示等待提示
+    local current_content = context:get_property("ai_replay_steam")
+    if not current_content or current_content == "" then
+        current_content = "等待AI回复..."
+    end
+
+    -- 生成候选词
+    local candidate = Candidate(matched_reply_tag, segment.start, segment._end, current_content, "")
+    candidate.quality = 1000
+    -- candidate.comment = "〔" .. reply_message:gsub("[:：]", "") .. "〕"
+    
+    -- 为AI回复候选词设置 preedit（使用 reply_messages_preedit 配置）
+    if env.ai_assistant_config.reply_messages_preedit[matched_trigger] then
+        candidate.preedit = env.ai_assistant_config.reply_messages_preedit[matched_trigger]
+        logger.info("为AI回复设置预编辑文本: " .. candidate.preedit)
+    end
+    
+    logger.info("为AI回复添加渲染文本: " .. reply_message)
+    
+    yield(candidate)
+end
+
+function translator.fini(env)
+    logger.info("AI对话翻译器结束运行")
+
+    -- 清理选词通知器，参考 smart_cursor_processor.lua 的写法
+    if env.commit_notifier then
+        env.commit_notifier:disconnect()
+        logger.info("选词通知器已断开连接")
+    end
+
+    if env.my_commit_notifier then
+        env.my_commit_notifier:disconnect()
+    end
+
+end
+
+return translator

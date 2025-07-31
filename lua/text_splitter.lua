@@ -384,9 +384,48 @@ function text_splitter.has_punctuation_no_backtick(text, logger)
         has_punct = true
     end
 
-    -- 中文标点也添加进来
-    if string.find(text, "[， 。 ？ ！ ： ； （ ）【 】 ｛ ｝ 《 》 “ ”‘ ’ 、 …… — · 〈 〉「 」 『 』 〔 〕 〖 〗]") then
-        has_punct = true
+    -- 方法2: 使用哈希表（Set）查找，避免循环
+    -- 创建标点符号集合
+    local punct_set = {
+        ["“"] = true,
+        ["”"] = true,
+        ["‘"] = true,
+        ["’"] = true,
+        ["，"] = true,
+        ["。"] = true,
+        ["？"] = true,
+        ["！"] = true,
+        ["："] = true,
+        ["；"] = true,
+        ["（"] = true,
+        ["）"] = true,
+        ["【"] = true,
+        ["】"] = true,
+        ["｛"] = true,
+        ["｝"] = true,
+        ["《"] = true,
+        ["》"] = true,
+        ["、"] = true,
+        ["……"] = true,
+        ["—"] = true,
+        ["·"] = true,
+        ["〈"] = true,
+        ["〉"] = true,
+        ["「"] = true,
+        ["」"] = true,
+        ["『"] = true,
+        ["』"] = true,
+        ["〔"] = true,
+        ["〕"] = true,
+        ["〖"] = true,
+        ["〗"] = true
+    }
+    -- 遍历文本中的每个UTF-8字符
+    for pos, code in utf8.codes(text) do
+        local char = utf8.char(code)
+        if punct_set[char] then
+            has_punct = true
+        end
     end
 
     logger.info("has_punct(no backtick): " .. tostring(has_punct))
@@ -560,9 +599,10 @@ function text_splitter.split_and_convert_input_with_delimiter(input, backtick_de
 end
 
 -- 只处理反引号的切分函数
-function text_splitter.split_by_backtick(input, delimiter_before, delimiter_after)
+function text_splitter.split_by_backtick(input, seg_start, seg_end, delimiter_before, delimiter_after)
     delimiter_before = delimiter_before or "" -- 默认无分隔符
     delimiter_after = delimiter_after or "" -- 默认无分隔符
+    seg_start = seg_start or 0 -- 默认起始位置为0
 
     -- 先找到所有反引号的位置
     local backtick_positions = {}
@@ -591,13 +631,13 @@ function text_splitter.split_by_backtick(input, delimiter_before, delimiter_afte
         if has_unpaired_backtick and backtick_pair_index == backtick_count - 1 and char == "`" then
             -- 最后一个未配对的反引号，从这里开始到末尾都不处理
             if current_segment ~= "" then
-                local segment_start = i - #current_segment - 1 -- 转换为0基索引
+                local segment_start = seg_start + i - #current_segment - 1 -- 添加seg_start偏移
                 table.insert(segments, {
                     type = "abc",
                     content = current_segment,
                     original = current_segment,
                     start = segment_start,
-                    _end = i - 1, -- 开区间，不包含反引号位置
+                    _end = seg_start + i - 1, -- 添加seg_start偏移，开区间，不包含反引号位置
                     length = #current_segment
                 })
                 current_segment = ""
@@ -611,8 +651,8 @@ function text_splitter.split_by_backtick(input, delimiter_before, delimiter_afte
                 type = "backtick",
                 content = processed_content,
                 original = "`" .. remaining_content,
-                start = i - 1, -- 转换为0基索引，从反引号开始
-                _end = #input, -- 开区间，到字符串末尾
+                start = seg_start + i - 1, -- 添加seg_start偏移，从反引号开始
+                _end = seg_start + #input, -- 添加seg_start偏移，开区间，到字符串末尾
                 length = #input - i + 1
             })
             break
@@ -622,13 +662,13 @@ function text_splitter.split_by_backtick(input, delimiter_before, delimiter_afte
             if not in_backtick then
                 -- 开始反引号内容
                 if current_segment ~= "" then
-                    local segment_start = i - #current_segment - 1 -- 转换为0基索引
+                    local segment_start = seg_start + i - #current_segment - 1 -- 添加seg_start偏移
                     table.insert(segments, {
                         type = "abc",
                         content = current_segment,
                         original = current_segment,
                         start = segment_start,
-                        _end = i - 1, -- 开区间，不包含反引号位置
+                        _end = seg_start + i - 1, -- 添加seg_start偏移，开区间，不包含反引号位置
                         length = #current_segment
                     })
                     current_segment = ""
@@ -639,13 +679,13 @@ function text_splitter.split_by_backtick(input, delimiter_before, delimiter_afte
                 -- 结束反引号内容，添加分隔符
                 local processed_content = delimiter_before .. backtick_content .. delimiter_after
                 -- 添加原始反引号内容字段
-                local backtick_start = i - #backtick_content - 2 -- 转换为0基索引，包含开始反引号
+                local backtick_start = seg_start + i - #backtick_content - 2 -- 添加seg_start偏移，包含开始反引号
                 table.insert(segments, {
                     type = "backtick",
                     content = processed_content,
                     original = "`" .. backtick_content .. "`",
                     start = backtick_start,
-                    _end = i, -- 开区间，不包含结束反引号后的位置
+                    _end = seg_start + i, -- 添加seg_start偏移，开区间，不包含结束反引号后的位置
                     length = #backtick_content + 2
                 })
                 in_backtick = false
@@ -666,23 +706,23 @@ function text_splitter.split_by_backtick(input, delimiter_before, delimiter_afte
         -- 未闭合的反引号内容，添加分隔符
         local processed_content = delimiter_before .. backtick_content .. delimiter_after
         -- 添加原始反引号内容字段
-        local backtick_start = #input - #backtick_content - 1 -- 转换为0基索引，包含反引号
+        local backtick_start = seg_start + #input - #backtick_content - 1 -- 添加seg_start偏移，包含反引号
         table.insert(segments, {
             type = "backtick",
             content = processed_content,
             original = "`" .. backtick_content,
             start = backtick_start,
-            _end = #input, -- 开区间，到字符串末尾
+            _end = seg_start + #input, -- 添加seg_start偏移，开区间，到字符串末尾
             length = #backtick_content + 1
         })
     elseif current_segment ~= "" then
-        local segment_start = #input - #current_segment -- 转换为0基索引
+        local segment_start = seg_start + #input - #current_segment -- 添加seg_start偏移
         table.insert(segments, {
             type = "abc",
             content = current_segment,
             original = current_segment,
             start = segment_start,
-            _end = #input, -- 开区间，到字符串末尾
+            _end = seg_start + #input, -- 添加seg_start偏移，开区间，到字符串末尾
             length = #current_segment
         })
     end
@@ -723,12 +763,12 @@ function text_splitter.split_and_convert_input_with_log_and_delimiter(input, log
 end
 
 -- 带日志记录的split_by_backtick函数
-function text_splitter.split_by_backtick_with_log(input, delimiter_before, delimiter_after, logger)
+function text_splitter.split_by_backtick_with_log(input, seg_start, seg_end, delimiter_before, delimiter_after, logger)
     logger.info(
         "开始使用split_by_backtick处理输入: " .. input .. "，分隔符: '" .. (delimiter_before or "") .. "' '" ..
             (delimiter_after or "") .. "'")
 
-    local segments = text_splitter.split_by_backtick(input, delimiter_before, delimiter_after)
+    local segments = text_splitter.split_by_backtick(input, seg_start, seg_end, delimiter_before, delimiter_after)
 
     logger.info("split_by_backtick切分结果:")
     for i, seg in ipairs(segments) do

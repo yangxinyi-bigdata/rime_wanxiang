@@ -16,7 +16,7 @@ local HttpServer = {}
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("http_server", {
-    enabled = true, unified_log = false -- 启用日志以便测试
+    enabled = true, unique_file_log = false -- 启用日志以便测试
 })
 
 -- 默认配置

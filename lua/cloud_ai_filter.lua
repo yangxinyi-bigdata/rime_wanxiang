@@ -14,8 +14,8 @@ local spans_manager = require("spans_manager")
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("cloud_ai_filter", {
     enabled = true, -- 启用日志以便测试
-    unified_log = true, -- 启用日志以便测试
-    log_level = "INFO"
+    unique_file_log = false, -- 启用日志以便测试
+    log_level = "DEBUG"
 })
 
 -- 添加 ARM64 Homebrew 的 Lua 路径
@@ -194,21 +194,6 @@ function translator.func(translation, env)
     -- 自动检查并清除过期的spans信息
     -- spans_manager.auto_clear_check(context, input)
 
-    -- 判断是否存在标点符号或者长度超过设定值,如果是在seg后面添加prompt说明
-    local segment = ""
-
-    -- 在segment后面添加prompt
-    local composition = context.composition
-    local segmentation = composition:toSegmentation()
-    local confirmed_pos_input = ""
-    if (not segmentation:empty()) then
-        -- 获得队尾的 Segment 对象
-        segment = segmentation:back()
-        local confirmed_pos = segmentation:get_confirmed_position()
-        confirmed_pos_input = input:sub(confirmed_pos + 1)
-        logger.info("confirmed_pos_input: " .. confirmed_pos_input)
-    end
-
     if not context:get_option("cloud_translate") then
         -- 查看有没有云翻译的标识, 没有的话直接返回原有的候选词
         local count = 0
@@ -234,13 +219,36 @@ function translator.func(translation, env)
     -- 包含标点符号或反引号，使用智能切分处理
     logger.info("检测到标点符号或反引号，使用智能切分处理方式")
 
+    -- 判断是否存在标点符号或者长度超过设定值,如果是在seg后面添加prompt说明
+    local segment = ""
+
+    -- 在segment后面添加prompt
+    local composition = context.composition
+    local segmentation = composition:toSegmentation()
+    local confirmed_pos_input = ""
+    if (not segmentation:empty()) then
+        -- 获得队尾的 Segment 对象
+        segment = segmentation:back()
+        local confirmed_pos = segmentation:get_confirmed_position()
+        confirmed_pos_input = input:sub(confirmed_pos + 1)
+
+        logger.info("segmentation:get_confirmed_position(): " .. segmentation:get_confirmed_position())
+        logger.info("confirmed_pos_input: " .. confirmed_pos_input)
+    end
+
     -- 升级成将拼音发送到python那边,python那边进行处理之后,返回结果
     -- 1. input好像内容太多了,这里是否切分光标剩余的部分更加合理?  confirmed_pos_input
     -- 2. 将confirmed_pos_input使用socket发送到python端 tcp_socket
     -- 3. 发送tcp_socket.translate 等待获取结果
+
+    -- 这里原来的confirmed_pos_input是不合理的,如果有多个segment就会都发送过去,应该是最后一个segment, 并且标签为abc
     local ordered_candidates = {}
     local ok, err = pcall(function()
-        local parsed_data = tcp_socket.translate(env.schema_name, env.shuru_schema, confirmed_pos_input)
+        -- segment切片出应的input部分 _start: 8 _end: 14
+        local segment_input = input:sub(segment._start + 1, segment._end)
+        logger.info("根据segment切片得到 segment_input: " .. segment_input)
+
+        local parsed_data = tcp_socket.translate(env.schema_name, env.shuru_schema, segment_input)
         if parsed_data and (parsed_data.cloud_candidates or parsed_data.ai_candidates) then
             --[[ {
                 "cloud_candidates": [
@@ -336,8 +344,21 @@ function translator.func(translation, env)
             original_preedit = cand.preedit
             cand_start = cand.start
             cand_end = cand._end
+            logger.info(string.format(
+                "原始候选词信息: text=%s, preedit=%s, start=%s, end=%s, type=%s, comment=%s",
+                tostring(cand.text), tostring(cand.preedit), tostring(cand.start), tostring(cand._end),
+                tostring(cand.type), tostring(cand.comment)))
             cand_type = cand.type
             cand_comment = cand.comment
+
+            if cand_type == "punch" then
+                context:confirm_current_selection()
+                return 
+            end
+
+            if cand_type == "abc" then
+                 
+            end
 
             -- 获取候选词的 spans
 
@@ -374,8 +395,12 @@ function translator.func(translation, env)
         end
 
         for cand in translation:iter() do
+            logger.info(string.format("剩余选词信息: text=%s, preedit=%s, start=%s, end=%s, type=%s, comment=%s",
+                tostring(cand.text), tostring(cand.preedit), tostring(cand.start), tostring(cand._end),
+                tostring(cand.type), tostring(cand.comment)))
             yield(cand)
         end
+        logger.info("所有候选词输出完成.")
     else
         -- 没有智能合成结果，输出原有候选词
         logger.info("没有智能合成结果，输出原始候选词")

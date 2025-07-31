@@ -6,7 +6,7 @@ local logger_module = require("logger")
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("super_preedit", {
     enabled = false, -- 启用日志以便测试
-    unified_log = false, -- 启用日志以便测试
+    unique_file_log = false, -- 启用日志以便测试
     log_level = "DEBUG"
 })
 
@@ -61,14 +61,6 @@ local function modify_preedit_filter(input, env)
 
         -- 如果没有注释或不显示声调，直接输出候选词
         if not comment or comment == "" or not is_tone_display then
-            yield(cand)
-            goto continue
-        end
-
-        -- 检查并清理comment中的chinese_pos信息
-        if comment:match("^chinese_pos:") then
-            -- 如果comment以chinese_pos开头，删除"chinese_pos:数字,数字,"格式的前缀
-            logger.debug("检测到chinese_pos前缀，清理前: " .. comment)
             yield(cand)
             goto continue
         end

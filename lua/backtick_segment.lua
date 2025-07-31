@@ -4,9 +4,11 @@
 local logger_module = require("logger")
 local debug_utils = require("debug_utils")
 
--- 创建日志记录器
+-- 创建当前模块的日志记录器
 local logger = logger_module.create("backtick_segment", {
-    enabled = false
+    enabled = true, -- 启用日志以便测试
+    unique_file_log = false, -- 启用日志以便测试
+    log_level = "DEBUG"
 })
 
 local segmentor = {}
@@ -26,7 +28,7 @@ function segmentor.func(segmentation, env)
     logger.info("输入整个input长度: " .. #input)
 
     -- 使用debug_utils打印Segmentation信息
-    debug_utils.print_segmentation_info(segmentation, logger)
+    -- debug_utils.print_segmentation_info(segmentation, logger)
 
     -- 这个时候应该将剩余的所有内容都切出来 
     local segment_input = ""  -- 这个就是无论在每种情况下,都应该切除的是剩余的段,或者是segmentation.input? 

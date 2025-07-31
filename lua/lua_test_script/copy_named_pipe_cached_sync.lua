@@ -9,7 +9,7 @@ local logger_module = require("logger")
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("named_pipe_cached_sync", {
     enabled = true,
-    unified_log = false -- 启用日志以便测试
+    unique_file_log = false -- 启用日志以便测试
 })
 
 local json_ok, json = pcall(require, "json")  -- 这个处理json

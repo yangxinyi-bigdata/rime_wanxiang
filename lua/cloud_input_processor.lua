@@ -4,28 +4,136 @@ local logger_module = require("logger")
 -- local text_splitter = require("text_splitter")
 local debug_utils = require("debug_utils")
 
--- 创建当前模块的日志记录器
+-- 引入TCP同步模块
+local tcp_socket = nil
+local tcp_ok, tcp_err = pcall(function()
+    tcp_socket = require("tcp_socket_sync")
+end)
+if not tcp_ok then
+    logger.error("加载 tcp_socket_sync 失败: " .. tostring(tcp_err))
+end
+
 local logger = logger_module.create("cloud_input_processor", {
-    enabled = true, -- 可以通过这里控制日志开关
-    unified_log = false -- 启用日志以便测试
+    enabled = true,
+    unique_file_log = false,
+    log_level = "DEBUG"
 })
+
+-- 配置缓存机制
+local config_cache = {}
+local last_schema_id = nil
+
+-- 读取配置的辅助函数
+local function load_ai_config(env)
+    local schema = env.engine.schema
+    local config = schema.config
+    local schema_id = schema.schema_id
+    
+    -- 如果schema没有变化且已有缓存，直接使用缓存
+    if last_schema_id == schema_id and config_cache.ai_assistant_config then
+        logger.info("使用缓存的AI助手配置 (schema: " .. schema_id .. ")")
+        return config_cache.ai_assistant_config
+    end
+    
+    logger.info("重新加载AI助手配置 (schema: " .. schema_id .. ")")
+    
+    -- 读取AI助手配置
+    local ai_assistant_config = {}
+    ai_assistant_config.chat_triggers = {}
+    ai_assistant_config.reply_messages = {}
+    ai_assistant_config.prefix_to_reply = {}
+
+    -- 动态读取 chat_triggers 配置
+    local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
+    if chat_triggers_config then
+        -- 获取所有键名
+        local trigger_keys = chat_triggers_config:keys()
+        logger.info("找到 " .. #trigger_keys .. " 个触发器配置")
+
+        -- 遍历配置中的所有触发器
+        for _, trigger_name in ipairs(trigger_keys) do
+            local trigger_value = config:get_string("ai_assistant/chat_triggers/" .. trigger_name)
+            local reply_message = config:get_string("ai_assistant/reply_messages/" .. trigger_name)
+
+            if trigger_value then
+                ai_assistant_config.chat_triggers[trigger_name] = trigger_value
+                logger.info("云输入触发器 - " .. trigger_name .. ": " .. trigger_value)
+            end
+
+            if reply_message then
+                ai_assistant_config.reply_messages[trigger_name] = reply_message
+                logger.info("云输入回复消息 - " .. trigger_name .. ": " .. reply_message)
+            end
+        end
+    else
+        logger.warning("未找到 chat_triggers 配置")
+    end
+
+    -- 创建触发器前缀到回复消息的映射
+    for trigger, prefix in pairs(ai_assistant_config.chat_triggers) do
+        local reply_message = ai_assistant_config.reply_messages[trigger]
+        if reply_message then
+            ai_assistant_config.prefix_to_reply[prefix] = reply_message
+        end
+    end
+    
+    -- 缓存配置
+    config_cache.ai_assistant_config = ai_assistant_config
+    last_schema_id = schema_id
+    
+    return ai_assistant_config
+end
 
 local cloud_input_processor = {}
 local delimiter = " " -- 默认分隔符
+
+-- 获取当前AI上下文对应的回复输入格式
+local function get_current_ai_reply_input(env, context)
+    if not env.ai_assistant_config or not env.ai_assistant_config.chat_triggers then
+        return "ai_reply:" -- 默认回复输入
+    end
+
+    -- 获取当前AI上下文标记
+    local current_ai_context = context:get_property("current_ai_context")
+    if current_ai_context and env.ai_assistant_config.chat_triggers[current_ai_context] then
+        local trigger_prefix = env.ai_assistant_config.chat_triggers[current_ai_context]
+        local reply_input = trigger_prefix:gsub(":$", "_reply:")
+        logger.info("使用AI上下文回复输入: " .. current_ai_context .. " -> " .. reply_input)
+        return reply_input
+    end
+
+    -- 如果没有设置上下文，尝试从输入历史中推断
+    local input_history = context:get_property("ai_input_history")
+    if input_history and env.ai_assistant_config.chat_triggers then
+        for trigger, prefix in pairs(env.ai_assistant_config.chat_triggers) do
+            if input_history:match("^" .. prefix:gsub("[%(%)%.%+%-%*%?%[%]%^%$%%]", "%%%1")) then
+                local reply_input = prefix:gsub(":$", "_reply:")
+                logger.info("从输入历史推断回复输入: " .. prefix .. " -> " .. reply_input)
+                return reply_input
+            end
+        end
+    end
+
+    return "ai_reply:" -- 默认回复输入
+end
 
 function cloud_input_processor.init(env)
     -- 获取输入法引擎和上下文   
     local config = env.engine.schema.config
     -- 初始化时清空日志文件
-    logger.clear()
+    -- logger.clear()
     logger.info("云输入处理器初始化完成")
     delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
     logger.info("当前分隔符: " .. delimiter)
+
+    -- 使用配置加载函数
+    env.ai_assistant_config = load_ai_config(env)
+    logger.info("AI助手配置加载完成")
+
     --  fixed 设置一个变量
     -- context:set_property只能设置字符串类型
     env.engine.context:set_property("cloud_translate_flag", "0")
     env.engine.context:set_property("backtick_prompt", "0")
-
 end
 
 local function set_cloud_translate_flag(context)
@@ -34,6 +142,7 @@ local function set_cloud_translate_flag(context)
     local is_composing = context:is_composing()
     local preedit = context:get_preedit()
     local preedit_text = preedit.text
+    -- 这里不需要考虑已经确认的部分,确认的部分不会出现在preedit_text中.
     -- 移除光标符号和后续的prompt内容
     local clean_text = preedit_text:gsub("‸.*$", "") -- 从光标符号开始删除到结尾
     logger.info("当前预编辑文本: " .. clean_text)
@@ -73,23 +182,77 @@ end
 function cloud_input_processor.func(key, env)
     local engine = env.engine
     local context = engine.context
-    logger.info("测试虚拟按键: " .. key:repr())
+    local input = context.input
+    local key_repr = key:repr()
+    logger.info("测试虚拟按键: " .. key_repr)
     -- 返回值常量定义
     local kRejected = 0 -- 表示按键被拒绝
     local kAccepted = 1 -- 表示按键已被处理
     local kNoop = 2 -- 表示按键未被处理,继续传递给下一个处理器
+
+    if key_repr == "Release+Control_L" then
+        logger.info("拦截所有Release+Control_L按键")
+        return kAccepted
+    end
+
+    if context:get_property("get_ai_stream") == "true" then
+
+        if key_repr == "Control+F11" then
+            logger.info("get_ai_stream==true, 触发重新刷新候选词: ")
+            if context.input == "" then
+                local reply_input = get_current_ai_reply_input(env, context)
+                context.input = reply_input
+                logger.info("设置AI回复输入: " .. reply_input)
+            end
+            context:refresh_non_confirmed_composition()
+            return kAccepted
+        end
+
+    else
+        if key_repr == "Control+F11" then
+            logger.info("get_ai_stream==false, 依然拦截输入Control+F11: ")
+            return kAccepted
+        end
+    end
+
     local is_composing = context:is_composing()
     if not key or not context:is_composing() then
         return kNoop
     end
 
+    if context:get_property("intercept_select_key") == "true" then
+
+        if key_repr == "space" or key_repr == "1" then
+            logger.debug("进入分支 get_property intercept_select_key: " ..
+                             context:get_property("intercept_select_key"))
+            logger.debug("触发清空clear. key_repr: " .. key_repr)
+            -- 拦截按键, 清空当前context中的内容.
+            logger.info("context:clear()")
+            context:clear()
+
+            -- 使用TCP通信发送粘贴命令到Python服务端（跨平台通用）
+            if tcp_socket then
+                logger.info("🍴 通过TCP发送粘贴命令到Python服务端 (intercept模式)")
+                local paste_success = tcp_socket.send_paste_command()
+                if paste_success then
+                    logger.info("✅ 粘贴命令发送成功 (intercept模式)")
+                else
+                    logger.error("❌ 粘贴命令发送失败 (intercept模式)")
+                end
+            else
+                logger.warn("⚠️ TCP模块未加载，无法发送粘贴命令 (intercept模式)")
+            end
+
+            logger.debug("set_property intercept_select_key: false")
+            context:set_property("intercept_select_key", "false")
+            return kAccepted
+
+        end
+
+    end
+
     -- 使用 pcall 捕获所有可能的错误
     local success, result = pcall(function()
-        -- 获取输入法引擎和上下文
-        local engine = env.engine
-        local context = engine.context
-        local input = context.input
-        
 
         if #input <= 1 then
             logger.info("input为1, 不判断直接退出")
@@ -111,11 +274,11 @@ function cloud_input_processor.func(key, env)
         -- 如果是则直接将当前第一个候选项上屏.
         logger.info("")
         logger.info("=== 开始分析lua/cloud_input_processor.lua ===")
-        logger.info("当前按键: " .. key:repr())
+        logger.info("当前按键: " .. key_repr)
         logger.info("当前input: " .. input)
 
         logger.info("context:get_property:backtick_prompt " .. context:get_property("backtick_prompt"))
-        
+
         -- 首先打印seg的信息
         -- 使用debug_utils打印Segmentation信息
         -- debug_utils.print_segmentation_info(segmentation, logger)
@@ -148,7 +311,7 @@ function cloud_input_processor.func(key, env)
         -- 如果输入的是反引号,那么segmente_input是前边的内容, 
         -- 这就有两种情况, 一种是 wo` 一种是wo`ok`
         -- 如果是前边的情况, segmente_input为 input, 后面的情况 segmente_input为 wo`ok
-        local key_repr = key:repr()
+
         if key_repr == "grave" then
             -- segmente_input 后面追加一个反引号字符
             segmente_input = segmente_input .. "`"
@@ -300,29 +463,6 @@ function cloud_input_processor.func(key, env)
         logger.info("=== 结束分析lua/cloud_input_processor.lua ===")
         logger.info("")
 
-        -- -- 定义需要跳过处理的按键
-        -- local skip_keys = {
-        --     ["Up"] = true,
-        --     ["Down"] = true,
-        --     ["space"] = true,
-        --     ["1"] = true,
-        --     ["2"] = true,
-        --     ["3"] = true,
-        --     ["4"] = true,
-        --     ["5"] = true,
-        --     ["6"] = true,
-        --     ["7"] = true,
-        --     ["8"] = true,
-        --     ["9"] = true,
-        --     ["0"] = true
-        -- }
-        -- -- 如果按键需要跳过,则不进行处理
-        -- local key_repr = key:repr()
-        -- if skip_keys[key_repr] then
-        --     logger.info("按键为上下键、空格键或数字键, 不进行处理")
-        --     return kNoop
-        -- end
-
         -- 设置云输入法表示标
         set_cloud_translate_flag(context)
 
@@ -335,6 +475,7 @@ function cloud_input_processor.func(key, env)
             return kAccepted
         end
 
+        logger.info("没有处理该按键, 返回kNoop")
         return kNoop
     end)
 

@@ -9,7 +9,8 @@ local spans_manager = require("spans_manager")
 -- 创建日志记录器
 local logger = logger_module.create("smart_cursor_processor", {
     enabled = true,
-    unified_log = false -- 启用日志以便测试
+    unique_file_log = false, -- 启用日志以便测试
+    log_level = "DEBUG"
 })
 
 local tcp_socket = nil
@@ -48,6 +49,14 @@ function smart_cursor_processor.init(env)
     env.move_next_punct = config:get_string("key_binder/move_next_punct")
     env.move_prev_punct = config:get_string("key_binder/move_prev_punct")
     env.search_move_cursor = config:get_string("key_binder/search_move_cursor")
+    local ok, err = pcall(function()
+        env.shuru_schema = config:get_string("schema/my_shuru_schema")
+    end)
+    if ok then
+        logger.info("env.shuru_schema: " .. tostring(env.shuru_schema))
+    else
+        logger.error("获取 set_shuru_schema/__include 失败: " .. tostring(err))
+    end
     -- 定义标点符号集合
     env.punctuation_chars = {
         [","] = true,
@@ -137,6 +146,22 @@ function smart_cursor_processor.init(env)
                 context:set_option("search_move", false)
                 context:set_property("search_move_str", "")
             end
+
+            -- 清空云输入法的状态
+            if context:get_property("cloud_translate_flag") == "1" then
+                context:set_property("cloud_translate_flag", "0")
+            end
+
+            -- 清空反引号英文模式的状态
+            if context:get_property("backtick_prompt") == "1" then
+                context:set_property("backtick_prompt", "0")
+            end
+
+            -- 清空ai回复消息模式的状态
+            if context:get_property("intercept_select_key") == "1" then
+                context:set_property("intercept_select_key", "0")
+            end
+
         end
 
         -- local input = context.input or ""
@@ -185,20 +210,15 @@ function smart_cursor_processor.init(env)
     --     end
     -- end)
 
-    env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
-        if tcp_socket then
-            tcp_socket.sync_with_server(context)
-        else
-            logger.debug("sync_module为nil，跳过状态更新")
-        end
-    end)
+    -- env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
+    --     if tcp_socket then
+    --         tcp_socket.sync_with_server(context)
+    --     else
+    --         logger.debug("sync_module为nil，跳过状态更新")
+    --     end
+    -- end)
 
     env.new_update_notifier = context.update_notifier:connect(function(context)
-        -- 防止递归调用的标志
-        if context:get_property("tcp_sync_in_progress") == "true" then
-            logger.debug("tcp_socket.sync_with_server() 正在进行中，跳过本次调用")
-            return
-        end
 
         -- 判断is_composing状态是否发生了变化
         local current_is_composing = context:is_composing()
@@ -221,18 +241,14 @@ function smart_cursor_processor.init(env)
             logger.debug("从输入状态变化，触发发送当前开关信息.")
             if tcp_socket then
                 -- 传递option信息
-                tcp_socket.sync_with_server(context, true)
+                tcp_socket.sync_with_server(context, false)
             else
                 logger.debug("sync_module为nil，跳过状态更新")
             end
             -- 更新记录的状态
             context:set_property("previous_is_composing", tostring(current_is_composing))
-        else
-            -- 发送普通状态信息
-            tcp_socket.sync_with_server(context)
+
         end
-        -- 清除标志
-        context:set_property("tcp_sync_in_progress", "false")
     end)
 
 end
@@ -380,7 +396,7 @@ function smart_cursor_processor.move_to_prev_punctuation(env)
 end
 
 -- 基于 vertices 分割点进行智能光标移动（新版本，使用spans_manager）
-function smart_cursor_processor.move_by_spans_manager(env)
+function smart_cursor_processor.move_by_spans_manager(env, direction)
     local engine = env.engine
     local context = engine.context
     local caret_pos = context.caret_pos
@@ -389,7 +405,12 @@ function smart_cursor_processor.move_by_spans_manager(env)
 
     -- 使用spans_manager获取下一个光标位置
     -- 这里传入当前光标位置
-    local next_pos = spans_manager.get_next_cursor_position(context, caret_pos)
+    local next_pos
+    if direction == "next" then
+        next_pos = spans_manager.get_next_cursor_position(context, caret_pos)
+    elseif direction == "prev" then
+        next_pos = spans_manager.get_prev_cursor_position(context, caret_pos)
+    end
 
     if next_pos ~= nil then
         logger.info("移动光标从 " .. caret_pos .. " 到 " .. next_pos)
@@ -399,80 +420,6 @@ function smart_cursor_processor.move_by_spans_manager(env)
         logger.info("spans_manager未返回有效的下一个位置")
         return false
     end
-end
-
--- 基于 vertices 分割点进行智能光标移动（兼容旧版本）
-function smart_cursor_processor.move_by_vertices(env, vertices_str)
-    local engine = env.engine
-    local context = engine.context
-
-    logger.info("开始手动移动tab光标位置, vertices_str: " .. vertices_str)
-
-    -- 读取 vertices 信息
-    local vertices = {}
-    for vertex_str in vertices_str:gmatch("[^,]+") do
-        table.insert(vertices, tonumber(vertex_str))
-    end
-
-    for i, vertex in ipairs(vertices) do
-        logger.info("spans Vertex " .. i .. ": " .. vertex)
-    end
-
-    -- 获取当前光标位置
-    local caret_pos = context.caret_pos
-    local input = context.input
-    logger.info("当前光标位置: " .. caret_pos .. ", 输入长度: " .. #input)
-
-    -- 找到当前光标位置在 vertices 中的位置
-    local current_vertex_index = nil
-    local next_vertex_pos = nil
-
-    -- 如果光标在最末尾，跳转到第二个分割点（第一个是0）
-    if caret_pos == #input then
-        logger.info("光标在末尾，跳转到开头")
-        context.caret_pos = 0
-        next_vertex_pos = vertices[2]
-        caret_pos = 0
-    else
-        -- 查找当前光标所在的区间
-        for i = 1, #vertices do
-            if caret_pos < vertices[i] then
-                next_vertex_pos = vertices[i]
-                current_vertex_index = i
-                logger.info("找到下一个分割点: vertices[" .. i .. "] = " .. next_vertex_pos)
-                break
-            elseif caret_pos == vertices[i] then
-                -- 光标正好在分割点上，跳转到下一个分割点
-                if i < #vertices then -- 不是最后一个分割点
-                    next_vertex_pos = vertices[i + 1]
-                    current_vertex_index = i + 1
-                    logger.info(
-                        "光标在分割点 " .. i .. " 上，跳转到下一个分割点: vertices[" .. (i + 1) ..
-                            "] = " .. next_vertex_pos)
-                else
-                    -- 已经是最后一个分割点，跳转到末尾
-                    next_vertex_pos = #input
-                    logger.info("已在最后分割点，跳转到末尾: " .. next_vertex_pos)
-                end
-                break
-            end
-        end
-
-        -- 如果没有找到下一个分割点，说明已经在最后一个区间，跳转到末尾
-        if not next_vertex_pos then
-            next_vertex_pos = #input
-            logger.info("在最后区间，跳转到末尾: " .. next_vertex_pos)
-        end
-    end
-
-    -- 执行光标移动
-    if next_vertex_pos then
-        logger.info("直接设置光标位置到: " .. next_vertex_pos)
-        context.caret_pos = next_vertex_pos
-        return true
-    end
-
-    return false
 end
 
 function smart_cursor_processor.func(key, env)
@@ -665,13 +612,29 @@ function smart_cursor_processor.func(key, env)
 
         ------------------------------------------------------------------------
 
+        if spans_manager.get_spans(context) then
+            logger.debug("当前存在spans信息")
+        else
+            logger.debug("当前不存在spans信息")
+        end
+
         -- 检测自定义的智能移动快捷键
         if key_repr == "Tab" then
             -- 尝试使用新的spans_manager进行光标移动
-            if smart_cursor_processor.move_by_spans_manager(env) then
-                return kAccepted
+            if spans_manager.get_spans(context) then
+                logger.debug("获取到spans信息")
+                if smart_cursor_processor.move_by_spans_manager(env, "next") then
+                    return kAccepted
+                end
             end
-
+            return kNoop
+        elseif key_repr == "Left" then
+            -- 尝试使用新的spans_manager进行光标移动
+            if spans_manager.get_spans(context) then
+                if smart_cursor_processor.move_by_spans_manager(env, "prev") then
+                    return kAccepted
+                end
+            end
             return kNoop
 
         elseif key_repr == env.move_prev_punct then

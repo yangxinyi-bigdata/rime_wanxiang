@@ -4,6 +4,13 @@
 
 `spans_manager.lua` 是一个专门用于管理 Rime 输入法中候选词 spans 信息的模块。它提供了统一的接口来保存、获取、清除和管理 spans 信息，解决了多个脚本之间 spans 信息管理混乱的问题。
 
+## bug排查
+应该知道,只要是被我替换过的候选词,其原来的spans信息都会消失,而我并没有办法重新添加spans信息.
+应该是在于第一个候选词的`spans`,信息,所以一定是我的哪一个脚本替换了候选词.
+
+确定了punct_eng_chinese_filter就是这个,
+
+
 ## 主要功能
 
 ### 1. 统一的 spans 信息管理
@@ -272,6 +279,8 @@ if spans_info then
     local vertices = spans_info.vertices
 end
 ```
+
+
 
 ## 注意事项
 

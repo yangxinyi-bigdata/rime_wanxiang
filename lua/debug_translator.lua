@@ -5,8 +5,11 @@ local debug_utils = require("debug_utils")
 
 -- 创建日志记录器
 local logger = logger_module.create("debug_translator", {
-    enabled = true
+    enabled = true,
+    unique_file_log = false,
+    log_level = "DEBUG"
 })
+
 
 local translator = {}
 

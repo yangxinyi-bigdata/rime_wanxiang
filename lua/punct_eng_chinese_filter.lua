@@ -9,11 +9,15 @@ local spans_manager = require("spans_manager")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("punct_eng_chinese_filter", {
-    enabled = false -- 可以通过这里控制日志开关
+    enabled = true, -- 启用日志以便测试
+    unique_file_log = false, -- 启用日志以便测试
+    log_level = "DEBUG"
 })
 
 local punct_eng_chinese_filter = {}
 local delimiter = ""
+local ai_reply_tags = {}
+local ai_chat_triggers = {}
 
 function punct_eng_chinese_filter.init(env)
     -- 初始化时清空日志文件
@@ -23,6 +27,28 @@ function punct_eng_chinese_filter.init(env)
     local config = env.engine.schema.config
     delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
     logger.info("当前分隔符: " .. delimiter)
+
+    -- 读取 AI 助手触发器配置，动态生成回复标签
+    local chat_triggers_map = config:get_map("ai_assistant/chat_triggers")
+    if chat_triggers_map then
+        local trigger_keys = chat_triggers_map:keys()
+        local tag_count = 0
+        -- 使用标准的 Lua table 遍历方式
+        for _, trigger_name in ipairs(trigger_keys) do
+            -- 保存原始的chat trigger标签
+            ai_chat_triggers[trigger_name] = true
+            logger.info("保存AI聊天触发器标签: " .. trigger_name)
+
+            -- 动态生成回复标签（触发器名称 + "_reply"）
+            local reply_tag = trigger_name .. "_reply"
+            ai_reply_tags[reply_tag] = true
+            tag_count = tag_count + 1
+            logger.info("动态生成AI回复标签: " .. reply_tag)
+        end
+        logger.info("AI标签生成完成，共 " .. tostring(tag_count) .. " 个触发器和回复标签")
+    else
+        logger.info("未找到AI触发器配置")
+    end
 
 end
 
@@ -92,33 +118,43 @@ function punct_eng_chinese_filter.func(translation, env)
         local count = 0 -- 用于计数，限制最多处理4个候选词
         -- 遍历所有候选词并进行标点符号替换
         local punch_flag = false -- 是否存在标点符号
+        local ai_flag = false
         for cand in translation:iter() do
+
             count = count + 1
             -- 当 count 等于 1 的时候，这个时候判断是否有标点符号，如果没有则后面不用判断了。
             if count == 1 then
+                -- 判断候选词类型，进行豁免。
+                -- 检查是否为AI回复类型，如果是则豁免标点符号替换
 
-                logger.info("text_splitter.has_punctuation_no_backtick(cand.text, logger): " .. tostring(text_splitter.has_punctuation_no_backtick(cand.text, logger)))
-                logger.info("cand.text: " .. cand.text)
-                if cand.text and text_splitter.has_punctuation_no_backtick(cand.text, logger) then
-                    punch_flag = true
-                    logger.info("cand.text: " .. cand.text)
-                    -- 检查是否已有spans信息，如果没有则尝试保存, 
-                    local existing_spans = spans_manager.get_spans(context)
-                    logger.info("existing_spans: " .. tostring(existing_spans))
-                    if not existing_spans then
-                        -- 尝试从候选词中提取并保存spans信息
-                        spans_manager.extract_and_save_from_candidate(context, cand, context.input,
-                            "punct_eng_chinese_filter")
-                            logger.info("existing_spans: " .. tostring(existing_spans))
-                    else
-                        logger.info("已存在spans信息，来源: " .. existing_spans.source)
+                -- 对于 a:nihk 这样的内容，是否应该跳过标点符号替换呢？标点符号不需要跳过替换，但是spans信息,应该能够得到正确的处理
+                logger.info("监测是否ai回复标签, cand.type: " .. cand.type)
+                if cand.type and ai_reply_tags[cand.type] then
+                    logger.info("候选词类型为AI回复标签，豁免标点符号替换: " .. cand.type)
+                    -- 对AI回复类型的候选词直接输出，不进行标点符号替换
+                    ai_flag = true
+
+                    -- elseif cand.type and ai_chat_triggers[cand.type] then
+                    --     logger.info("候选词类型为AI聊天触发器标签，豁免标点符号替换: " .. cand.type)
+                    --     -- 对AI聊天触发器类型的候选词直接输出，不进行标点符号替换
+                    --     ai_flag = true
+
+                else
+                    -- logger.info("cand.text: " .. cand.text)
+                    if cand.text and text_splitter.has_punctuation_no_backtick(cand.text, logger) then
+                        punch_flag = true
+                        logger.info("punch_flag: true")
+                        -- 对于标点符号替换，我们不需要额外处理spans信息
+                        -- 普通候选词的spans信息可以直接通过candidate:spans()获取
+                        -- backtick_combo类型的spans信息已经在backtick_translator中保存到spans_manager了
                     end
                 end
             end
 
             -- 检查输入是否包含反引号标签
             local new_text = ""
-            if punch_flag and count < 10 then
+            if not ai_flag and punch_flag and count < 10 then
+                logger.info("进入not ai_reply_flag and punch_flag and count < 10")
                 local cand_text = cand.text
                 local cand_type = cand.type
                 local cand_comment = cand.comment
@@ -173,7 +209,11 @@ function punct_eng_chinese_filter.func(translation, env)
                 end
                 yield(new_cand) -- 输出新的候选词
             else
-                -- 如果没有文本或不包含标点符号，直接输出原候选词
+                -- 如果没有文本或不包含标点符号，将comment中的chinese_pos去掉
+                if cand.comment and cand.comment:match("^chinese_pos:") then
+                    -- logger.info("候选词为chinese_pos, 删除comment, 格式为chinese_pos:1,2,9,10,")
+                    cand.comment = cand.comment:gsub("^chinese_pos:[%d,]+", "")
+                end
                 yield(cand)
             end
         end

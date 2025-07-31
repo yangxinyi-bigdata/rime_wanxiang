@@ -3,15 +3,22 @@
 --
 -- 使用方法：
 -- 1. 分离模式（默认）：每个模块使用独立的日志文件
---    将 default_config.unified_log 设置为 false
+--    将 default_config.unique_file_log 设置为 false
 -- 2. 统一模式：所有模块输出到同一个日志文件
---    将 default_config.unified_log 设置为 true
---    可通过 default_config.unified_log_file 自定义文件名
+--    将 default_config.unique_file_log 设置为 true
+--    可通过 default_config.unique_file_log_file 自定义文件名
 -- 3. 控制台输出：可以通过 default_config.console_output 设置为 true
 --    来同时将日志输出到控制台，便于调试
 -- 4. 日志级别控制：通过 logger.set_log_level() 设置日志输出级别
 --    可用级别：DEBUG < INFO < WARN < ERROR
 --    只有大于等于设置级别的日志才会被输出
+-- 5. 行号显示：通过 logger.set_show_line_info() 控制是否显示行号
+--    默认为 true，日志格式: [时间] [级别] [模块名:行号] 消息
+--
+-- 优先级控制：
+-- - 当 logger.lua 中 unique_file_log = true 时，强制所有模块使用统一日志文件，
+--   忽略各个调用脚本中的 unique_file_log 设置
+-- - 当 logger.lua 中 unique_file_log = false 时，才允许各个调用脚本自定义设置
 
 local logger = {}
 
@@ -28,17 +35,18 @@ local default_config = {
     enabled = true,
     log_dir = "/Users/yangxinyi/Library/Rime/log/",
     timestamp_format = "%Y-%m-%d %H:%M:%S",
-    unified_log = true,  -- 是否统一输出到同一个日志文件
-    unified_log_file = "all_modules.log",  -- 统一日志文件名
+    unique_file_log = false,  -- 是否统一输出到同一个日志文件
+    unique_file_log_file = "all_modules.log",  -- 统一日志文件名
     console_output = false,  -- 是否同时输出到控制台
-    log_level = "INFO"  -- 日志输出级别：DEBUG, INFO, WARN, ERROR
+    log_level = "INFO",  -- 日志输出级别：DEBUG, INFO, WARN, ERROR
+    show_line_info = true  -- 是否显示文件名和行号信息
 }
 
 -- 配置管理函数
 function logger.set_unified_mode(enabled, filename)
-    default_config.unified_log = enabled
+    default_config.unique_file_log = enabled
     if filename then
-        default_config.unified_log_file = filename
+        default_config.unique_file_log_file = filename
     end
 end
 
@@ -54,6 +62,10 @@ function logger.set_log_level(level)
     end
 end
 
+function logger.set_show_line_info(enabled)
+    default_config.show_line_info = enabled
+end
+
 function logger.get_config()
     return default_config
 end
@@ -62,7 +74,7 @@ end
 function logger.create(module_name, config)
     config = config or {}
     
-    -- 合并配置
+    -- 合并配置，但 unique_file_log 在 logger.lua 中设置时具有最高优先级
     local log_config = {}
     for k, v in pairs(default_config) do
         if config[k] ~= nil then
@@ -72,11 +84,19 @@ function logger.create(module_name, config)
         end
     end
     
+    -- unique_file_log 优先级控制：
+    -- 当 logger.lua 中设置为 true 时，强制使用统一日志文件，忽略调用者的设置
+    -- 当 logger.lua 中设置为 false 时，才允许调用者自定义
+    if default_config.unique_file_log == true then
+        log_config.unique_file_log = true
+        log_config.unique_file_log_file = default_config.unique_file_log_file
+    end
+    
     -- 生成日志文件路径
     local log_file_path
-    if log_config.unified_log then
+    if log_config.unique_file_log then
         -- 统一模式：所有模块使用同一个日志文件
-        log_file_path = log_config.log_dir .. log_config.unified_log_file
+        log_file_path = log_config.log_dir .. log_config.unique_file_log_file
     else
         -- 分离模式：每个模块使用独立的日志文件
         log_file_path = log_config.log_dir .. module_name .. ".log"
@@ -88,9 +108,10 @@ function logger.create(module_name, config)
         module_name = module_name,
         log_file_path = log_file_path,
         timestamp_format = log_config.timestamp_format,
-        unified_log = log_config.unified_log,
+        unique_file_log = log_config.unique_file_log,
         console_output = log_config.console_output,
-        log_level = log_config.log_level
+        log_level = log_config.log_level,
+        show_line_info = log_config.show_line_info
     }
     
     -- 清空日志文件函数
@@ -164,15 +185,42 @@ function logger.create(module_name, config)
             message = ""
         end
         
+        -- 获取调用者的文件名和行号信息
+        local location_info = ""
+        local actual_module_name = log_instance.module_name  -- 默认使用传入的模块名
+        
+        if log_instance.show_line_info then
+            local caller_info = debug.getinfo(3, "Sl")  -- 3级调用栈：write <- info/debug/warn/error <- 实际调用者
+            if caller_info and caller_info.source then
+                -- 从完整路径中提取文件名（去掉路径和扩展名）
+                local source = caller_info.source
+                if source:sub(1, 1) == "@" then
+                    source = source:sub(2)  -- 去掉开头的@符号
+                end
+                
+                -- 提取文件名
+                local filename = source:match("([^/\\]+)$") or source  -- 提取最后的文件名部分
+                if filename:match("%.lua$") then
+                    actual_module_name = filename:sub(1, -5)  -- 去掉.lua扩展名
+                else
+                    actual_module_name = filename
+                end
+                
+                if caller_info.currentline and caller_info.currentline > 0 then
+                    location_info = string.format(":%d", caller_info.currentline)
+                end
+            end
+        end
+        
         level = level or "INFO"
         local timestamp = os.date(log_instance.timestamp_format)
-        local log_message = string.format("[%s] [%s] [%s] %s\n", 
-            timestamp, level, log_instance.module_name, message)
+        local log_message = string.format("[%s] [%s] [%s%s] %s\n", 
+            timestamp, level, actual_module_name, location_info, message)
         
         -- 如果启用了控制台输出，同时输出到控制台
         if log_instance.console_output then
-            print(string.format("[%s] [%s] [%s] %s", 
-                timestamp, level, log_instance.module_name, message))
+            print(string.format("[%s] [%s] [%s%s] %s", 
+                timestamp, level, actual_module_name, location_info, message))
         end
         
         -- 写入到文件

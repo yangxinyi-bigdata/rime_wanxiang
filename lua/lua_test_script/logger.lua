@@ -3,10 +3,10 @@
 --
 -- 使用方法：
 -- 1. 分离模式（默认）：每个模块使用独立的日志文件
---    将 default_config.unified_log 设置为 false
+--    将 default_config.unique_file_log 设置为 false
 -- 2. 统一模式：所有模块输出到同一个日志文件
---    将 default_config.unified_log 设置为 true
---    可通过 default_config.unified_log_file 自定义文件名
+--    将 default_config.unique_file_log 设置为 true
+--    可通过 default_config.unique_file_log_file 自定义文件名
 
 local logger = {}
 
@@ -15,15 +15,15 @@ local default_config = {
     enabled = true,
     log_dir = "/Users/yangxinyi/Library/Rime/log/",
     timestamp_format = "%Y-%m-%d %H:%M:%S",
-    unified_log = true,  -- 是否统一输出到同一个日志文件
-    unified_log_file = "all_modules.log"  -- 统一日志文件名
+    unique_file_log = true,  -- 是否统一输出到同一个日志文件
+    unique_file_log_file = "all_modules.log"  -- 统一日志文件名
 }
 
 -- 配置管理函数
 function logger.set_unified_mode(enabled, filename)
-    default_config.unified_log = enabled
+    default_config.unique_file_log = enabled
     if filename then
-        default_config.unified_log_file = filename
+        default_config.unique_file_log_file = filename
     end
 end
 
@@ -47,9 +47,9 @@ function logger.create(module_name, config)
     
     -- 生成日志文件路径
     local log_file_path
-    if log_config.unified_log then
+    if log_config.unique_file_log then
         -- 统一模式：所有模块使用同一个日志文件
-        log_file_path = log_config.log_dir .. log_config.unified_log_file
+        log_file_path = log_config.log_dir .. log_config.unique_file_log_file
     else
         -- 分离模式：每个模块使用独立的日志文件
         log_file_path = log_config.log_dir .. module_name .. ".log"
@@ -61,7 +61,7 @@ function logger.create(module_name, config)
         module_name = module_name,
         log_file_path = log_file_path,
         timestamp_format = log_config.timestamp_format,
-        unified_log = log_config.unified_log
+        unique_file_log = log_config.unique_file_log
     }
     
     -- 清空日志文件函数

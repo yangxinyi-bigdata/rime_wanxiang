@@ -1,0 +1,18 @@
+.cm-content {
+  line-height: 1.8;
+}
+/* 预览模式下的行间距 */
+.markdown-preview-view {
+  line-height: 1.8;
+}
+
+
+/* 编辑模式下的标题间隔 */
+.cm-header-1,
+.cm-header-2,
+.cm-header-3,
+.cm-header-4,
+.cm-header-5,
+.cm-header-6 {
+  line-height: 1.8;
+}

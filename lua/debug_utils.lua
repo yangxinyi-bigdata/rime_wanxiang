@@ -225,6 +225,9 @@ function debug_utils.print_segmentation_info(segmentation, logger)
     -- 获取已确认位置
     local confirmed_pos = segmentation:get_confirmed_position()
     logger.info("confirmed_position: " .. tostring(confirmed_pos))
+    local confirmed_pos = segmentation:get_confirmed_position()
+    local confirmed_pos_input = segmentation.input:sub(confirmed_pos + 1)
+    logger.info("confirmed_pos_input: " .. confirmed_pos_input)
 
     -- 获取当前位置信息
     local current_start = segmentation:get_current_start_position()
@@ -299,6 +302,52 @@ function debug_utils.print_translation_detailed(translation, logger)
 
     -- 返回所有候选词，让调用者重新yield
     return all_candidates
+
+end
+
+-- 打印Context的详细信息
+function debug_utils.print_context_info(context, logger)
+    if not context then
+        logger.info("Context is nil")
+        return
+    end
+
+    logger.info("=== Context 详细信息 ===")
+    
+    -- 基础属性
+    logger.info("基础属性:")
+    logger.info("  input: '" .. (context.input or "") .. "'")
+    logger.info("  caret_pos: " .. tostring(context.caret_pos))
+    logger.info("  is_composing: " .. tostring(context:is_composing()))
+    logger.info("  has_menu: " .. tostring(context:has_menu()))
+    
+    -- 获取文本相关信息
+    logger.info("文本信息:")
+    local commit_text = context:get_commit_text()
+    local script_text = context:get_script_text()
+    logger.info("  get_commit_text: '" .. (commit_text or "") .. "'")
+    logger.info("  get_script_text: '" .. (script_text or "") .. "'")
+    
+    -- 预编辑信息
+    local preedit = context:get_preedit()
+    if preedit then
+        logger.info("  preedit:")
+        logger.info("    text: '" .. (preedit.text or "") .. "'")
+    else
+        logger.info("  preedit: nil")
+    end
+    
+    -- 选中的候选词
+    local selected_candidate = context:get_selected_candidate()
+    if selected_candidate then
+        logger.info("  selected_candidate:")
+        logger.info("    text: '" .. (selected_candidate.text or "") .. "'")
+        logger.info("    comment: '" .. (selected_candidate.comment or "") .. "'")
+        logger.info("    type: " .. tostring(selected_candidate.type))
+        logger.info("    quality: " .. tostring(selected_candidate.quality))
+    else
+        logger.info("  selected_candidate: nil")
+    end
 
 end
 

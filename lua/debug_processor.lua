@@ -6,7 +6,9 @@ local debug_utils = require("debug_utils")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("debug_processor", {
-    enabled = true  -- 调试模式默认开启日志
+    enabled = true, -- 启用日志以便测试
+    unique_file_log = false, -- 启用日志以便测试
+    log_level = "DEBUG"
 })
 
 local debug_precessor = {}
@@ -67,17 +69,6 @@ function debug_precessor.func(key, env)
         -- 清理预编辑文本（移除光标符号）
         local clean_text = preedit_text:gsub("‸.*$", "")
         logger.info("清理后的预编辑文本: " .. clean_text)
-        
-        -- -- 输出候选项信息
-        -- if context:has_menu() then
-        --     logger.info("存在候选菜单")
-        --     local composition = context.composition
-        --     if composition then
-        --         logger.info("候选项数量: " .. tostring(composition:toSegmentation().size))
-        --     end
-        -- else
-        --     logger.info("无候选菜单")
-        -- end
         
         -- 使用debug_utils输出详细的分段信息
         local segmentation = context.composition:toSegmentation()

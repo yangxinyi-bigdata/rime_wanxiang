@@ -16,7 +16,7 @@ schema_list:
 # 菜单
 menu:
   page_size: 5  # 候选词个数，不得超过6个，7890代表声调
-  alternative_select_labels: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]  # 修改候选项标签，Windows用这行会自动加点
+  alternative_select_labels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]    # 修改候选项标签，Windows用这行会自动加点
   #alternative_select_labels: [ ⒈, ⒉, ⒊, ⒋, ⒌, ⒍, ⒎, ⒏, ⒐, ⒑ ]  # 修改候选项标签，Linux用这行用了加点字符
   alternative_select_keys: 123456  # 如编码字符占用数字键，则需另设选字键
 
@@ -97,7 +97,6 @@ key_binder:
     # Tab / Shift+Tab 翻页
     # - { when: has_menu, accept: Shift+Tab, send: Page_Up }
     # - { when: has_menu, accept: Tab, send: Page_Down }
-    
     # numbered_mode_switch:
     # - { when: always, select: .next, accept: Control+Shift+1 }                  # 在最近的两个方案之间切换
     # - { when: always, select: .next, accept: Control+Shift+exclam }             # 在最近的两个方案之间切换
@@ -140,11 +139,11 @@ key_binder:
     - {accept: KP_7, send: 7, when: composing}
     - {accept: KP_8, send: 8, when: composing}
     - {accept: KP_9, send: 9, when: composing}
-    - {accept: KP_Decimal,  send: period  , when: composing}
+    - {accept: KP_Decimal, send: period, when: composing}
     - {accept: KP_Multiply, send: asterisk, when: composing}
-    - {accept: KP_Add,      send: plus,     when: composing}
-    - {accept: KP_Subtract, send: minus,    when: composing}
-    - {accept: KP_Divide,   send: slash,    when: composing}
+    - {accept: KP_Add, send: plus, when: composing}
+    - {accept: KP_Subtract, send: minus, when: composing}
+    - {accept: KP_Divide, send: slash, when: composing}
     - {accept: KP_Enter, send: Return, when: composing}
 
 # 按键速查
@@ -260,3 +259,5 @@ key_binder:
 # KP_7	小键板7
 # KP_8	小键板8
 # KP_9	小键板9
+ascii_punct: false
+simplifier: s2tw

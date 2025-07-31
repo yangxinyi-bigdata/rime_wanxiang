@@ -6,7 +6,9 @@ local logger_module = require("logger")
 
 -- 创建日志记录器
 local logger = logger_module.create("spans_manager", {
-    enabled = false
+    enabled = true,
+    unique_file_log = false, -- 启用日志以便测试
+    log_level = "DEBUG"
 })
 
 local spans_manager = {}
@@ -19,7 +21,8 @@ local SPANS_TIMESTAMP_KEY = "spans_timestamp"
 
 -- 来源优先级（数字越小优先级越高）
 local SOURCE_PRIORITY = {
-    script_backtick_translator = 1,
+    backtick_translator = 1,
+    cloud_ai_filter_v2 = 2,
     baidu_filter = 2,
     punct_eng_chinese_filter = 3,
     unknown = 99
@@ -218,7 +221,7 @@ function spans_manager.extract_and_save_from_candidate(context, candidate, input
     end
     
     local success, spans = pcall(function()
-        return candidate:spans()
+        return candidate:spans()  -- 这里不会返回最外面函数,而是返回pcall函数外面
     end)
     
     if not success or not spans then
@@ -226,12 +229,13 @@ function spans_manager.extract_and_save_from_candidate(context, candidate, input
         return false
     end
     
+    logger.debug("extract_and_save_from_candidate: 候选词包含spans信息，继续处理")
     local vertices = spans.vertices
     if not vertices or #vertices == 0 then
         logger.debug("extract_and_save_from_candidate: spans中无vertices信息")
         return false
     end
-    logger.debug("extract_and_save_from_candidate函数中执行save_spans")
+    logger.info("extract_and_save_from_candidate函数中执行save_spans")
     return spans_manager.save_spans(context, vertices, input, source)
 end
 
