@@ -170,10 +170,10 @@ engine:
 ai_assistant:
   enabled: true
   behavior:
-      commit_input: true         # 是否将用户提问问题上屏
-      auto_commit: false        # 是否自动上屏
-      clipboard_mode: true      # 是否使用剪贴板模式
-      prompt_chat: "a"  # 触发提示消息的字母
+    commit_input: true           # 是否将用户提问问题上屏
+    auto_commit: false          # 是否自动上屏
+    clipboard_mode: true        # 是否使用剪贴板模式
+    prompt_chat: "a"    # 触发提示消息的字母
   # 触发器配置：定义所有AI助手的前缀    
   chat_triggers:
     simple_ai_chat: "a:"          # 简单对话
@@ -187,6 +187,7 @@ ai_assistant:
     code_ai_chat: "code:"       # 编程助手
     write_ai_chat: "write:"     # 写作助手
     search_ai_chat: "as:"        # 搜索助手
+    openai_search_ai_chat: "aw:"        # openai_web_search搜索助手
     summarize_ai_chat: "sum:"             # 总结工具
     explain_ai_chat: "exp:"               # 解释工具
     improve_ai_chat: "imp:"               # 改进工具
@@ -203,6 +204,7 @@ ai_assistant:
     code_ai_chat: "AI编程:"
     write_ai_chat: "AI写作:"
     search_ai_chat: "AI搜索:"
+    openai_search_ai_chat: "AI搜索:"
     summarize_ai_chat: "AI总结:"
     explain_ai_chat: "AI解释:"
     improve_ai_chat: "AI改进:"
@@ -219,10 +221,11 @@ ai_assistant:
     code_ai_chat: "AI编程:"
     write_ai_chat: "AI写作:"
     search_ai_chat: "AI搜索:"
+    openai_search_ai_chat: "AI搜索:"
     summarize_ai_chat: "AI总结:"
     explain_ai_chat: "AI解释:"
     improve_ai_chat: "AI改进:"
-  
+
 
 predictor:
   db: wanxiang-lts-zh-predict.db
@@ -535,16 +538,16 @@ key_binder:
     - {when: always, accept: Control+Shift+dollar, toggle: s2t}    # 切换简繁
 
 editor:
-   bindings:
-     space: confirm                        # 空格键：上屏候选项
-     Return: commit_raw_input              # 回车键：上屏原始输入
-     Control+Return: commit_script_text    # Ctrl+回车键：上屏变换后输入（经过 preedit转换的）
-     Control+Shift+Return: commit_comment  # Ctrl+Shift+回车键：上屏 comment
-     BackSpace: revert                     # 退格键：向前删除（撤消上次输入）
-     Delete: delete                        # Delete 键：向后删除
-     Control+BackSpace: back_syllable      # Ctrl+退格键：删除一个音节
-     Control+Delete: delete_candidate      # Ctrl+Delete键：删除或降权候选项
-     Escape: cancel                        # Esc 键：取消输入
+  bindings:
+    space: confirm                         # 空格键：上屏候选项
+    Return: commit_raw_input               # 回车键：上屏原始输入
+    Control+Return: commit_script_text     # Ctrl+回车键：上屏变换后输入（经过 preedit转换的）
+    Control+Shift+Return: commit_comment   # Ctrl+Shift+回车键：上屏 comment
+    BackSpace: revert                      # 退格键：向前删除（撤消上次输入）
+    Delete: delete                         # Delete 键：向后删除
+    Control+BackSpace: back_syllable       # Ctrl+退格键：删除一个音节
+    Control+Delete: delete_candidate       # Ctrl+Delete键：删除或降权候选项
+    Escape: cancel                         # Esc 键：取消输入
 
 # 拼写设定
 

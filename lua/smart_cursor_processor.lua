@@ -123,18 +123,16 @@ function smart_cursor_processor.init(env)
         spans_manager.clear_spans(context, "选词完成")
     end)
 
-    -- env.commit_notifier = context.commit_notifier:connect(function(context)
-    --     -- 只要出发了上屏通知,就关闭搜索模式
-    --     -- 退出搜索模式
-    --     logger.debug("触发上屏通知")
-    --     if context:get_option("search_move") then
-    --         logger.debug("上屏通知: 退出搜索模式")
-    --         context:set_option("search_move", false)
-    --         -- segment.prompt = ""
-    --         context:set_property("search_move_str", "")
-    --     end
-
-    -- end)
+    env.commit_notifier = context.commit_notifier:connect(function(context)
+        -- 上屏之后,将当前的状态和上屏内容发送过去
+        if tcp_socket then
+            logger.info("上屏通知触发sync_with_server")
+            -- 传递提交内容文本的信息
+            tcp_socket.sync_with_server(context, true, true)
+        else
+            logger.debug("sync_module为nil，跳过状态更新")
+        end
+    end)
 
     env.update_notifier = context.update_notifier:connect(function(context)
         -- 只要出发了上屏通知,就关闭搜索模式
@@ -241,7 +239,7 @@ function smart_cursor_processor.init(env)
             logger.debug("从输入状态变化，触发发送当前开关信息.")
             if tcp_socket then
                 -- 传递option信息
-                tcp_socket.sync_with_server(context, false)
+                tcp_socket.sync_with_server(context, true)
             else
                 logger.debug("sync_module为nil，跳过状态更新")
             end
@@ -708,8 +706,8 @@ function smart_cursor_processor.fini(env)
         env.new_update_notifier:disconnect()
     end
 
-    if env.custom_commit_notifier then
-        env.custom_commit_notifier:disconnect()
+    if env.commit_notifier then
+        env.commit_notifier:disconnect()
     end
 
     if env.unhandled_key_notifier then

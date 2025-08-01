@@ -233,14 +233,14 @@ function M.check_ai_connection()
     -- 使用非阻塞读取来检测连接状态
     local original_timeout = ai_translate.client:gettimeout()
     ai_translate.client:settimeout(0.001) -- 1毫秒超时，快速检测
-    
+
     local test_data, test_err = ai_translate.client:receive("*l")
-    
+
     -- 恢复原始超时设置
     ai_translate.client:settimeout(original_timeout)
-    
+
     logger.debug("AI连接检测 test_data = " .. tostring(test_data) .. ", test_err = " .. tostring(test_err))
-    
+
     if test_err == "closed" then
         logger.warn("检测到AI翻译服务连接已断开")
         M.disconnect_from_ai_server()
@@ -273,14 +273,14 @@ function M.check_rime_connection()
     -- 使用非阻塞读取来检测连接状态
     local original_timeout = rime_state.client:gettimeout()
     rime_state.client:settimeout(0.001) -- 1毫秒超时，快速检测
-    
+
     local test_data, test_err = rime_state.client:receive("*l")
-    
+
     -- 恢复原始超时设置
     rime_state.client:settimeout(original_timeout)
-    
+
     logger.debug("Rime连接检测 test_data = " .. tostring(test_data) .. ", test_err = " .. tostring(test_err))
-    
+
     if test_err == "closed" then
         logger.warn("检测到Rime状态服务连接已断开")
         M.disconnect_from_rime_server()
@@ -309,7 +309,7 @@ function M.write_to_rime_socket(data)
     end
 
     local rime_state = socket_system.rime_state
-    
+
     -- 首先检查连接状态
     if not rime_state.client or not rime_state.is_connected then
         logger.debug("Rime状态服务未连接，尝试连接...")
@@ -318,7 +318,7 @@ function M.write_to_rime_socket(data)
             return false
         end
     end
-    
+
     -- 在发送数据前，先检测连接是否真的可用
     if not M.check_rime_connection() then
         logger.warn("Rime连接检测失败，尝试重新连接...")
@@ -327,7 +327,7 @@ function M.write_to_rime_socket(data)
             logger.error("Rime状态服务重连失败，放弃数据发送")
             return false
         end
-        
+
         -- 重连后再次检测
         if not M.check_rime_connection() then
             logger.error("Rime状态服务重连后连接检测仍然失败，放弃数据发送")
@@ -363,7 +363,7 @@ function M.write_to_ai_socket(data)
     end
 
     local ai_translate = socket_system.ai_translate
-    
+
     -- 首先检查连接状态
     if not ai_translate.client or not ai_translate.is_connected then
         logger.debug("AI翻译服务未连接，尝试连接...")
@@ -372,7 +372,7 @@ function M.write_to_ai_socket(data)
             return false
         end
     end
-    
+
     -- 在发送数据前，先检测连接是否真的可用
     if not M.check_ai_connection() then
         logger.warn("AI连接检测失败，尝试重新连接...")
@@ -381,7 +381,7 @@ function M.write_to_ai_socket(data)
             logger.error("AI翻译服务重连失败，放弃数据发送")
             return false
         end
-        
+
         -- 重连后再次检测
         if not M.check_ai_connection() then
             logger.error("AI翻译服务重连后连接检测仍然失败，放弃数据发送")
@@ -504,21 +504,22 @@ function M.read_all_from_ai_socket(timeout_seconds)
     local chunk_size = 8192 -- 每次读取8KB
     local start_time = get_current_time_ms()
     local timeout_ms = (timeout_seconds or ai_translate.timeout) * 1000
-    
+
     while true do
         -- 检查总体超时时间
         local current_time = get_current_time_ms()
         if (current_time - start_time) > timeout_ms then
-            logger.warn("🕐 AI翻译服务批量读取总体超时 (" .. (timeout_seconds or ai_translate.timeout) .. "秒)")
+            logger.warn("🕐 AI翻译服务批量读取总体超时 (" .. (timeout_seconds or ai_translate.timeout) ..
+                            "秒)")
             break
         end
-        
+
         local chunk, err = ai_translate.client:receive(chunk_size)
-        
+
         if chunk then
             all_data = all_data .. chunk
             logger.debug("📥 从AI翻译服务读取到数据块: " .. string.len(chunk) .. " 字节")
-            
+
             -- 如果读取的数据少于chunk_size，说明没有更多数据了
             if string.len(chunk) < chunk_size then
                 break
@@ -528,7 +529,8 @@ function M.read_all_from_ai_socket(timeout_seconds)
             if string.len(all_data) > 0 then
                 logger.debug("📥 AI翻译服务读取完成，总共读取: " .. string.len(all_data) .. " 字节")
             else
-                logger.warn("⏰ AI翻译服务等待超时，无数据可读 (" .. (timeout_seconds or ai_translate.timeout) .. "秒)")
+                logger.warn("⏰ AI翻译服务等待超时，无数据可读 (" ..
+                                (timeout_seconds or ai_translate.timeout) .. "秒)")
             end
             break
         else
@@ -545,13 +547,13 @@ function M.read_all_from_ai_socket(timeout_seconds)
             break
         end
     end
-    
+
     -- 恢复原始超时设置
     if timeout_seconds and ai_translate.client then
         ai_translate.client:settimeout(original_timeout)
         logger.debug("🔄 恢复AI翻译服务原始超时时间: " .. original_timeout .. "秒")
     end
-    
+
     if string.len(all_data) > 0 then
         logger.debug("📥 从AI翻译服务读取到完整数据: " .. all_data)
         return all_data
@@ -575,14 +577,14 @@ function M.flush_ai_socket_buffer()
     -- 临时设置为非阻塞模式（0秒超时）
     local original_timeout = ai_translate.timeout
     ai_translate.client:settimeout(0)
-    
+
     local total_flushed = 0
     local chunk_size = 8192
-    
+
     -- 快速读取并丢弃所有积压数据
     while true do
         local chunk, err = ai_translate.client:receive(chunk_size)
-        
+
         if chunk then
             total_flushed = total_flushed + string.len(chunk)
             -- 如果读取的数据少于chunk_size，说明没有更多数据了
@@ -594,14 +596,14 @@ function M.flush_ai_socket_buffer()
             break
         end
     end
-    
+
     -- 恢复原始超时设置
     ai_translate.client:settimeout(original_timeout)
-    
+
     if total_flushed > 0 then
         logger.debug("🗑️ 快速清理AI套接字积压数据: " .. total_flushed .. " 字节")
     end
-    
+
     return total_flushed
 end
 
@@ -613,7 +615,12 @@ function M.read_latest_from_ai_socket(timeout_seconds)
         logger.debug("AI翻译服务未连接，尝试重新连接...")
         if not M.connect_to_ai_server() then
             logger.warn("AI翻译服务重连失败")
-            return {data = nil, status = "error", raw_message = nil, error_msg = "服务未连接且重连失败"}
+            return {
+                data = nil,
+                status = "error",
+                raw_message = nil,
+                error_msg = "服务未连接且重连失败"
+            }
         end
         logger.debug("AI翻译服务重连成功，继续读取数据")
     end
@@ -621,7 +628,7 @@ function M.read_latest_from_ai_socket(timeout_seconds)
     -- 设置自定义超时时间
     local original_timeout = ai_translate.timeout
     local effective_timeout = timeout_seconds or 0.1 -- 默认100ms超时
-    
+
     ai_translate.client:settimeout(effective_timeout)
     logger.debug("🕐 设置AI翻译服务读取超时时间为: " .. effective_timeout .. "秒")
 
@@ -629,15 +636,15 @@ function M.read_latest_from_ai_socket(timeout_seconds)
     local latest_line = nil
     local total_lines = 0
     local max_attempts = 50 -- 最多尝试50次读取，防止无限循环
-    
+
     for attempt = 1, max_attempts do
         local line, err = ai_translate.client:receive("*l")
-        
+
         if line then
-            latest_line = line  -- 保存最新的一行
+            latest_line = line -- 保存最新的一行
             total_lines = total_lines + 1
-            logger.debug("📥 读取到消息行 #" .. total_lines .. " (长度:" .. string.len(line) .. "): " .. 
-                        string.sub(line, 1, 100) .. (string.len(line) > 100 and "..." or ""))
+            logger.debug("📥 读取到消息行 #" .. total_lines .. " (长度:" .. string.len(line) .. "): " ..
+                             string.sub(line, 1, 100) .. (string.len(line) > 100 and "..." or ""))
         elseif err == "timeout" then
             -- 超时表示没有更多数据，退出循环
             logger.debug("⏰ 第 " .. attempt .. " 次读取超时，停止读取")
@@ -648,35 +655,44 @@ function M.read_latest_from_ai_socket(timeout_seconds)
             -- 恢复原始超时设置
             ai_translate.client:settimeout(original_timeout)
             M.disconnect_from_ai_server()
-            return {data = nil, status = "error", raw_message = nil, error_msg = tostring(err)}
+            return {
+                data = nil,
+                status = "error",
+                raw_message = nil,
+                error_msg = tostring(err)
+            }
         end
     end
-    
+
     -- 恢复原始超时设置
     ai_translate.client:settimeout(original_timeout)
     logger.debug("🔄 恢复AI翻译服务原始超时时间: " .. original_timeout .. "秒")
-    
+
     if latest_line then
         if total_lines > 1 then
-            logger.debug("🎯 共读取了 " .. total_lines .. " 条消息，丢弃了 " .. 
-                       (total_lines - 1) .. " 条旧消息，保留最后一条")
+            logger.debug("🎯 共读取了 " .. total_lines .. " 条消息，丢弃了 " .. (total_lines - 1) ..
+                             " 条旧消息，保留最后一条")
         else
             logger.debug("📥 从AI翻译服务读取到1条最新消息")
         end
-        
+
         logger.debug("🎯 返回最新消息: " .. latest_line)
-        
+
         -- 尝试解析JSON数据
         local parsed_data = M.parse_socket_data(latest_line)
         return {
-            data = parsed_data, 
-            status = "success", 
+            data = parsed_data,
+            status = "success",
             raw_message = latest_line
         }
     else
         -- 没有读取到任何消息
         logger.debug("📭 没有收到有效消息，共尝试了 " .. max_attempts .. " 次读取")
-        return {data = nil, status = "timeout", raw_message = nil}
+        return {
+            data = nil,
+            status = "timeout",
+            raw_message = nil
+        }
     end
 end
 
@@ -897,25 +913,28 @@ function M.process_ai_socket_data_with_timeout(timeout_seconds)
 end
 
 -- 和Rime状态服务进行数据交换
-function M.sync_with_server(context, option_info)
+function M.sync_with_server(context, option_info, send_commit_text)
+    send_commit_text = send_commit_text or false
     local success, error_msg = pcall(function()
         local current_time = get_current_time_ms()
 
-        -- local context =  env.engine.context
         -- 构建基础状态数据
         local state_data = {
             messege_type = "state",
             is_composing = context:is_composing(),
             timestamp = current_time,
-            switches_option = {} -- 初始化为空表
+            switches_option = {} -- 初始化为空表,
         }
+
+        if send_commit_text then
+            -- 发送上屏内容
+            state_data.commit_text = context:get_commit_text()
+        end
 
         if option_info then
             -- 构建完整的带有option当前配置的状态数据
-            -- 简单开关列表（name类型）
             local simple_switches = {"ascii_punct", "full_shape", "tone_display", "prediction", "s2s", "s2t", "s2hk",
                                      "s2tw"}
-            -- 收集简单开关状态
             for _, switch_name in ipairs(simple_switches) do
                 local switch_state = context:get_option(switch_name)
                 table.insert(state_data.switches_option, {
@@ -925,7 +944,6 @@ function M.sync_with_server(context, option_info)
                     state_index = switch_state and 1 or 0
                 })
             end
-
         end
 
         logger.debug("state_data: " .. tostring(state_data))
@@ -1017,7 +1035,7 @@ end
 -- 公开接口：强制重置连接状态（用于服务端重启后立即重连）
 function M.force_reconnect()
     logger.info("强制重置所有TCP连接状态")
-    
+
     -- 重置连接状态和重连计时器
     socket_system.rime_state.last_connect_attempt = 0
     socket_system.ai_translate.last_connect_attempt = 0
@@ -1025,16 +1043,16 @@ function M.force_reconnect()
     socket_system.ai_translate.connection_failures = 0
     socket_system.rime_state.write_failure_count = 0
     socket_system.ai_translate.write_failure_count = 0
-    
+
     -- 断开现有连接
     M.disconnect_from_server()
-    
+
     -- 尝试重新连接
     local rime_connected = M.connect_to_rime_server()
     local ai_connected = M.connect_to_ai_server()
-    
+
     logger.info("强制重连结果 - Rime:" .. tostring(rime_connected) .. " AI:" .. tostring(ai_connected))
-    
+
     return rime_connected or ai_connected
 end
 
@@ -1081,7 +1099,7 @@ function M.translate(schema_name, shuru_schema, confirmed_pos_input, long_candid
         end
 
         -- 序列化状态数据
-        
+
         local json_data = json.encode(translate_data)
         logger.debug("json_data: " .. tostring(json_data))
 
@@ -1115,8 +1133,8 @@ function M.send_paste_command()
 
         -- 构建粘贴命令数据
         local paste_command = {
-            messege_type = "command",  -- 使用state类型以兼容现有处理逻辑
-            command = "paste",       -- 粘贴命令
+            messege_type = "command", -- 使用state类型以兼容现有处理逻辑
+            command = "paste", -- 粘贴命令
             timestamp = current_time,
             client_id = "lua_tcp_client"
         }
@@ -1130,7 +1148,7 @@ function M.send_paste_command()
             local send_success = M.write_to_rime_socket(json_data)
             if send_success then
                 logger.info("🍴 粘贴命令发送成功，等待服务端执行")
-                
+
                 -- 可选：等待服务端响应
                 local response = M.process_rime_socket_data()
                 if response then
@@ -1196,27 +1214,27 @@ end
 -- 公开接口：接收AI对话流式回复数据（单次调用版本）
 function M.receive_chat_stream_once(timeout_seconds)
     local timeout = timeout_seconds or 10 -- 默认10秒超时
-    
+
     local success, result = pcall(function()
         logger.debug("单次获取AI对话回复数据...")
-        
+
         -- 获取AI回复数据
         local ai_response = M.process_ai_socket_data_with_timeout(timeout_seconds)
-        
+
         -- 构造统一的stream_data结构
         local stream_data = {
             content = "",
             timestamp = get_current_time_ms(),
             is_final = false
         }
-        
+
         if ai_response and ai_response.messege_type == "chat_result" then
             logger.debug("收到流式对话数据: " .. tostring(ai_response.content or ""))
-            
+
             -- 设置内容和状态
             stream_data.content = ai_response.content or ""
             stream_data.is_final = ai_response.is_final or ai_response.finished or false
-            
+
             logger.debug("当前对话内容: " .. stream_data.content)
             logger.debug("is_final=" .. tostring(stream_data.is_final))
         elseif ai_response == nil then
@@ -1228,7 +1246,7 @@ function M.receive_chat_stream_once(timeout_seconds)
                 logger.debug("收到非对话结果数据: " .. tostring(ai_response.messege_type))
             end
         end
-        
+
         return stream_data
     end)
 
@@ -1245,7 +1263,6 @@ function M.receive_chat_stream_once(timeout_seconds)
     return result
 end
 
-
 -- 公开接口：发送对话消息并接收回复（组合功能，向后兼容）
 function M.send_and_receive_chat(commit_text, context, chat_type, timeout_seconds)
     -- 发送消息
@@ -1253,7 +1270,7 @@ function M.send_and_receive_chat(commit_text, context, chat_type, timeout_second
     if not send_success then
         return nil
     end
-    
+
     -- 接收流式回复
     return M.receive_chat_stream(context, timeout_seconds)
 end
