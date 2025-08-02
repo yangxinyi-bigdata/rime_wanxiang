@@ -210,7 +210,7 @@ local function clear_cloud_result_cache()
     logger.info("清空云输入结果缓存")
 end
 
-local function set_cloud_translate_flag(cand, context, delimiter)
+local function set_cloud_convert_flag(cand, context, delimiter)
     -- 这部分代码时检测输入的字符长度，通过检测中间有几个分隔符实现
     -- 检查当前是否正在组词状态（即用户正在输入但还未确认）
     local is_composing = context:is_composing()
@@ -227,23 +227,23 @@ local function set_cloud_translate_flag(cand, context, delimiter)
         logger.info("当前正在组词状态,检测到分隔符数量达到3,触发云输入提示")
         -- 只在值真正需要改变时才设置
         -- 先获取当前选项的值，避免不必要的更新
-        logger.info("当前云输入提示标志: " .. context:get_property("cloud_translate_flag"))
+        logger.info("当前云输入提示标志: " .. context:get_property("cloud_convert_flag"))
 
-        if context:get_property("cloud_translate_flag") == "0" then
+        if context:get_property("cloud_convert_flag") == "0" then
             logger.info("云输入提示标志为 0, 设置为 1")
-            context:set_property("cloud_translate_flag", "1")
-            -- context:set_option("cloud_translate_prompt", true)
-            logger.info("cloud_translate_flag 已设置为 1")
+            context:set_property("cloud_convert_flag", "1")
+            -- context:set_option("cloud_convert_prompt", true)
+            logger.info("cloud_convert_flag 已设置为 1")
 
         end
 
     else
         -- 如果不在组词状态或没有达到触发条件,则重置提示选项
         logger.info("当前不在组词状态或未达到触发条件,云输入提示已重置")
-        if context:get_property("cloud_translate_flag") == "1" then
-            -- context:set_option("cloud_translate_prompt", false)
-            context:set_property("cloud_translate_flag", "0")
-            logger.info("cloud_translate_flag 已设置为 0")
+        if context:get_property("cloud_convert_flag") == "1" then
+            -- context:set_option("cloud_convert_prompt", false)
+            context:set_property("cloud_convert_flag", "0")
+            logger.info("cloud_convert_flag 已设置为 0")
 
         end
     end
@@ -276,7 +276,7 @@ function translator.func(translation, env)
 
     -- 包含标点符号或反引号，使用智能切分处理
 
-    logger.info("cloud_translate: " .. tostring(context:get_option("cloud_translate")))
+    logger.info("cloud_convert: " .. tostring(context:get_option("cloud_convert")))
 
     local segment = ""
 
@@ -425,12 +425,12 @@ function translator.func(translation, env)
         logger.debug("cand_type:  " .. cand_type)
     end
 
-    -- 第一次进入的时候cloud_translate为true, 如果为false 则直接返回. 第二次如果这个有一个为真, 则
-    if not context:get_option("cloud_translate") and context:get_property("get_cloud_stream") ~= "true" then
-        logger.info("not cloud_translate, get_cloud_stream ~= true")
+    -- 第一次进入的时候cloud_convert为true, 如果为false 则直接返回. 第二次如果这个有一个为真, 则
+    if not context:get_option("cloud_convert") and context:get_property("get_cloud_stream") ~= "true" then
+        logger.info("not cloud_convert, get_cloud_stream ~= true")
         -- 查看有没有云翻译的标识, 没有的话直接返回原有的候选词
         yield(first_original_cand) -- 输出原有第一个候选词
-        set_cloud_translate_flag(first_original_cand, context, env.delimiter)
+        set_cloud_convert_flag(first_original_cand, context, env.delimiter)
         for cand in translation:iter() do
             yield(cand) -- 输出原有候选词
         end
@@ -439,12 +439,12 @@ function translator.func(translation, env)
 
     end
 
-    -- 代码走到这里,代表已经进入context:get_option("cloud_translate")成立分支
+    -- 代码走到这里,代表已经进入context:get_option("cloud_convert")成立分支
     -- 首次触发云输入（发送请求并开始流式获取）
-    logger.info("已经进入云输入法分支: cloud_translate " .. tostring(context:get_option("cloud_translate")) .. " get_cloud_stream: " .. context:get_property("get_cloud_stream"))
+    logger.info("已经进入云输入法分支: cloud_convert " .. tostring(context:get_option("cloud_convert")) .. " get_cloud_stream: " .. context:get_property("get_cloud_stream"))
     logger.info("cand_text: " .. cand_text .. " cand_type: " .. cand_type)
 
-    if context:get_option("cloud_translate") then
+    if context:get_option("cloud_convert") then
         local ok, err = pcall(function()
             -- 长度足够的候选词放入到long_candidates_table, 不够的放到no_long_candidates_table,只放一个
 
@@ -461,12 +461,12 @@ function translator.func(translation, env)
             logger.info("根据segment切片得到 segment_input: " .. segment_input)
 
             -- 发送翻译请求（异步，不等待响应）
-            local send_success = tcp_socket.send_translate_request(env.schema_name, env.shuru_schema, segment_input,
+            local send_success = tcp_socket.send_convert_request(env.schema_name, env.shuru_schema, segment_input,
                 long_candidates_table)
             if send_success then
                 logger.info("云输入翻译请求发送成功，开始流式获取结果")
                 context:set_property("get_cloud_stream", "true")
-                env.first_read_translate_result = true
+                env.first_read_convert_result = true
             else
                 logger.error("云输入翻译请求发送失败")
                 context:set_property("get_cloud_stream", "false")
@@ -474,7 +474,7 @@ function translator.func(translation, env)
             end
         end)
         if not ok then
-            logger.error("tcp_socket.send_translate_request 调用失败: " .. tostring(err))
+            logger.error("tcp_socket.send_convert_request 调用失败: " .. tostring(err))
             context:set_property("get_cloud_stream", "false")
             logger.info("get_cloud_stream, 设置为false")
         end
@@ -487,13 +487,13 @@ function translator.func(translation, env)
         local ok, err = pcall(function()
             -- 读取云输入结果（流式读取）
             local timeout
-            if context:get_option("cloud_translate") then
+            if context:get_option("cloud_convert") then
                 timeout = 1
-                context:set_option("cloud_translate", false) -- 重置选项，避免重复触发
+                context:set_option("cloud_convert", false) -- 重置选项，避免重复触发
             else
                 timeout = 0.01
             end
-            local stream_result = tcp_socket.read_translate_result(timeout)
+            local stream_result = tcp_socket.read_convert_result(timeout)
             local ordered_candidates = {}
             local segment_input = input:sub(segment._start + 1, segment._end)
 

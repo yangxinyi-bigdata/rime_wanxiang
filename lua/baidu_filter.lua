@@ -55,7 +55,7 @@ local backtick_delimiter_after = ""
 local delimiter = ""
 local replace_punct_enabled = false
 
-local function set_cloud_translate_flag(cand, context)
+local function set_cloud_convert_flag(cand, context)
     -- 这部分代码时检测输入的字符长度，通过检测中间有几个分隔符实现
     -- 检查当前是否正在组词状态（即用户正在输入但还未确认）
     local is_composing = context:is_composing()
@@ -72,23 +72,23 @@ local function set_cloud_translate_flag(cand, context)
         logger.info("当前正在组词状态,检测到分隔符数量达到3,触发云输入提示")
         -- 只在值真正需要改变时才设置
         -- 先获取当前选项的值，避免不必要的更新
-        logger.info("当前云输入提示标志: " .. context:get_property("cloud_translate_flag"))
+        logger.info("当前云输入提示标志: " .. context:get_property("cloud_convert_flag"))
 
-        if context:get_property("cloud_translate_flag") == "0" then
+        if context:get_property("cloud_convert_flag") == "0" then
             logger.info("云输入提示标志为 0, 设置为 1")
-            context:set_property("cloud_translate_flag", "1")
-            -- context:set_option("cloud_translate_prompt", true)
-            logger.info("cloud_translate_flag 已设置为 1")
+            context:set_property("cloud_convert_flag", "1")
+            -- context:set_option("cloud_convert_prompt", true)
+            logger.info("cloud_convert_flag 已设置为 1")
 
         end
 
     else
         -- 如果不在组词状态或没有达到触发条件,则重置提示选项
         logger.info("当前不在组词状态或未达到触发条件,云输入提示已重置")
-        if context:get_property("cloud_translate_flag") == "1" then
-            -- context:set_option("cloud_translate_prompt", false)
-            context:set_property("cloud_translate_flag", "0")
-            logger.info("cloud_translate_flag 已设置为 0")
+        if context:get_property("cloud_convert_flag") == "1" then
+            -- context:set_option("cloud_convert_prompt", false)
+            context:set_property("cloud_convert_flag", "0")
+            logger.info("cloud_convert_flag 已设置为 0")
 
         end
     end
@@ -224,13 +224,13 @@ function translator.func(translation, env)
         segment = composition:back()
     end
 
-    if not context:get_option("cloud_translate") then
+    if not context:get_option("cloud_convert") then
         -- 查看有没有云翻译的标识, 没有的话直接返回原有的候选词
         local count = 0
         for cand in translation:iter() do
             count = count + 1
             if count == 1 then
-                set_cloud_translate_flag(cand, context)
+                set_cloud_convert_flag(cand, context)
                 yield(cand) -- 输出原有候选词
             else
                 yield(cand) -- 输出原有候选词
@@ -240,7 +240,7 @@ function translator.func(translation, env)
 
         return
     else
-        context:set_option("cloud_translate", false) -- 重置选项，避免重复触发
+        context:set_option("cloud_convert", false) -- 重置选项，避免重复触发
     end
 
     -- 检查输入是否包含标点符号或反引号

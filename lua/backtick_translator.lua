@@ -304,8 +304,8 @@ function backtick_translator.func(input, seg, env)
     end
     logger.info("含有backtick标签, 进入反引号translator")
 
-    -- 如果输入的是Enter回车键, context:set_option("cloud_translate", true)
-    -- if context:get_option("cloud_translate") then
+    -- 如果输入的是Enter回车键, context:set_option("cloud_convert", true)
+    -- if context:get_option("cloud_convert") then
     --     logger.info("百度云处理, 这个脚本跳过")
     --     return
     -- end

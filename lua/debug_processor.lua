@@ -96,7 +96,7 @@ function debug_precessor.func(key, env)
             "simplification",
             "extended_charset",
             "emoji",
-            "cloud_translate_flag",
+            "cloud_convert_flag",
             "backtick_prompt"
         }
         
@@ -114,7 +114,7 @@ function debug_precessor.func(key, env)
             "simplification",
             "extended_charset",
             "emoji",
-            "cloud_translate"
+            "cloud_convert"
         }
         
         -- logger.info("--- 选项状态 ---")

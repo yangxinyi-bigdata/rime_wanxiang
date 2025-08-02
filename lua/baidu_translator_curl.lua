@@ -60,11 +60,11 @@ function translator.func(input, seg, env)
          local segment = composition:back()
          if segment then
             local prompt_text = "     ▶ 回车AI转换" 
-            -- 有几种可能呢? 两个参数,有可能设置了cloud_translate_prompt,但是segment.prompt还没有设置
-            -- 有可能设置了cloud_translate_prompt变成flase,但是segment.prompt之前设置过了
-            -- 有可能cloud_translate_prompt是false,segment.prompt也没有设置
-            -- 有可能设置了cloud_translate_prompt,之前segment.prompt也设置过了
-            if context:get_option("cloud_translate_prompt") then
+            -- 有几种可能呢? 两个参数,有可能设置了cloud_convert_prompt,但是segment.prompt还没有设置
+            -- 有可能设置了cloud_convert_prompt变成flase,但是segment.prompt之前设置过了
+            -- 有可能cloud_convert_prompt是false,segment.prompt也没有设置
+            -- 有可能设置了cloud_convert_prompt,之前segment.prompt也设置过了
+            if context:get_option("cloud_convert_prompt") then
                if segment.prompt ~= prompt_text then
                   -- 使用更醒目的格式，添加视觉分隔符
                   -- segment.prompt = "[     🤖 回车AI转换]"
@@ -77,7 +77,7 @@ function translator.func(input, seg, env)
                   -- logger.info("通过segmentation成功设置prompt")
                end 
                 
-            elseif not context:get_option("cloud_translate_prompt") then
+            elseif not context:get_option("cloud_convert_prompt") then
                if segment.prompt == prompt_text then
                   segment.prompt = ""
                end
@@ -86,12 +86,12 @@ function translator.func(input, seg, env)
    
       end
 
-   --  logger.info("处理输入: " .. tostring(context:get_option("cloud_translate")))
-    if not context:get_option("cloud_translate") then
+   --  logger.info("处理输入: " .. tostring(context:get_option("cloud_convert")))
+    if not context:get_option("cloud_convert") then
       -- 查看有没有云翻译的标识, 没有的话直接退出
       return
     else
-      context:set_option("cloud_translate", false)  -- 重置选项，避免重复触发
+      context:set_option("cloud_convert", false)  -- 重置选项，避免重复触发
     end
 
     -- 如果input当中存在标点符号,则对input进行切分处理,以标点符号为边界

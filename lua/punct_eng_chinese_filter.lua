@@ -68,7 +68,7 @@ function punct_eng_chinese_filter.func(translation, env)
         -- 获得队尾的 Segment 对象
         segment = composition:back()
         if segment then
-            -- logger.info("当前cloud_translate_prompt状态: ".. tostring(context:get_option("cloud_translate_prompt")))
+            -- logger.info("当前cloud_convert_prompt状态: ".. tostring(context:get_option("cloud_convert_prompt")))
 
             -- 定义两种提示文本
             local cloud_prompt_text = "    ▶ [回车AI转换]  "
@@ -79,7 +79,7 @@ function punct_eng_chinese_filter.func(translation, env)
             -- 获取两个状态
             local search_move = context:get_option("search_move")
             local backtick_prompt = context:get_property("backtick_prompt")
-            local cloud_translate_flag = context:get_property("cloud_translate_flag")
+            local cloud_convert_flag = context:get_property("cloud_convert_flag")
 
             -- 判断显示哪个提示（ search_move优先级更高, backtick_prompt第二）
             if search_move then
@@ -95,8 +95,8 @@ function punct_eng_chinese_filter.func(translation, env)
                     segment.prompt = backtick_prompt_text
                     logger.info("设置反引号提示: " .. backtick_prompt_text)
                 end
-            elseif cloud_translate_flag == "1" then
-                -- 只有在 backtick_prompt 为 0 时才显示 cloud_translate_flag 的提示
+            elseif cloud_convert_flag == "1" then
+                -- 只有在 backtick_prompt 为 0 时才显示 cloud_convert_flag 的提示
                 if segment.prompt ~= cloud_prompt_text then
                     logger.info("segment.prompt: " .. segment.prompt .. " cloud_prompt_text: " .. cloud_prompt_text)
                     segment.prompt = cloud_prompt_text
@@ -154,11 +154,12 @@ function punct_eng_chinese_filter.func(translation, env)
 
             -- 检查输入是否包含反引号标签
             local new_text = ""
+            local cand_text = cand.text
+            local cand_type = cand.type
+            local cand_comment = cand.comment
             if not ai_flag and punch_flag and count < 10 then
                 logger.info("进入not ai_reply_flag and punch_flag and count < 10")
-                local cand_text = cand.text
-                local cand_type = cand.type
-                local cand_comment = cand.comment
+
                 -- 反引号组合候选词backtick_combo
                 if cand_comment:match("^chinese_pos:") then
                     logger.info("候选词为chinese_pos, 使用反引号替换")
@@ -176,8 +177,9 @@ function punct_eng_chinese_filter.func(translation, env)
                     -- 从候选词中提取spans信息并保存, 对于at:这类候选词,也是到了这个地方,但是abc为什么会产生这样的spans信息呢? 
                     -- 不对, 应该是两个segment,所以分成了两段. 
                     local spans = cand:spans()
-                    
-                    logger.info(" cand.type: " .. cand.type .. " cand.start: " .. cand.start .. " cand._end: " .. cand._end)
+
+                    logger.info(" cand.type: " .. cand.type .. " cand.start: " .. cand.start .. " cand._end: " ..
+                                    cand._end)
                     if cand.text then
                         local vertices = spans.vertices
                         logger.info("vertices: " .. table.concat(vertices, ", "))
@@ -185,9 +187,9 @@ function punct_eng_chinese_filter.func(translation, env)
                         if not ai_chat then
                             spans_manager.save_spans(context, vertices, input, "punct_eng_chinese_filter")
                         end
-                        
+
                     end
-                    
+
                     -- 这里的标点符号的候选词是不是应该在abc创建的时候是有spans信息的?
                 end
 
@@ -208,6 +210,7 @@ function punct_eng_chinese_filter.func(translation, env)
                 logger.info("标点替换: " .. cand_text .. " -> " .. new_text)
                 -- 根据文档，使用Candidate构造方法创建新候选项
                 -- Candidate(type, start, end, text, comment)
+                logger.info("cand_type: " .. cand_type)
                 if cand_type == "baidu_cloud" then
                     cand_comment = "   [云输入]"
                 elseif cand_type == "ai_cloud" then
@@ -227,10 +230,19 @@ function punct_eng_chinese_filter.func(translation, env)
                 end
                 yield(new_cand) -- 输出新的候选词
             else
+
                 -- 如果没有文本或不包含标点符号，将comment中的chinese_pos去掉
                 if cand.comment and cand.comment:match("^chinese_pos:") then
                     -- logger.info("候选词为chinese_pos, 删除comment, 格式为chinese_pos:1,2,9,10,")
                     cand.comment = cand.comment:gsub("^chinese_pos:[%d,]+", "")
+                end
+                                
+                if cand_type == "baidu_cloud" then
+                    cand.comment = "   [云输入]"
+                elseif cand_type == "ai_cloud" then
+                    cand.comment = "   [AI识别]"
+                elseif cand_type == "backtick_combo" then
+                    cand.comment = ""
                 end
                 yield(cand)
             end

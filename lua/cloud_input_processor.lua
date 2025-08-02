@@ -132,11 +132,11 @@ function cloud_input_processor.init(env)
 
     --  fixed 设置一个变量
     -- context:set_property只能设置字符串类型
-    env.engine.context:set_property("cloud_translate_flag", "0")
+    env.engine.context:set_property("cloud_convert_flag", "0")
     env.engine.context:set_property("backtick_prompt", "0")
 end
 
-local function set_cloud_translate_flag(context)
+local function set_cloud_convert_flag(context)
     -- 这部分代码时检测输入的字符长度，通过检测中间有几个分隔符实现
     -- 检查当前是否正在组词状态（即用户正在输入但还未确认）
     local is_composing = context:is_composing()
@@ -155,23 +155,23 @@ local function set_cloud_translate_flag(context)
         logger.info("当前正在组词状态,检测到分隔符数量达到3,触发云输入提示")
         -- 只在值真正需要改变时才设置
         -- 先获取当前选项的值，避免不必要的更新
-        logger.info("当前云输入提示标志: " .. context:get_property("cloud_translate_flag"))
+        logger.info("当前云输入提示标志: " .. context:get_property("cloud_convert_flag"))
 
-        if context:get_property("cloud_translate_flag") == "0" then
+        if context:get_property("cloud_convert_flag") == "0" then
             logger.info("云输入提示标志为 0, 设置为 1")
-            context:set_property("cloud_translate_flag", "1")
-            -- context:set_option("cloud_translate_prompt", true)
-            logger.info("cloud_translate_flag 已设置为 1")
+            context:set_property("cloud_convert_flag", "1")
+            -- context:set_option("cloud_convert_prompt", true)
+            logger.info("cloud_convert_flag 已设置为 1")
 
         end
 
     else
         -- 如果不在组词状态或没有达到触发条件,则重置提示选项
         logger.info("当前不在组词状态或未达到触发条件,云输入提示已重置")
-        if context:get_property("cloud_translate_flag") == "1" then
-            -- context:set_option("cloud_translate_prompt", false)
-            context:set_property("cloud_translate_flag", "0")
-            logger.info("cloud_translate_flag 已设置为 0")
+        if context:get_property("cloud_convert_flag") == "1" then
+            -- context:set_option("cloud_convert_prompt", false)
+            context:set_property("cloud_convert_flag", "0")
+            logger.info("cloud_convert_flag 已设置为 0")
 
         end
     end
@@ -472,12 +472,12 @@ function cloud_input_processor.func(key, env)
         logger.info("")
 
         -- 设置云输入法表示标
-        set_cloud_translate_flag(context)
+        set_cloud_convert_flag(context)
 
         -- 检查当前按键是否为预设的触发键
-        if key:repr() == "Return" and context:get_property("cloud_translate_flag") == "1" then
-            logger.info("触发云输入处理cloud_translate, 添加option")
-            context:set_option("cloud_translate", true)
+        if key:repr() == "Return" and context:get_property("cloud_convert_flag") == "1" then
+            logger.info("触发云输入处理cloud_convert, 添加option")
+            context:set_option("cloud_convert", true)
 
             -- 返回已处理,阻止其他处理器处理这个按键
             return kAccepted

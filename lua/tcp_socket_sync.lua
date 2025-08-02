@@ -2,7 +2,7 @@
 双端口TCP套接字实时状态同步系统
 使用双端口TCP套接字实现不同类型的双向通信：
 1. Rime状态交互服务（端口10086）- 快速状态响应，0.1秒超时
-2. AI翻译服务（端口10087）- 智能拼音转中文，5秒超时
+2. AI转换服务（端口10087）- 智能拼音转中文，5秒超时
 --]] -- 添加 ARM64 Homebrew 的 Lua 路径和项目lua目录
 local function setup_lua_paths()
     -- 添加 ARM64 Homebrew 路径
@@ -63,8 +63,8 @@ local socket_system = {
         timeout = 0.01 -- 快速响应超时时间
     },
 
-    -- AI翻译服务（长时间等待）
-    ai_translate = {
+    -- AI转换服务（长时间等待）
+    ai_convert = {
         port = 10087,
         client = nil,
         is_connected = false,
@@ -74,7 +74,7 @@ local socket_system = {
         max_connection_failures = 3,
         write_failure_count = 0,
         max_failure_count = 3,
-        timeout = 1 -- AI翻译超时时间
+        timeout = 1 -- AI转换超时时间
     },
 
     -- 系统状态
@@ -135,56 +135,56 @@ function M.connect_to_rime_server()
     end
 end
 
--- 连接到AI翻译服务端（长时间等待）
+-- 连接到AI转换服务端（长时间等待）
 function M.connect_to_ai_server()
     local current_time = get_current_time_ms()
-    local ai_translate = socket_system.ai_translate
+    local ai_convert = socket_system.ai_convert
 
     -- 如果已连接，先检测连接是否真的可用
-    if ai_translate.client and ai_translate.is_connected then
+    if ai_convert.client and ai_convert.is_connected then
         -- 使用我们的连接检测函数来验证
         if M.check_ai_connection() then
-            logger.debug("AI翻译服务连接检测通过，无需重连")
+            logger.debug("AI转换服务连接检测通过，无需重连")
             return true
         else
-            logger.debug("AI翻译服务连接检测失败，需要重连")
+            logger.debug("AI转换服务连接检测失败，需要重连")
             -- 连接已断开，先断开再重连
             M.disconnect_from_ai_server()
         end
     end
 
     -- 检查重连间隔（仅在需要新连接时检查）
-    if (current_time - ai_translate.last_connect_attempt) < ai_translate.connect_retry_interval then
-        logger.debug("AI翻译服务重连间隔未到，跳过连接尝试")
+    if (current_time - ai_convert.last_connect_attempt) < ai_convert.connect_retry_interval then
+        logger.debug("AI转换服务重连间隔未到，跳过连接尝试")
         return false
     end
 
-    ai_translate.last_connect_attempt = current_time
+    ai_convert.last_connect_attempt = current_time
 
     -- 确保之前的连接已经完全断开
-    if ai_translate.client then
+    if ai_convert.client then
         logger.debug("发现残留的AI客户端连接，强制关闭")
         M.disconnect_from_ai_server()
     end
 
     -- 尝试新连接
-    logger.debug("尝试连接到AI翻译服务端: " .. socket_system.host .. ":" .. ai_translate.port)
+    logger.debug("尝试连接到AI转换服务端: " .. socket_system.host .. ":" .. ai_convert.port)
 
-    local client, err = socket.connect(socket_system.host, ai_translate.port)
+    local client, err = socket.connect(socket_system.host, ai_convert.port)
     if client then
-        ai_translate.client = client
-        ai_translate.is_connected = true
-        ai_translate.connection_failures = 0
+        ai_convert.client = client
+        ai_convert.is_connected = true
+        ai_convert.connection_failures = 0
 
-        -- 设置AI翻译超时
-        client:settimeout(ai_translate.timeout)
+        -- 设置AI转换超时
+        client:settimeout(ai_convert.timeout)
 
-        logger.debug("AI翻译服务连接建立成功")
+        logger.debug("AI转换服务连接建立成功")
         return true
     else
-        ai_translate.connection_failures = ai_translate.connection_failures + 1
-        logger.warn("AI翻译服务连接失败: " .. tostring(err) .. " (失败次数: " ..
-                        ai_translate.connection_failures .. ")")
+        ai_convert.connection_failures = ai_convert.connection_failures + 1
+        logger.warn("AI转换服务连接失败: " .. tostring(err) .. " (失败次数: " ..
+                        ai_convert.connection_failures .. ")")
         return false
     end
 end
@@ -202,17 +202,17 @@ function M.disconnect_from_rime_server()
     logger.debug("Rime状态服务连接已断开")
 end
 
--- 断开AI翻译服务连接
+-- 断开AI转换服务连接
 function M.disconnect_from_ai_server()
-    local ai_translate = socket_system.ai_translate
-    if ai_translate.client then
+    local ai_convert = socket_system.ai_convert
+    if ai_convert.client then
         pcall(function()
-            ai_translate.client:close()
+            ai_convert.client:close()
         end)
-        ai_translate.client = nil
+        ai_convert.client = nil
     end
-    ai_translate.is_connected = false
-    logger.debug("AI翻译服务连接已断开")
+    ai_convert.is_connected = false
+    logger.debug("AI转换服务连接已断开")
 end
 
 -- 断开与所有服务端的连接
@@ -222,27 +222,27 @@ function M.disconnect_from_server()
     logger.debug("所有TCP连接已断开")
 end
 
--- 检测AI翻译服务连接状态
+-- 检测AI转换服务连接状态
 function M.check_ai_connection()
-    local ai_translate = socket_system.ai_translate
-    if not ai_translate.client or not ai_translate.is_connected then
-        logger.debug("AI翻译服务未连接")
+    local ai_convert = socket_system.ai_convert
+    if not ai_convert.client or not ai_convert.is_connected then
+        logger.debug("AI转换服务未连接")
         return false
     end
 
     -- 使用非阻塞读取来检测连接状态
-    local original_timeout = ai_translate.client:gettimeout()
-    ai_translate.client:settimeout(0.001) -- 1毫秒超时，快速检测
+    local original_timeout = ai_convert.client:gettimeout()
+    ai_convert.client:settimeout(0.001) -- 1毫秒超时，快速检测
 
-    local test_data, test_err = ai_translate.client:receive("*l")
+    local test_data, test_err = ai_convert.client:receive("*l")
 
     -- 恢复原始超时设置
-    ai_translate.client:settimeout(original_timeout)
+    ai_convert.client:settimeout(original_timeout)
 
     logger.debug("AI连接检测 test_data = " .. tostring(test_data) .. ", test_err = " .. tostring(test_err))
 
     if test_err == "closed" then
-        logger.warn("检测到AI翻译服务连接已断开")
+        logger.warn("检测到AI转换服务连接已断开")
         M.disconnect_from_ai_server()
         return false
     elseif test_err == "timeout" then
@@ -356,19 +356,19 @@ function M.write_to_rime_socket(data)
     end
 end
 
--- 写入AI翻译服务TCP套接字
+-- 写入AI转换服务TCP套接字
 function M.write_to_ai_socket(data)
     if not socket_system.is_initialized then
         return false
     end
 
-    local ai_translate = socket_system.ai_translate
+    local ai_convert = socket_system.ai_convert
 
     -- 首先检查连接状态
-    if not ai_translate.client or not ai_translate.is_connected then
-        logger.debug("AI翻译服务未连接，尝试连接...")
+    if not ai_convert.client or not ai_convert.is_connected then
+        logger.debug("AI转换服务未连接，尝试连接...")
         if not M.connect_to_ai_server() then
-            logger.warn("AI翻译服务连接不可用")
+            logger.warn("AI转换服务连接不可用")
             return false
         end
     end
@@ -378,13 +378,13 @@ function M.write_to_ai_socket(data)
         logger.warn("AI连接检测失败，尝试重新连接...")
         -- 尝试重新连接
         if not M.connect_to_ai_server() then
-            logger.error("AI翻译服务重连失败，放弃数据发送")
+            logger.error("AI转换服务重连失败，放弃数据发送")
             return false
         end
 
         -- 重连后再次检测
         if not M.check_ai_connection() then
-            logger.error("AI翻译服务重连后连接检测仍然失败，放弃数据发送")
+            logger.error("AI转换服务重连后连接检测仍然失败，放弃数据发送")
             return false
         end
     end
@@ -392,18 +392,18 @@ function M.write_to_ai_socket(data)
     local success, err = pcall(function()
         -- 发送JSON数据，以换行符结尾
         logger.debug("将要发送给客户端的ai接口json:  " .. tostring(data))
-        ai_translate.client:send(data .. "\n")
+        ai_convert.client:send(data .. "\n")
     end)
 
     if success then
         logger.debug("ai接口数据发送成功")
-        ai_translate.write_failure_count = 0
+        ai_convert.write_failure_count = 0
         return true
     else
         -- send()调用失败，说明连接确实有问题
-        ai_translate.write_failure_count = ai_translate.write_failure_count + 1
-        logger.error("AI翻译服务TCP写入失败: " .. tostring(err) .. " (失败次数: " ..
-                         ai_translate.write_failure_count .. ")")
+        ai_convert.write_failure_count = ai_convert.write_failure_count + 1
+        logger.error("AI转换服务TCP写入失败: " .. tostring(err) .. " (失败次数: " ..
+                         ai_convert.write_failure_count .. ")")
 
         -- 连接已断开，立即断开
         M.disconnect_from_ai_server()
@@ -439,86 +439,86 @@ function M.read_from_rime_socket()
     end
 end
 
--- 带超时读取AI翻译服务TCP套接字数据（按行读取，支持自定义超时）
+-- 带超时读取AI转换服务TCP套接字数据（按行读取，支持自定义超时）
 function M.read_from_ai_socket(timeout_seconds)
-    local ai_translate = socket_system.ai_translate
-    if not ai_translate.client or not ai_translate.is_connected then
-        logger.debug("AI翻译服务未连接，尝试重新连接...")
+    local ai_convert = socket_system.ai_convert
+    if not ai_convert.client or not ai_convert.is_connected then
+        logger.debug("AI转换服务未连接，尝试重新连接...")
         if not M.connect_to_ai_server() then
-            logger.warn("AI翻译服务重连失败")
+            logger.warn("AI转换服务重连失败")
             return nil
         end
-        logger.debug("AI翻译服务重连成功，继续读取数据")
+        logger.debug("AI转换服务重连成功，继续读取数据")
     end
 
     -- 设置自定义超时时间
-    local original_timeout = ai_translate.timeout
+    local original_timeout = ai_convert.timeout
     if timeout_seconds then
-        ai_translate.client:settimeout(timeout_seconds)
-        logger.debug("🕐 临时设置AI翻译服务按行读取超时时间为: " .. timeout_seconds .. "秒")
+        ai_convert.client:settimeout(timeout_seconds)
+        logger.debug("🕐 临时设置AI转换服务按行读取超时时间为: " .. timeout_seconds .. "秒")
     end
 
-    local line, err = ai_translate.client:receive("*l")
+    local line, err = ai_convert.client:receive("*l")
 
     -- 恢复原始超时设置
-    if timeout_seconds and ai_translate.client then
-        ai_translate.client:settimeout(original_timeout)
-        logger.debug("🔄 恢复AI翻译服务原始超时时间: " .. original_timeout .. "秒")
+    if timeout_seconds and ai_convert.client then
+        ai_convert.client:settimeout(original_timeout)
+        logger.debug("🔄 恢复AI转换服务原始超时时间: " .. original_timeout .. "秒")
     end
 
     if line then
-        logger.debug("📥 从AI翻译服务读取到原始数据: " .. line)
+        logger.debug("📥 从AI转换服务读取到原始数据: " .. line)
         return line
     elseif err == "timeout" then
         -- 超时表示等待时间内无数据可读
-        logger.warn("⏰ AI翻译服务等待超时 (" .. (timeout_seconds or ai_translate.timeout) .. "秒)")
+        logger.warn("⏰ AI转换服务等待超时 (" .. (timeout_seconds or ai_convert.timeout) .. "秒)")
         return nil
     else
         -- 其他错误，可能是连接断开
-        logger.warn("AI翻译服务TCP读取错误: " .. tostring(err))
+        logger.warn("AI转换服务TCP读取错误: " .. tostring(err))
         M.disconnect_from_ai_server()
         return nil
     end
 end
 
--- 读取AI翻译服务TCP套接字所有可用数据（支持自定义超时）
+-- 读取AI转换服务TCP套接字所有可用数据（支持自定义超时）
 function M.read_all_from_ai_socket(timeout_seconds)
-    local ai_translate = socket_system.ai_translate
-    if not ai_translate.client or not ai_translate.is_connected then
-        logger.debug("AI翻译服务未连接，尝试重新连接...")
+    local ai_convert = socket_system.ai_convert
+    if not ai_convert.client or not ai_convert.is_connected then
+        logger.debug("AI转换服务未连接，尝试重新连接...")
         if not M.connect_to_ai_server() then
-            logger.warn("AI翻译服务重连失败")
+            logger.warn("AI转换服务重连失败")
             return nil
         end
-        logger.debug("AI翻译服务重连成功，继续读取数据")
+        logger.debug("AI转换服务重连成功，继续读取数据")
     end
 
     -- 设置自定义超时时间
-    local original_timeout = ai_translate.timeout
+    local original_timeout = ai_convert.timeout
     if timeout_seconds then
-        ai_translate.client:settimeout(timeout_seconds)
-        logger.debug("🕐 临时设置AI翻译服务超时时间为: " .. timeout_seconds .. "秒")
+        ai_convert.client:settimeout(timeout_seconds)
+        logger.debug("🕐 临时设置AI转换服务超时时间为: " .. timeout_seconds .. "秒")
     end
 
     local all_data = ""
     local chunk_size = 8192 -- 每次读取8KB
     local start_time = get_current_time_ms()
-    local timeout_ms = (timeout_seconds or ai_translate.timeout) * 1000
+    local timeout_ms = (timeout_seconds or ai_convert.timeout) * 1000
 
     while true do
         -- 检查总体超时时间
         local current_time = get_current_time_ms()
         if (current_time - start_time) > timeout_ms then
-            logger.warn("🕐 AI翻译服务批量读取总体超时 (" .. (timeout_seconds or ai_translate.timeout) ..
+            logger.warn("🕐 AI转换服务批量读取总体超时 (" .. (timeout_seconds or ai_convert.timeout) ..
                             "秒)")
             break
         end
 
-        local chunk, err = ai_translate.client:receive(chunk_size)
+        local chunk, err = ai_convert.client:receive(chunk_size)
 
         if chunk then
             all_data = all_data .. chunk
-            logger.debug("📥 从AI翻译服务读取到数据块: " .. string.len(chunk) .. " 字节")
+            logger.debug("📥 从AI转换服务读取到数据块: " .. string.len(chunk) .. " 字节")
 
             -- 如果读取的数据少于chunk_size，说明没有更多数据了
             if string.len(chunk) < chunk_size then
@@ -527,20 +527,20 @@ function M.read_all_from_ai_socket(timeout_seconds)
         elseif err == "timeout" then
             -- 超时表示没有更多数据可读
             if string.len(all_data) > 0 then
-                logger.debug("📥 AI翻译服务读取完成，总共读取: " .. string.len(all_data) .. " 字节")
+                logger.debug("📥 AI转换服务读取完成，总共读取: " .. string.len(all_data) .. " 字节")
             else
-                logger.warn("⏰ AI翻译服务等待超时，无数据可读 (" ..
-                                (timeout_seconds or ai_translate.timeout) .. "秒)")
+                logger.warn("⏰ AI转换服务等待超时，无数据可读 (" ..
+                                (timeout_seconds or ai_convert.timeout) .. "秒)")
             end
             break
         else
             -- 其他错误，可能是连接断开
-            logger.warn("AI翻译服务TCP批量读取错误: " .. tostring(err))
+            logger.warn("AI转换服务TCP批量读取错误: " .. tostring(err))
             if string.len(all_data) == 0 then
                 M.disconnect_from_ai_server()
                 -- 恢复原始超时设置
-                if timeout_seconds and ai_translate.client then
-                    ai_translate.client:settimeout(original_timeout)
+                if timeout_seconds and ai_convert.client then
+                    ai_convert.client:settimeout(original_timeout)
                 end
                 return nil
             end
@@ -549,41 +549,41 @@ function M.read_all_from_ai_socket(timeout_seconds)
     end
 
     -- 恢复原始超时设置
-    if timeout_seconds and ai_translate.client then
-        ai_translate.client:settimeout(original_timeout)
-        logger.debug("🔄 恢复AI翻译服务原始超时时间: " .. original_timeout .. "秒")
+    if timeout_seconds and ai_convert.client then
+        ai_convert.client:settimeout(original_timeout)
+        logger.debug("🔄 恢复AI转换服务原始超时时间: " .. original_timeout .. "秒")
     end
 
     if string.len(all_data) > 0 then
-        logger.debug("📥 从AI翻译服务读取到完整数据: " .. all_data)
+        logger.debug("📥 从AI转换服务读取到完整数据: " .. all_data)
         return all_data
     else
         return nil
     end
 end
 
--- 快速清理AI翻译服务TCP套接字积压数据
+-- 快速清理AI转换服务TCP套接字积压数据
 function M.flush_ai_socket_buffer()
-    local ai_translate = socket_system.ai_translate
-    if not ai_translate.client or not ai_translate.is_connected then
-        logger.debug("AI翻译服务未连接，尝试重新连接...")
+    local ai_convert = socket_system.ai_convert
+    if not ai_convert.client or not ai_convert.is_connected then
+        logger.debug("AI转换服务未连接，尝试重新连接...")
         if not M.connect_to_ai_server() then
-            logger.warn("AI翻译服务重连失败，无法清理缓冲区")
+            logger.warn("AI转换服务重连失败，无法清理缓冲区")
             return 0
         end
-        logger.debug("AI翻译服务重连成功，继续清理缓冲区")
+        logger.debug("AI转换服务重连成功，继续清理缓冲区")
     end
 
     -- 临时设置为非阻塞模式（0秒超时）
-    local original_timeout = ai_translate.timeout
-    ai_translate.client:settimeout(0)
+    local original_timeout = ai_convert.timeout
+    ai_convert.client:settimeout(0)
 
     local total_flushed = 0
     local chunk_size = 8192
 
     -- 快速读取并丢弃所有积压数据
     while true do
-        local chunk, err = ai_translate.client:receive(chunk_size)
+        local chunk, err = ai_convert.client:receive(chunk_size)
 
         if chunk then
             total_flushed = total_flushed + string.len(chunk)
@@ -598,7 +598,7 @@ function M.flush_ai_socket_buffer()
     end
 
     -- 恢复原始超时设置
-    ai_translate.client:settimeout(original_timeout)
+    ai_convert.client:settimeout(original_timeout)
 
     if total_flushed > 0 then
         logger.debug("🗑️ 快速清理AI套接字积压数据: " .. total_flushed .. " 字节")
@@ -607,14 +607,14 @@ function M.flush_ai_socket_buffer()
     return total_flushed
 end
 
--- 读取AI翻译服务最新消息（丢弃旧消息，只返回最后一条）- 优化版本
+-- 读取AI转换服务最新消息（丢弃旧消息，只返回最后一条）- 优化版本
 -- 返回值格式: {data = parsed_data or nil, status = "success"|"timeout"|"no_data"|"error", raw_message = string or nil}
 function M.read_latest_from_ai_socket(timeout_seconds)
-    local ai_translate = socket_system.ai_translate
-    if not ai_translate.client or not ai_translate.is_connected then
-        logger.debug("AI翻译服务未连接，尝试重新连接...")
+    local ai_convert = socket_system.ai_convert
+    if not ai_convert.client or not ai_convert.is_connected then
+        logger.debug("AI转换服务未连接，尝试重新连接...")
         if not M.connect_to_ai_server() then
-            logger.warn("AI翻译服务重连失败")
+            logger.warn("AI转换服务重连失败")
             return {
                 data = nil,
                 status = "error",
@@ -622,14 +622,14 @@ function M.read_latest_from_ai_socket(timeout_seconds)
                 error_msg = "服务未连接且重连失败"
             }
         end
-        logger.debug("AI翻译服务重连成功，继续读取数据")
+        logger.debug("AI转换服务重连成功，继续读取数据")
     end
 
     -- 设置自定义超时时间
     local timeout_seconds = timeout_seconds or 0.1 -- 默认100ms超时
 
-    ai_translate.client:settimeout(timeout_seconds)
-    logger.debug("🕐 设置AI翻译服务读取超时时间为: " .. timeout_seconds .. "秒")
+    ai_convert.client:settimeout(timeout_seconds)
+    logger.debug("🕐 设置AI转换服务读取超时时间为: " .. timeout_seconds .. "秒")
 
     -- 使用循环按行读取数据，保留最后一行
     local latest_line = nil
@@ -637,7 +637,7 @@ function M.read_latest_from_ai_socket(timeout_seconds)
     local max_attempts = 50 -- 最多尝试50次读取，防止无限循环
 
     for attempt = 1, max_attempts do
-        local line, err = ai_translate.client:receive("*l")
+        local line, err = ai_convert.client:receive("*l")
 
         if line then
             latest_line = line -- 保存最新的一行
@@ -649,7 +649,7 @@ function M.read_latest_from_ai_socket(timeout_seconds)
             break
         else
             -- 其他错误
-            logger.warn("AI翻译服务TCP读取错误: " .. tostring(err))
+            logger.warn("AI转换服务TCP读取错误: " .. tostring(err))
             M.disconnect_from_ai_server()
             return {
                 data = nil,
@@ -665,7 +665,7 @@ function M.read_latest_from_ai_socket(timeout_seconds)
             logger.debug("🎯 共读取了 " .. total_lines .. " 条消息，丢弃了 " .. (total_lines - 1) ..
                              " 条旧消息，保留最后一条")
         else
-            logger.debug("📥 从AI翻译服务读取到1条最新消息")
+            logger.debug("📥 从AI转换服务读取到1条最新消息")
         end
 
         logger.debug("🎯 返回最新消息: " .. latest_line)
@@ -850,26 +850,26 @@ function M.process_rime_socket_data(context)
     end
 end
 
--- 带超时的处理AI翻译服务TCP套接字数据（用于大模型等长时间等待的场景）
+-- 带超时的处理AI转换服务TCP套接字数据（用于大模型等长时间等待的场景）
 function M.process_ai_socket_data_with_timeout(timeout_seconds)
-    local ai_translate = socket_system.ai_translate
-    if not ai_translate.client or not ai_translate.is_connected then
-        logger.debug("AI翻译服务未连接，尝试重新连接...")
+    local ai_convert = socket_system.ai_convert
+    if not ai_convert.client or not ai_convert.is_connected then
+        logger.debug("AI转换服务未连接，尝试重新连接...")
         if not M.connect_to_ai_server() then
-            logger.warn("AI翻译服务重连失败，无法等待数据")
+            logger.warn("AI转换服务重连失败，无法等待数据")
             return nil
         end
-        logger.debug("AI翻译服务重连成功，继续等待数据")
+        logger.debug("AI转换服务重连成功，继续等待数据")
     end
 
     local line = M.read_from_ai_socket(timeout_seconds)
 
     if line then
-        logger.debug("📥 收到AI翻译服务回复数据: " .. line)
+        logger.debug("📥 收到AI转换服务回复数据: " .. line)
         local parsed_data = M.parse_socket_data(line)
         if parsed_data then
-            logger.debug("📨 AI翻译数据解析成功")
-            if parsed_data.messege_type == "translate_result" then
+            logger.debug("📨 AI转换数据解析成功")
+            if parsed_data.messege_type == "convert_result" then
                 for k, v in pairs(parsed_data) do
                     logger.debug("parsed_data[" .. tostring(k) .. "] = " .. tostring(v))
                 end
@@ -881,7 +881,7 @@ function M.process_ai_socket_data_with_timeout(timeout_seconds)
                 end
                 return parsed_data
             elseif parsed_data.messege_type == "command_response" then
-                logger.debug("📨 收到命令响应，但期望翻译结果")
+                logger.debug("📨 收到命令响应，但期望转换结果")
                 -- 处理可能的多条命令
                 if parsed_data.command_messege and type(parsed_data.command_messege) == "table" then
                     if #parsed_data.command_messege > 0 then
@@ -896,7 +896,7 @@ function M.process_ai_socket_data_with_timeout(timeout_seconds)
                         M.handle_socket_command(parsed_data.command_messege)
                     end
                 end
-                return nil -- 收到的不是翻译结果
+                return nil -- 收到的不是转换结果
             end
         end
     end
@@ -975,13 +975,13 @@ function M.get_stats()
             timeout = socket_system.rime_state.timeout
         },
 
-        -- AI翻译服务统计
-        ai_translate = {
-            port = socket_system.ai_translate.port,
-            is_connected = socket_system.ai_translate.is_connected,
-            connection_failures = socket_system.ai_translate.connection_failures,
-            write_failure_count = socket_system.ai_translate.write_failure_count,
-            timeout = socket_system.ai_translate.timeout
+        -- AI转换服务统计
+        ai_convert = {
+            port = socket_system.ai_convert.port,
+            is_connected = socket_system.ai_convert.is_connected,
+            connection_failures = socket_system.ai_convert.connection_failures,
+            write_failure_count = socket_system.ai_convert.write_failure_count,
+            timeout = socket_system.ai_convert.timeout
         }
     }
 
@@ -1001,9 +1001,9 @@ function M.get_connection_info()
             port = socket_system.rime_state.port,
             is_connected = socket_system.rime_state.is_connected
         },
-        ai_translate = {
-            port = socket_system.ai_translate.port,
-            is_connected = socket_system.ai_translate.is_connected
+        ai_convert = {
+            port = socket_system.ai_convert.port,
+            is_connected = socket_system.ai_convert.is_connected
         }
     }
 end
@@ -1011,7 +1011,7 @@ end
 -- 公开接口：检查双端口系统是否就绪（任一服务可用即为就绪）
 function M.is_system_ready()
     return socket_system.is_initialized and
-               (socket_system.rime_state.is_connected or socket_system.ai_translate.is_connected)
+               (socket_system.rime_state.is_connected or socket_system.ai_convert.is_connected)
 end
 
 -- 公开接口：检查Rime状态服务连接状态
@@ -1019,9 +1019,9 @@ function M.is_rime_socket_ready()
     return socket_system.is_initialized and socket_system.rime_state.is_connected
 end
 
--- 公开接口：检查AI翻译服务连接状态
+-- 公开接口：检查AI转换服务连接状态
 function M.is_ai_socket_ready()
-    return socket_system.is_initialized and socket_system.ai_translate.is_connected
+    return socket_system.is_initialized and socket_system.ai_convert.is_connected
 end
 
 -- 公开接口：强制重置连接状态（用于服务端重启后立即重连）
@@ -1030,11 +1030,11 @@ function M.force_reconnect()
 
     -- 重置连接状态和重连计时器
     socket_system.rime_state.last_connect_attempt = 0
-    socket_system.ai_translate.last_connect_attempt = 0
+    socket_system.ai_convert.last_connect_attempt = 0
     socket_system.rime_state.connection_failures = 0
-    socket_system.ai_translate.connection_failures = 0
+    socket_system.ai_convert.connection_failures = 0
     socket_system.rime_state.write_failure_count = 0
-    socket_system.ai_translate.write_failure_count = 0
+    socket_system.ai_convert.write_failure_count = 0
 
     -- 断开现有连接
     M.disconnect_from_server()
@@ -1057,22 +1057,22 @@ function M.set_connection_params(host, rime_port, ai_port)
         socket_system.rime_state.port = rime_port
     end
     if ai_port then
-        socket_system.ai_translate.port = ai_port
+        socket_system.ai_convert.port = ai_port
     end
     logger.debug(
         "连接参数已更新: " .. socket_system.host .. " Rime:" .. socket_system.rime_state.port .. " AI:" ..
-            socket_system.ai_translate.port)
+            socket_system.ai_convert.port)
 end
 
--- 公开接口：发送翻译请求（仅发送，不等待响应）
-function M.send_translate_request(schema_name, shuru_schema, confirmed_pos_input, long_candidates_table, timeout_seconds)
-    local timeout = timeout_seconds or socket_system.ai_translate.timeout -- 默认使用AI服务超时时间
+-- 公开接口：发送转换请求（仅发送，不等待响应）
+function M.send_convert_request(schema_name, shuru_schema, confirmed_pos_input, long_candidates_table, timeout_seconds)
+    local timeout = timeout_seconds or socket_system.ai_convert.timeout -- 默认使用AI服务超时时间
     local success, error_msg = pcall(function()
         local current_time = get_current_time_ms()
 
-        -- 构建要翻译的拼音字符串
-        local translate_data = {
-            messege_type = "translate",
+        -- 构建要转换的拼音字符串
+        local convert_data = {
+            messege_type = "convert",
             confirmed_pos_input = confirmed_pos_input,
             schema_name = schema_name,
             shuru_schema = shuru_schema,
@@ -1083,37 +1083,37 @@ function M.send_translate_request(schema_name, shuru_schema, confirmed_pos_input
 
         -- 提取long_candidates_table中每个元素的text属性，组成数组
         if long_candidates_table then
-            translate_data.candidates_text = {}
+            convert_data.candidates_text = {}
             for _, candidate in ipairs(long_candidates_table) do
-                table.insert(translate_data.candidates_text, candidate.text)
+                table.insert(convert_data.candidates_text, candidate.text)
             end
         end
 
         -- 序列化状态数据
-        local json_data = json.encode(translate_data)
-        logger.debug("发送翻译请求json_data: " .. tostring(json_data))
+        local json_data = json.encode(convert_data)
+        logger.debug("发送转换请求json_data: " .. tostring(json_data))
 
         if json_data then
-            -- 写入AI翻译服务TCP套接字
+            -- 写入AI转换服务TCP套接字
             M.write_to_ai_socket(json_data)
-            logger.debug("翻译请求发送成功")
+            logger.debug("转换请求发送成功")
             return true
         else
-            logger.debug("translate_data序列化失败,请排查错误: " .. tostring(translate_data))
+            logger.debug("convert_data序列化失败,请排查错误: " .. tostring(convert_data))
             return false
         end
     end)
 
     if not success then
-        logger.error("发送翻译请求失败: " .. tostring(error_msg))
+        logger.error("发送转换请求失败: " .. tostring(error_msg))
         return false
     end
 
     return true
 end
 
--- 公开接口：读取翻译结果（流式读取，类似AI助手的读取方式）
-function M.read_translate_result(timeout_seconds)
+-- 公开接口：读取转换结果（流式读取，类似AI助手的读取方式）
+function M.read_convert_result(timeout_seconds)
     local timeout = timeout_seconds or 0.1 -- 默认100ms超时，适合流式读取
     
     -- 使用现有的read_latest_from_ai_socket函数
@@ -1122,9 +1122,9 @@ function M.read_translate_result(timeout_seconds)
     if stream_result and stream_result.status == "success" and stream_result.data then
         local parsed_data = stream_result.data
         
-        -- 检查是否是翻译结果
-        if parsed_data.messege_type == "translate_result_stream" then
-            logger.debug("读取到翻译结果数据")
+        -- 检查是否是转换结果
+        if parsed_data.messege_type == "convert_result_stream" then
+            logger.debug("读取到转换结果数据")
             
             -- 从服务端数据中获取 is_final 状态
             local is_final = parsed_data.is_final or false
@@ -1132,7 +1132,7 @@ function M.read_translate_result(timeout_seconds)
             local is_timeout = parsed_data.is_timeout or false
             local is_error = parsed_data.is_error or false
             
-            logger.debug("翻译结果状态 - is_final: " .. tostring(is_final) .. 
+            logger.debug("转换结果状态 - is_final: " .. tostring(is_final) .. 
                         ", is_partial: " .. tostring(is_partial) ..
                         ", is_timeout: " .. tostring(is_timeout) ..
                         ", is_error: " .. tostring(is_error))
@@ -1146,7 +1146,7 @@ function M.read_translate_result(timeout_seconds)
                 is_error = is_error
             }
         else
-            logger.debug("收到非翻译结果数据，类型: " .. tostring(parsed_data.messege_type))
+            logger.debug("收到非转换结果数据，类型: " .. tostring(parsed_data.messege_type))
             return {
                 status = "no_data",
                 data = nil,
@@ -1154,14 +1154,14 @@ function M.read_translate_result(timeout_seconds)
             }
         end
     elseif stream_result and stream_result.status == "timeout" then
-        logger.debug("翻译结果读取超时(正常) - 服务端可能还没处理完成")
+        logger.debug("转换结果读取超时(正常) - 服务端可能还没处理完成")
         return {
             status = "timeout",
             data = nil,
             is_final = false
         }
     elseif stream_result and stream_result.status == "error" then
-        logger.error("翻译结果读取错误: " .. tostring(stream_result.error_msg))
+        logger.error("转换结果读取错误: " .. tostring(stream_result.error_msg))
         return {
             status = "error",
             data = nil,
@@ -1169,67 +1169,13 @@ function M.read_translate_result(timeout_seconds)
             error_msg = stream_result.error_msg
         }
     else
-        logger.debug("未知的翻译结果读取状态")
+        logger.debug("未知的转换结果读取状态")
         return {
             status = "no_data",
             data = nil,
             is_final = false
         }
     end
-end
-
--- 公开接口：翻译拼音字符串（支持自定义超时）- 保持向后兼容
-function M.translate(schema_name, shuru_schema, confirmed_pos_input, long_candidates_table, timeout_seconds)
-    local timeout = timeout_seconds or socket_system.ai_translate.timeout -- 默认使用AI服务超时时间
-    local parsed_data = nil
-
-    local success, error_msg = pcall(function()
-        local current_time = get_current_time_ms()
-
-        -- 构建要翻译的拼音字符串
-        local translate_data = {
-            messege_type = "translate",
-            confirmed_pos_input = confirmed_pos_input,
-            schema_name = schema_name,
-            shuru_schema = shuru_schema,
-            timestamp = current_time,
-            timeout = timeout -- 告知服务端预期的超时时间
-        }
-
-        -- 提取long_candidates_table中每个元素的text属性，组成数组
-        if long_candidates_table then
-            translate_data.candidates_text = {}
-            for _, candidate in ipairs(long_candidates_table) do
-                table.insert(translate_data.candidates_text, candidate.text)
-            end
-        end
-
-        -- 序列化状态数据
-
-        local json_data = json.encode(translate_data)
-        logger.debug("json_data: " .. tostring(json_data))
-
-        if json_data then
-            -- 写入AI翻译服务TCP套接字
-            M.write_to_ai_socket(json_data)
-
-            -- 处理来自AI翻译服务端的数据
-            if socket_system.is_initialized and socket_system.ai_translate.is_connected then
-                parsed_data = M.process_ai_socket_data_with_timeout()
-                logger.debug("parsed_data: " .. tostring(parsed_data))
-            end
-        else
-            logger.debug("translate_data序列化失败,请排查错误: " .. tostring(translate_data))
-        end
-
-    end)
-
-    if not success then
-        logger.error("带超时翻译处理失败: " .. tostring(error_msg))
-        return nil
-    end
-
-    return parsed_data
 end
 
 -- 公开接口：发送粘贴命令到服务端（跨平台通用）
@@ -1300,7 +1246,7 @@ function M.send_chat_message(commit_text, chat_type)
         logger.debug("发送对话消息json_data: " .. tostring(json_data))
 
         if json_data then
-            -- 写入AI翻译服务TCP套接字
+            -- 写入AI转换服务TCP套接字
             M.write_to_ai_socket(json_data)
             logger.debug("对话消息发送成功，类型: " .. tostring(chat_type))
         else
@@ -1393,7 +1339,7 @@ function M.init()
 
     -- 尝试连接到Rime状态服务
     local rime_connected = M.connect_to_rime_server()
-    -- 尝试连接到AI翻译服务
+    -- 尝试连接到AI转换服务
     local ai_connected = M.connect_to_ai_server()
 
     if rime_connected or ai_connected then
@@ -1403,7 +1349,7 @@ function M.init()
             logger.info("Rime状态服务连接成功")
         end
         if ai_connected then
-            logger.info("AI翻译服务连接成功")
+            logger.info("AI转换服务连接成功")
         end
         logger.info("双端口TCP套接字系统初始化完成")
         return true

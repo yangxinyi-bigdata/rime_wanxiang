@@ -146,8 +146,8 @@ function smart_cursor_processor.init(env)
             end
 
             -- 清空云输入法的状态
-            if context:get_property("cloud_translate_flag") == "1" then
-                context:set_property("cloud_translate_flag", "0")
+            if context:get_property("cloud_convert_flag") == "1" then
+                context:set_property("cloud_convert_flag", "0")
             end
 
             -- 清空反引号英文模式的状态

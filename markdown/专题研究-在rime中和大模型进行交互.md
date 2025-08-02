@@ -85,8 +85,33 @@ rime这边的开关状态是动态变化的,不需要重新加载配置,所以�
 6. 工作方式都是一样的,所以所有配置的ai对话模式都是可以通过启动之后,进行工作. 所以应该是设置一个属性,字符串,有多个不同的值,而不是仅仅一个true或者false的开关,或者也可以是一系列的开关,先判断开关, 在判断属性字符串? 
 
 步骤
-1. rime当中先搞,rime如何获取这个属性的值呢? 不管怎么获取,反正先判断这个属性的值,然后只要有这个属性的某种值存在就要进行拦截.
-　　
+1. 还是先搞 python 端吧,在python端UI页面当中,添加一个配置,
+2. rime当中先搞,rime如何获取这个属性的值呢? 不管怎么获取,反正先判断这个属性的值,然后只要有这个属性的某种值存在就要进行拦截.
+
+rime提示词:
+首先这个值的属性信息应该从哪里获取? 应该是从服务器进行获取,在每次和服务器通信的过程中,服务器会发过来命令,如果存在设置这个属性的命令,就会设置这个属性. 
+然后应该每次将这个属性的值发送给服务端.
+
+我希望在rime输入法中添加一个属性, 根据属性设置的值去自动调用各种ai功能,例如cat_ai_chat,normal_ai_chat,translate_ai_chat等. 
+首先应该在src/rime_config_manager/config_manager.py当中提取rime配置文件wanxiang_pro.schema.yaml中的ai_assistant.chat_triggers中的所有配置项.
+然后在config当中添加一个配置保存当前启用哪个ai对话功能, 例如 ENABLE_CHAT_TRIGGER: "translate_ai_chat".
+然后在frontend/src/views/RimeSettings.vue中添加对于这个配置项的管理.
+当启用了某个ai能力的时候, rime输入法中的每次上屏文本都会自动向服务端发送消息.
+
+我希望将在rime_option_intime分支中开发的实时和rime同步配置的代码重新添加到本分支中来, 相关代码已经复制到了src/temp文件夹当中,可以参考这部分代码进行添加. 
+但是原来同步的那些简体,中英文等配置不再需要实时同步,而是新添加的ENABLE_CHAT_TRIGGER功能需要实时同步, rime会在每次发送过来的状态信息当中说明当前这个属性的值, 如果发现属性的值,和服务器当中配置的不同,则应该进行修改.
+
+　
+
+提示词:
+AI提问:将拼音转换成中文的过程，如果不使用翻译这个词汇的话，还有哪个词可以比较准确地描述这一个过程？
+
+转换convert, 
+当前项目中,将使用百度云接口和ai大模型将拼音转换成中文这一过程成为翻译translate, 和新实现的ai翻译功能产生名称冲突,容易造成误解.
+我想要将拼音转换成中文这一过程, 称为"转换convert", 用转换convert来代替原来的"翻译translate", 这一过程涉及到src/ai_converter.py, src/rime_socket_serve.py, src/main.py, src/config.py, src/cloud_pinyin_translate.py 以及前端的frontend/src/views/RimeSettings.vue,等一系列文件, 不只是这些文件,也可能存在其他的文件也需要修改.
+我希望你能帮我进行一次大范围的代码重构,对这个翻译的代码进行修改.
+但是注意用于大模型中英文翻译的代码不要进行修改.
+
 
 
 - [x] 将ai云输入法的功能，也变成流式的。这个可能会比较麻烦啊。
