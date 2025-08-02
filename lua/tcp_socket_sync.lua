@@ -21,7 +21,7 @@ local json = require("json") -- 项目中的json模块
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("tcp_socket_sync", {
-    enabled = false,
+    enabled = true,
     unique_file_log = false, -- 启用日志以便测试
     log_level = "DEBUG"
     -- console_output = true -- 为特定实例启用控制台输出
@@ -74,7 +74,7 @@ local socket_system = {
         max_connection_failures = 3,
         write_failure_count = 0,
         max_failure_count = 3,
-        timeout = 5.0 -- AI翻译超时时间
+        timeout = 1 -- AI翻译超时时间
     },
 
     -- 系统状态
@@ -626,11 +626,10 @@ function M.read_latest_from_ai_socket(timeout_seconds)
     end
 
     -- 设置自定义超时时间
-    local original_timeout = ai_translate.timeout
-    local effective_timeout = timeout_seconds or 0.1 -- 默认100ms超时
+    local timeout_seconds = timeout_seconds or 0.1 -- 默认100ms超时
 
-    ai_translate.client:settimeout(effective_timeout)
-    logger.debug("🕐 设置AI翻译服务读取超时时间为: " .. effective_timeout .. "秒")
+    ai_translate.client:settimeout(timeout_seconds)
+    logger.debug("🕐 设置AI翻译服务读取超时时间为: " .. timeout_seconds .. "秒")
 
     -- 使用循环按行读取数据，保留最后一行
     local latest_line = nil
@@ -643,8 +642,7 @@ function M.read_latest_from_ai_socket(timeout_seconds)
         if line then
             latest_line = line -- 保存最新的一行
             total_lines = total_lines + 1
-            logger.debug("📥 读取到消息行 #" .. total_lines .. " (长度:" .. string.len(line) .. "): " ..
-                             string.sub(line, 1, 100) .. (string.len(line) > 100 and "..." or ""))
+            logger.debug("📥 读取到消息行: " .. line)
         elseif err == "timeout" then
             -- 超时表示没有更多数据，退出循环
             logger.debug("⏰ 第 " .. attempt .. " 次读取超时，停止读取")
@@ -652,8 +650,6 @@ function M.read_latest_from_ai_socket(timeout_seconds)
         else
             -- 其他错误
             logger.warn("AI翻译服务TCP读取错误: " .. tostring(err))
-            -- 恢复原始超时设置
-            ai_translate.client:settimeout(original_timeout)
             M.disconnect_from_ai_server()
             return {
                 data = nil,
@@ -663,10 +659,6 @@ function M.read_latest_from_ai_socket(timeout_seconds)
             }
         end
     end
-
-    -- 恢复原始超时设置
-    ai_translate.client:settimeout(original_timeout)
-    logger.debug("🔄 恢复AI翻译服务原始超时时间: " .. original_timeout .. "秒")
 
     if latest_line then
         if total_lines > 1 then
@@ -1072,7 +1064,121 @@ function M.set_connection_params(host, rime_port, ai_port)
             socket_system.ai_translate.port)
 end
 
--- 公开接口：翻译拼音字符串（支持自定义超时）
+-- 公开接口：发送翻译请求（仅发送，不等待响应）
+function M.send_translate_request(schema_name, shuru_schema, confirmed_pos_input, long_candidates_table, timeout_seconds)
+    local timeout = timeout_seconds or socket_system.ai_translate.timeout -- 默认使用AI服务超时时间
+    local success, error_msg = pcall(function()
+        local current_time = get_current_time_ms()
+
+        -- 构建要翻译的拼音字符串
+        local translate_data = {
+            messege_type = "translate",
+            confirmed_pos_input = confirmed_pos_input,
+            schema_name = schema_name,
+            shuru_schema = shuru_schema,
+            stream_mode = true,
+            timestamp = current_time,
+            timeout = timeout -- 告知服务端预期的超时时间
+        }
+
+        -- 提取long_candidates_table中每个元素的text属性，组成数组
+        if long_candidates_table then
+            translate_data.candidates_text = {}
+            for _, candidate in ipairs(long_candidates_table) do
+                table.insert(translate_data.candidates_text, candidate.text)
+            end
+        end
+
+        -- 序列化状态数据
+        local json_data = json.encode(translate_data)
+        logger.debug("发送翻译请求json_data: " .. tostring(json_data))
+
+        if json_data then
+            -- 写入AI翻译服务TCP套接字
+            M.write_to_ai_socket(json_data)
+            logger.debug("翻译请求发送成功")
+            return true
+        else
+            logger.debug("translate_data序列化失败,请排查错误: " .. tostring(translate_data))
+            return false
+        end
+    end)
+
+    if not success then
+        logger.error("发送翻译请求失败: " .. tostring(error_msg))
+        return false
+    end
+
+    return true
+end
+
+-- 公开接口：读取翻译结果（流式读取，类似AI助手的读取方式）
+function M.read_translate_result(timeout_seconds)
+    local timeout = timeout_seconds or 0.1 -- 默认100ms超时，适合流式读取
+    
+    -- 使用现有的read_latest_from_ai_socket函数
+    local stream_result = M.read_latest_from_ai_socket(timeout)
+    
+    if stream_result and stream_result.status == "success" and stream_result.data then
+        local parsed_data = stream_result.data
+        
+        -- 检查是否是翻译结果
+        if parsed_data.messege_type == "translate_result_stream" then
+            logger.debug("读取到翻译结果数据")
+            
+            -- 从服务端数据中获取 is_final 状态
+            local is_final = parsed_data.is_final or false
+            local is_partial = parsed_data.is_partial or false
+            local is_timeout = parsed_data.is_timeout or false
+            local is_error = parsed_data.is_error or false
+            
+            logger.debug("翻译结果状态 - is_final: " .. tostring(is_final) .. 
+                        ", is_partial: " .. tostring(is_partial) ..
+                        ", is_timeout: " .. tostring(is_timeout) ..
+                        ", is_error: " .. tostring(is_error))
+            
+            return {
+                status = "success",
+                data = parsed_data,
+                is_final = is_final,
+                is_partial = is_partial,
+                is_timeout = is_timeout,
+                is_error = is_error
+            }
+        else
+            logger.debug("收到非翻译结果数据，类型: " .. tostring(parsed_data.messege_type))
+            return {
+                status = "no_data",
+                data = nil,
+                is_final = false
+            }
+        end
+    elseif stream_result and stream_result.status == "timeout" then
+        logger.debug("翻译结果读取超时(正常) - 服务端可能还没处理完成")
+        return {
+            status = "timeout",
+            data = nil,
+            is_final = false
+        }
+    elseif stream_result and stream_result.status == "error" then
+        logger.error("翻译结果读取错误: " .. tostring(stream_result.error_msg))
+        return {
+            status = "error",
+            data = nil,
+            is_final = true,
+            error_msg = stream_result.error_msg
+        }
+    else
+        logger.debug("未知的翻译结果读取状态")
+        return {
+            status = "no_data",
+            data = nil,
+            is_final = false
+        }
+    end
+end
+
+-- 公开接口：翻译拼音字符串（支持自定义超时）- 保持向后兼容
 function M.translate(schema_name, shuru_schema, confirmed_pos_input, long_candidates_table, timeout_seconds)
     local timeout = timeout_seconds or socket_system.ai_translate.timeout -- 默认使用AI服务超时时间
     local parsed_data = nil

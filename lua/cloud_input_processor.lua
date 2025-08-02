@@ -208,9 +208,17 @@ function cloud_input_processor.func(key, env)
             return kAccepted
         end
 
+    elseif context:get_property("get_cloud_stream") == "true" then
+        
+        if key_repr == "Control+F11" then
+            logger.info("get_cloud_stream==true, 触发重新刷新云输入候选词: ")
+            context:refresh_non_confirmed_composition()
+            return kAccepted
+        end
+
     else
         if key_repr == "Control+F11" then
-            logger.info("get_ai_stream==false, 依然拦截输入Control+F11: ")
+            logger.info("get_ai_stream==false && get_cloud_stream==false, 依然拦截输入Control+F11: ")
             return kAccepted
         end
     end

@@ -3,11 +3,11 @@
 --
 -- 使用方法：
 -- 1. 分离模式（默认）：每个模块使用独立的日志文件
---    将 default_config.unique_file_log 设置为 false
+--    将调用文件中的 config.unique_file_log 设置为 false
 -- 2. 统一模式：所有模块输出到同一个日志文件
---    将 default_config.unique_file_log 设置为 true
---    可通过 default_config.unique_file_log_file 自定义文件名
--- 3. 控制台输出：可以通过 default_config.console_output 设置为 true
+--    将调用文件中的 config.unique_file_log 设置为 true
+--    可通过 config.unique_file_log_file 自定义文件名
+-- 3. 控制台输出：可以通过 config.console_output 设置为 true
 --    来同时将日志输出到控制台，便于调试
 -- 4. 日志级别控制：通过 logger.set_log_level() 设置日志输出级别
 --    可用级别：DEBUG < INFO < WARN < ERROR
@@ -15,10 +15,18 @@
 -- 5. 行号显示：通过 logger.set_show_line_info() 控制是否显示行号
 --    默认为 true，日志格式: [时间] [级别] [模块名:行号] 消息
 --
--- 优先级控制：
--- - 当 logger.lua 中 unique_file_log = true 时，强制所有模块使用统一日志文件，
---   忽略各个调用脚本中的 unique_file_log 设置
--- - 当 logger.lua 中 unique_file_log = false 时，才允许各个调用脚本自定义设置
+-- 全局超级开关（优先级最高）：
+-- - logger.set_global_enabled(enabled): 全局日志开关
+--   当设置为 true/false 时，强制覆盖所有调用文件的 enabled 设置
+--   当设置为 nil 时，使用各个调用文件的 enabled 设置
+-- - logger.set_global_unique_file_log(enabled, filename): 全局统一文件开关
+--   当设置为 true/false 时，强制覆盖所有调用文件的 unique_file_log 设置
+--   当设置为 nil 时，使用各个调用文件的 unique_file_log 设置
+--
+-- 配置优先级（从高到低）：
+-- 1. 全局超级开关（logger.lua 中的 global_overrides）
+-- 2. 调用文件中的 config 参数
+-- 3. logger.lua 中的 default_config 默认值
 
 local logger = {}
 
@@ -30,12 +38,18 @@ local LOG_LEVELS = {
     ERROR = 4
 }
 
+-- 全局超级开关（优先级最高）
+local global_overrides = {
+    force_enabled = nil,  -- 全局日志开关：nil=不强制, true=强制开启, false=强制关闭
+    force_unique_file_log = nil  -- 全局统一文件开关：nil=不强制, true=强制统一文件, false=强制分离文件
+}
+
 -- 默认配置
 local default_config = {
     enabled = true,
     log_dir = "/Users/yangxinyi/Library/Rime/log/",
     timestamp_format = "%Y-%m-%d %H:%M:%S",
-    unique_file_log = false,  -- 是否统一输出到同一个日志文件
+    unique_file_log = false,  -- 是否统一输出到同一个日志文件（普通参数，由各个文件自己控制）
     unique_file_log_file = "all_modules.log",  -- 统一日志文件名
     console_output = false,  -- 是否同时输出到控制台
     log_level = "INFO",  -- 日志输出级别：DEBUG, INFO, WARN, ERROR
@@ -43,6 +57,17 @@ local default_config = {
 }
 
 -- 配置管理函数
+function logger.set_global_enabled(enabled)
+    global_overrides.force_enabled = enabled
+end
+
+function logger.set_global_unique_file_log(enabled, filename)
+    global_overrides.force_unique_file_log = enabled
+    if filename then
+        default_config.unique_file_log_file = filename
+    end
+end
+
 function logger.set_unified_mode(enabled, filename)
     default_config.unique_file_log = enabled
     if filename then
@@ -70,11 +95,15 @@ function logger.get_config()
     return default_config
 end
 
+function logger.get_global_overrides()
+    return global_overrides
+end
+
 -- 创建日志记录器
 function logger.create(module_name, config)
     config = config or {}
     
-    -- 合并配置，但 unique_file_log 在 logger.lua 中设置时具有最高优先级
+    -- 合并配置
     local log_config = {}
     for k, v in pairs(default_config) do
         if config[k] ~= nil then
@@ -84,12 +113,15 @@ function logger.create(module_name, config)
         end
     end
     
-    -- unique_file_log 优先级控制：
-    -- 当 logger.lua 中设置为 true 时，强制使用统一日志文件，忽略调用者的设置
-    -- 当 logger.lua 中设置为 false 时，才允许调用者自定义
-    if default_config.unique_file_log == true then
-        log_config.unique_file_log = true
-        log_config.unique_file_log_file = default_config.unique_file_log_file
+    -- 应用全局超级开关（优先级最高）
+    -- 1. 全局日志开关
+    if global_overrides.force_enabled ~= nil then
+        log_config.enabled = global_overrides.force_enabled
+    end
+    
+    -- 2. 全局统一文件开关
+    if global_overrides.force_unique_file_log ~= nil then
+        log_config.unique_file_log = global_overrides.force_unique_file_log
     end
     
     -- 生成日志文件路径

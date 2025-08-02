@@ -15,7 +15,7 @@ local spans_manager = require("spans_manager")
 local logger = logger_module.create("cloud_ai_filter_v2", {
     enabled = true, -- 启用日志以便测试
     unique_file_log = false, -- 启用日志以便测试
-    log_level = "DEBUG"
+    log_level = "INFO"
 })
 
 -- 添加 ARM64 Homebrew 的 Lua 路径
@@ -52,62 +52,71 @@ end
 local config_cache = {}
 local last_schema_id = nil
 
+-- 云输入结果缓存机制
+local cloud_result_cache = {
+    last_input = "", -- 上次输入的内容
+    cloud_candidates = {}, -- 缓存的云候选词
+    ai_candidates = {}, -- 缓存的AI候选词
+    timestamp = 0, -- 缓存时间戳
+    cache_timeout = 60 -- 缓存有效期（秒）
+}
+
 -- 读取AI助手配置的辅助函数
 local function load_ai_config(env)
     local schema = env.engine.schema
     local config = schema.config
     local schema_id = schema.schema_id
-    
+
     -- 如果schema没有变化且已有缓存，直接使用缓存并应用配置
     if last_schema_id == schema_id and config_cache.ai_assistant_config then
         logger.info("使用缓存的AI助手配置 (schema: " .. schema_id .. ")")
         local ai_assistant_config = config_cache.ai_assistant_config
-        
+
         -- 应用配置到环境变量
         env.schema_name = ai_assistant_config.schema_name
         env.shuru_schema = ai_assistant_config.shuru_schema
         env.max_cloud_candidates = ai_assistant_config.max_cloud_candidates
         env.max_ai_candidates = ai_assistant_config.max_ai_candidates
-        
+
         -- 将全局变量也保存到env中
         env.ziranma_mapping_config = ai_assistant_config.ziranma_mapping_config
         env.backtick_delimiter_before = ai_assistant_config.backtick_delimiter_before
         env.backtick_delimiter_after = ai_assistant_config.backtick_delimiter_after
         env.delimiter = ai_assistant_config.delimiter
-        
+
         return ai_assistant_config
     end
-    
+
     logger.info("重新加载AI助手配置 (schema: " .. schema_id .. ")")
-    
+
     -- 读取 ai_assistant 配置
     local ai_assistant_config = {}
-    
+
     -- 读取 behavior 配置
     ai_assistant_config.behavior = {}
     ai_assistant_config.behavior.prompt_chat = config:get_string("ai_assistant/behavior/prompt_chat")
-    
+
     -- 动态读取 chat_triggers 配置
     ai_assistant_config.chat_triggers = {}
     ai_assistant_config.chat_names = {}
-    
+
     -- 获取 chat_triggers 配置项
     local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
     if chat_triggers_config then
         -- 获取所有键名
         local trigger_keys = chat_triggers_config:keys()
         logger.info("找到 " .. #trigger_keys .. " 个触发器配置")
-        
+
         -- 遍历配置中的所有触发器
         for _, trigger_name in ipairs(trigger_keys) do
             local trigger_value = config:get_string("ai_assistant/chat_triggers/" .. trigger_name)
             local chat_name = config:get_string("ai_assistant/chat_names/" .. trigger_name)
-            
+
             if trigger_value then
                 ai_assistant_config.chat_triggers[trigger_name] = trigger_value
                 logger.info("AI触发器 - " .. trigger_name .. ": " .. trigger_value)
             end
-            
+
             if chat_name then
                 ai_assistant_config.chat_names[trigger_name] = chat_name
                 logger.info("AI聊天名称 - " .. trigger_name .. ": " .. chat_name)
@@ -116,51 +125,90 @@ local function load_ai_config(env)
     else
         logger.warning("未找到 chat_triggers 配置")
     end
-    
+
     -- 读取其他配置项并添加到ai_assistant_config中
     ai_assistant_config.schema_name = env.engine.schema.schema_name
     ai_assistant_config.shuru_schema = config:get_string("schema/my_shuru_schema") or ""
-    
+
     -- 读取候选词数量限制配置
     ai_assistant_config.max_cloud_candidates = config:get_int("cloud_ai_filter/max_cloud_candidates") or 2
     ai_assistant_config.max_ai_candidates = config:get_int("cloud_ai_filter/max_ai_candidates") or 1
-    
+
     -- 读取分隔符配置
     ai_assistant_config.delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
-    
+
     -- 读取反引号分隔符配置
     ai_assistant_config.backtick_delimiter_before = config:get_string("translator/backtick_delimiter_before") or ""
     ai_assistant_config.backtick_delimiter_after = config:get_string("translator/backtick_delimiter_after") or ""
-    
+
     -- 加载自然码映射表
     ai_assistant_config.ziranma_mapping_config = config:get_map("speller/ziranma_to_quanpin")
-    
+
     logger.info("云候选词最大数量: " .. ai_assistant_config.max_cloud_candidates)
     logger.info("AI候选词最大数量: " .. ai_assistant_config.max_ai_candidates)
     logger.info("当前分隔符: " .. ai_assistant_config.delimiter)
-    
+
     -- 应用配置到环境变量
     env.schema_name = ai_assistant_config.schema_name
     env.shuru_schema = ai_assistant_config.shuru_schema
     env.max_cloud_candidates = ai_assistant_config.max_cloud_candidates
     env.max_ai_candidates = ai_assistant_config.max_ai_candidates
-    
+
     -- 将全局变量也保存到env中
     env.ziranma_mapping_config = ai_assistant_config.ziranma_mapping_config
     env.backtick_delimiter_before = ai_assistant_config.backtick_delimiter_before
     env.backtick_delimiter_after = ai_assistant_config.backtick_delimiter_after
     env.delimiter = ai_assistant_config.delimiter
-    
+
     -- 缓存配置
     config_cache.ai_assistant_config = ai_assistant_config
     last_schema_id = schema_id
-    
+
     return ai_assistant_config
 end
 
 local translator = {}
 
 local replace_punct_enabled = false
+
+-- 缓存管理函数
+local function save_cloud_result_cache(input_text, parsed_data)
+    if parsed_data and (parsed_data.cloud_candidates or parsed_data.ai_candidates) then
+        cloud_result_cache.last_input = input_text
+        cloud_result_cache.cloud_candidates = parsed_data.cloud_candidates or {}
+        cloud_result_cache.ai_candidates = parsed_data.ai_candidates or {}
+        cloud_result_cache.timestamp = os.time()
+        logger.info("保存云输入结果缓存，输入: " .. input_text .. ", 云候选词: " ..
+                        #cloud_result_cache.cloud_candidates .. ", AI候选词: " .. #cloud_result_cache.ai_candidates)
+    end
+end
+
+local function get_cached_cloud_result(input_text)
+    -- 检查缓存是否有效
+    local current_time = os.time()
+    if cloud_result_cache.last_input == input_text and cloud_result_cache.timestamp > 0 and
+        (current_time - cloud_result_cache.timestamp) < cloud_result_cache.cache_timeout and
+        (#cloud_result_cache.cloud_candidates > 0 or #cloud_result_cache.ai_candidates > 0) then
+
+        logger.info("使用缓存的云输入结果，输入: " .. input_text .. ", 云候选词: " ..
+                        #cloud_result_cache.cloud_candidates .. ", AI候选词: " .. #cloud_result_cache.ai_candidates)
+
+        return {
+            cloud_candidates = cloud_result_cache.cloud_candidates,
+            ai_candidates = cloud_result_cache.ai_candidates
+        }
+    end
+
+    return nil
+end
+
+local function clear_cloud_result_cache()
+    cloud_result_cache.last_input = ""
+    cloud_result_cache.cloud_candidates = {}
+    cloud_result_cache.ai_candidates = {}
+    cloud_result_cache.timestamp = 0
+    logger.info("清空云输入结果缓存")
+end
 
 local function set_cloud_translate_flag(cand, context, delimiter)
     -- 这部分代码时检测输入的字符长度，通过检测中间有几个分隔符实现
@@ -208,7 +256,10 @@ function translator.init(env)
 
     -- 使用配置加载函数加载AI助手配置（配置会自动应用到env中）
     env.ai_assistant_config = load_ai_config(env)
-    
+
+    -- 清空云输入结果缓存
+    clear_cloud_result_cache()
+
     logger.info("AI助手配置加载完成")
 end
 
@@ -261,12 +312,12 @@ function translator.func(translation, env)
 
     --  判断segment:has_tag("ai_prompt") , 给前x个候选词添加comment, x的数量和lua/ai_assistant_segmentor.lua中trigger_prefix:sub(1, 1) == prompt_chat 的数量相同, 
     -- 将每一个匹配上的prompt_triggers, 添加到候选词的comment当中去
-    
+
     -- 检查是否是AI提示段落
     local is_ai_prompt = segment:has_tag("ai_prompt")
     if is_ai_prompt then
         logger.info("检测到ai_prompt标签，开始处理AI提示候选词")
-        
+
         -- 生成prompt_triggers列表，与ai_assistant_segmentor.lua中的逻辑一致
         local prompt_triggers = {}
         if env.ai_assistant_config and env.ai_assistant_config.behavior and env.ai_assistant_config.chat_triggers then
@@ -281,45 +332,43 @@ function translator.func(translation, env)
                         end
                     end
                 end
-                
+
                 -- 排序以保持一致性
                 table.sort(prompt_triggers)
                 logger.info("生成了 " .. #prompt_triggers .. " 个提示触发器")
             end
         end
-        
+
         -- 为候选词添加comment，每个候选词对应两个触发器
         local count = 0
-        local max_rounds = math.floor(#prompt_triggers / 2)  -- 计算最大轮数
+        local max_rounds = math.floor(#prompt_triggers / 2) -- 计算最大轮数
         local current_round = 0
-        
+
         for cand in translation:iter() do
             current_round = current_round + 1
-            
+
             -- 如果超过最大轮数，不再添加comment
             if current_round <= max_rounds then
                 count = count + 2
                 local trigger_info1 = prompt_triggers[count - 1]
                 local trigger_info2 = prompt_triggers[count]
-                
+
                 -- 组合触发器信息
                 local combined_trigger_info = trigger_info1
                 if trigger_info2 then
                     combined_trigger_info = combined_trigger_info .. "  " .. trigger_info2
                 end
-                
+
                 cand.comment = " " .. combined_trigger_info
                 logger.info("为候选词添加提示: " .. combined_trigger_info)
             end
-            
+
             yield(cand)
         end
-        
+
         logger.info("AI提示候选词处理完成，共处理 " .. count .. " 个候选词")
         return
     end
-    
- 
 
     local segments = {}
 
@@ -331,8 +380,6 @@ function translator.func(translation, env)
     local cand_type = nil
     local cand_comment = ""
     local spans = nil
-
-    -- logger.info("232")
 
     -- 首先检查是不是标点符号的候选词, 如果是直接确认第一个候选项,并返回.
     -- 先保存第一个原始候选词
@@ -351,44 +398,40 @@ function translator.func(translation, env)
             cand_end = cand._end
             cand_type = cand.type
             cand_comment = cand.comment
-            logger.info(string.format(
-                "原始候选词信息: text=%s, preedit=%s, start=%s, end=%s, type=%s, comment=%s",
-                tostring(cand_text), tostring(original_preedit), tostring(cand_start), tostring(cand_end),
-                tostring(cand_type), tostring(cand_comment)))
+            -- logger.info(string.format(
+            --     "原始候选词信息: text=%s, preedit=%s, start=%s, end=%s, type=%s, comment=%s",
+            --     tostring(cand_text), tostring(original_preedit), tostring(cand_start), tostring(cand_end),
+            --     tostring(cand_type), tostring(cand_comment)))
         end
         -- 只提取一个候选词
         break
     end
 
     if cand_type == "punct" or cand_type:sub(-7) == "ai_chat" then
-        logger.info("cand_type: punct or ai_chat cand_text: " .. cand_text)
+        logger.debug("cand_type: punct or ai_chat cand_text: " .. cand_text)
         -- 输出原始候选词
         yield(first_original_cand)
 
         for cand in translation:iter() do
-            logger.info(string.format(
+            logger.debug(string.format(
                 "punct剩余选词信息: text=%s, preedit=%s, start=%s, end=%s, type=%s, comment=%s",
                 tostring(cand.text), tostring(cand.preedit), tostring(cand.start), tostring(cand._end),
                 tostring(cand.type), tostring(cand.comment)))
             yield(cand)
         end
 
-        return        
+        return
     else
-        logger.info("cand_type:  " .. cand_type)
+        logger.debug("cand_type:  " .. cand_type)
     end
 
-    -- cand_type ~= "user_table"  phrase 等等
-    if not context:get_option("cloud_translate") then
-        logger.info("not cloud_translate")
+    -- 第一次进入的时候cloud_translate为true, 如果为false 则直接返回. 第二次如果这个有一个为真, 则
+    if not context:get_option("cloud_translate") and context:get_property("get_cloud_stream") ~= "true" then
+        logger.info("not cloud_translate, get_cloud_stream ~= true")
         -- 查看有没有云翻译的标识, 没有的话直接返回原有的候选词
         yield(first_original_cand) -- 输出原有第一个候选词
         set_cloud_translate_flag(first_original_cand, context, env.delimiter)
         for cand in translation:iter() do
-            logger.info(string.format(
-                "没有cloud_translate, 剩余选词信息: text=%s, preedit=%s, start=%s, end=%s, type=%s, comment=%s",
-                tostring(cand.text), tostring(cand.preedit), tostring(cand.start), tostring(cand._end),
-                tostring(cand.type), tostring(cand.comment)))
             yield(cand) -- 输出原有候选词
         end
 
@@ -397,161 +440,201 @@ function translator.func(translation, env)
     end
 
     -- 代码走到这里,代表已经进入context:get_option("cloud_translate")成立分支
-    logger.info("已经进入云输入法分支: cloud_translate " .. tostring(context:get_option("cloud_translate")))
+    -- 首次触发云输入（发送请求并开始流式获取）
+    logger.info("已经进入云输入法分支: cloud_translate " .. tostring(context:get_option("cloud_translate")) .. " get_cloud_stream: " .. context:get_property("get_cloud_stream"))
     logger.info("cand_text: " .. cand_text .. " cand_type: " .. cand_type)
-    context:set_option("cloud_translate", false) -- 重置选项，避免重复触发
 
-    local ordered_candidates = {}
+    if context:get_option("cloud_translate") then
+        local ok, err = pcall(function()
+            -- 长度足够的候选词放入到long_candidates_table, 不够的放到no_long_candidates_table,只放一个
 
-    local ok, err = pcall(function()
-        -- 长度足够的候选词放入到long_candidates_table, 不够的放到no_long_candidates_table,只放一个
+            for cand in translation:iter() do
+                if cand._end == segment._end then
+                    table.insert(long_candidates_table, cand)
+                else
+                    table.insert(no_long_candidates_table, cand)
+                    break
+                end
+            end
 
+            local segment_input = input:sub(segment._start + 1, segment._end)
+            logger.info("根据segment切片得到 segment_input: " .. segment_input)
+
+            -- 发送翻译请求（异步，不等待响应）
+            local send_success = tcp_socket.send_translate_request(env.schema_name, env.shuru_schema, segment_input,
+                long_candidates_table)
+            if send_success then
+                logger.info("云输入翻译请求发送成功，开始流式获取结果")
+                context:set_property("get_cloud_stream", "true")
+                env.first_read_translate_result = true
+            else
+                logger.error("云输入翻译请求发送失败")
+                context:set_property("get_cloud_stream", "false")
+                logger.info("get_cloud_stream, 设置为false")
+            end
+        end)
+        if not ok then
+            logger.error("tcp_socket.send_translate_request 调用失败: " .. tostring(err))
+            context:set_property("get_cloud_stream", "false")
+            logger.info("get_cloud_stream, 设置为false")
+        end
+    end
+
+    -- 检查是否正在流式获取云输入结果
+    if context:get_property("get_cloud_stream") == "true" then
+        logger.info("正在流式获取云输入结果，读取最新数据...")
+
+        local ok, err = pcall(function()
+            -- 读取云输入结果（流式读取）
+            local timeout
+            if context:get_option("cloud_translate") then
+                timeout = 1
+                context:set_option("cloud_translate", false) -- 重置选项，避免重复触发
+            else
+                timeout = 0.01
+            end
+            local stream_result = tcp_socket.read_translate_result(timeout)
+            local ordered_candidates = {}
+            local segment_input = input:sub(segment._start + 1, segment._end)
+
+            -- 云输入首次触发完成, 设置成假后续不再发送请求,只接收数据
+
+            if stream_result and stream_result.status == "success" and stream_result.data then
+                local parsed_data = stream_result.data
+                logger.info("成功读取到云输入结果数据")
+
+                -- 保存成功获取的数据到缓存
+                save_cloud_result_cache(segment_input, parsed_data)
+
+                -- 处理云输入结果数据，构建候选词
+                if parsed_data.cloud_candidates then
+                    for i, cloud_cand in ipairs(parsed_data.cloud_candidates) do
+                        if i <= env.max_cloud_candidates then
+                            local candidate = Candidate("baidu_cloud", segment._start, segment._end,
+                                cloud_cand.value or cloud_cand, "")
+                            candidate.quality = 900 + (env.max_cloud_candidates - i + 1) * 10
+                            candidate.preedit = first_original_cand.preedit -- 保持原始预编辑文本
+                            table.insert(ordered_candidates, candidate)
+                            logger.info("添加云候选词: " .. (cloud_cand.value or cloud_cand))
+                        end
+                    end
+                end
+
+                if parsed_data.ai_candidates then
+                    for i, ai_cand in ipairs(parsed_data.ai_candidates) do
+                        if i <= env.max_ai_candidates then
+                            local candidate =
+                                Candidate("ai_cloud", segment._start, segment._end, ai_cand.value or ai_cand, "")
+                            candidate.quality = 950 + (env.max_ai_candidates - i + 1) * 10
+                            candidate.preedit = first_original_cand.preedit -- 保持原始预编辑文本
+                            table.insert(ordered_candidates, candidate)
+                            logger.info("添加AI候选词: " .. (ai_cand.value or ai_cand))
+                        end
+                    end
+                end
+
+                if stream_result.is_final then
+                    -- 最终数据，停止流式获取
+                    context:set_property("get_cloud_stream", "false")
+                    logger.info("get_cloud_stream, 设置为false")
+                    -- 清空缓存数据，避免影响下次输入
+                    clear_cloud_result_cache()
+                    logger.info("云输入结果获取完成，停止流式获取，已清空缓存")
+                end
+
+            elseif stream_result and stream_result.status == "timeout" then
+                -- 超时是正常的，继续等待
+                logger.debug("云输入结果读取超时(正常) - 服务端可能还在处理")
+                context:set_property("get_cloud_stream", "true")
+
+            elseif stream_result and stream_result.status == "error" then
+                -- 连接错误，停止获取
+                context:set_property("get_cloud_stream", "false")
+                logger.info("get_cloud_stream, 设置为false")
+                -- 连接错误时也清空缓存，避免使用不可靠的数据
+                clear_cloud_result_cache()
+                logger.error("云输入服务连接错误，停止流式获取，已清空缓存: " ..
+                                 tostring(stream_result.error_msg))
+
+            else
+                -- 其他情况（无数据、未知状态等），尝试使用缓存数据
+                logger.debug("未知的云输入结果状态或无数据，尝试使用缓存数据")
+
+                local cached_data = get_cached_cloud_result(segment_input)
+                if cached_data then
+                    logger.info("使用缓存数据构建候选词")
+
+                    -- 使用缓存的云候选词
+                    if cached_data.cloud_candidates then
+                        for i, cloud_cand in ipairs(cached_data.cloud_candidates) do
+                            if i <= env.max_cloud_candidates then
+                                local candidate = Candidate("cloud", segment._start, segment._end,
+                                    cloud_cand.value or cloud_cand, "")
+                                candidate.quality = 900 + (env.max_cloud_candidates - i + 1) * 10
+                                candidate.comment = "☁📦" -- 添加缓存标识
+                                candidate.preedit = first_original_cand.preedit
+                                table.insert(ordered_candidates, candidate)
+                                logger.info("添加缓存云候选词: " .. (cloud_cand.value or cloud_cand))
+                            end
+                        end
+                    end
+
+                    -- 使用缓存的AI候选词
+                    if cached_data.ai_candidates then
+                        for i, ai_cand in ipairs(cached_data.ai_candidates) do
+                            if i <= env.max_ai_candidates then
+                                local candidate = Candidate("ai", segment._start, segment._end,
+                                    ai_cand.value or ai_cand, "")
+                                candidate.quality = 950 + (env.max_ai_candidates - i + 1) * 10
+                                candidate.comment = "🤖📦" -- 添加缓存标识
+                                candidate.preedit = first_original_cand.preedit
+                                table.insert(ordered_candidates, candidate)
+                                logger.info("添加缓存AI候选词: " .. (ai_cand.value or ai_cand))
+                            end
+                        end
+                    end
+                else
+                    logger.debug("没有可用的缓存数据")
+                end
+            end
+
+            -- 为云输入候选词添加spans信息（用于光标跳转功能）
+            if #ordered_candidates > 0 then
+                local existing_spans = spans_manager.get_spans(context)
+                if not existing_spans then
+                    -- 从原生候选词中提取spans信息
+                    local success = spans_manager.extract_and_save_from_candidate(context, first_original_cand, input,
+                        "cloud_ai_filter_v2")
+                    if success then
+                        logger.info("为云输入候选词创建spans信息")
+                    end
+                end
+            end
+
+            -- 输出流式获取的候选词
+            for _, candidate in ipairs(ordered_candidates) do
+                yield(candidate)
+            end
+        end)
+        if not ok then
+            logger.error("云输入候选词处理异常: " .. tostring(err))
+        end
+
+        -- 输出原始候选词
+        yield(first_original_cand)
         for cand in translation:iter() do
-            if cand._end == segment._end then
-                table.insert(long_candidates_table, cand)
-            else
-                table.insert(no_long_candidates_table, cand)
-                break
-            end
+            yield(cand)
         end
 
-        local segment_input = input:sub(segment._start + 1, segment._end)
-        logger.info("根据segment切片得到 segment_input: " .. segment_input)
-
-        local parsed_data =
-            tcp_socket.translate(env.schema_name, env.shuru_schema, segment_input, long_candidates_table)
-        if parsed_data and (parsed_data.cloud_candidates or parsed_data.ai_candidates) then
-            --[[ {
-                "cloud_candidates": [
-                    {
-                    "field_name": "cloud_candidate_1",
-                    "value": "你好",
-                    "source": "baidu_cloud", 
-                    "rank": 1
-                    }
-                ],
-                "ai_candidates": [
-                    {
-                    "field_name": "ai_result",
-                    "value": "你好",
-                    "source": "ai_cloud",
-                    "rank": 1
-                    }
-                ]
-                } ]]
-            -- 按照 candidates 数组的顺序提取候选词，添加数量限制
-            local cloud_count = 0
-            local ai_count = 0
-
-            for i, candidate in ipairs(parsed_data.cloud_candidates) do
-                if cloud_count >= env.max_cloud_candidates then
-                    logger.info("云候选词已达到最大数量限制: " .. env.max_cloud_candidates ..
-                                    "，跳过后续候选词")
-                    break
-                end
-
-                if candidate.value and candidate.value ~= "" then
-                    local cand_info = {
-                        text = candidate.value,
-                        field_name = candidate.field_name,
-                        source = candidate.source,
-                        rank = candidate.rank or i,
-                        type = candidate.source
-                    }
-                    table.insert(ordered_candidates, cand_info)
-                    cloud_count = cloud_count + 1
-                    logger.info("提取云候选词 " .. cloud_count .. "/" .. env.max_cloud_candidates .. ": " ..
-                                    candidate.field_name .. " = " .. candidate.value .. " (source: " .. candidate.source ..
-                                    ")")
-                end
-            end
-
-            for i, candidate in ipairs(parsed_data.ai_candidates) do
-                if ai_count >= env.max_ai_candidates then
-                    logger.info("AI候选词已达到最大数量限制: " .. env.max_ai_candidates ..
-                                    "，跳过后续候选词")
-                    break
-                end
-
-                if candidate.value and candidate.value ~= "" then
-                    local cand_info = {
-                        text = candidate.value,
-                        field_name = candidate.field_name,
-                        source = candidate.source,
-                        rank = candidate.rank or i,
-                        type = candidate.source
-                    }
-                    table.insert(ordered_candidates, cand_info)
-                    ai_count = ai_count + 1
-                    logger.info("提取AI候选词 " .. ai_count .. "/" .. env.max_ai_candidates .. ": " ..
-                                    candidate.field_name .. " = " .. candidate.value .. " (source: " .. candidate.source ..
-                                    ")")
-                end
-            end
-
-            logger.info("按顺序提取到 " .. #ordered_candidates .. " 个候选词 (云: " .. cloud_count .. "/" ..
-                            env.max_cloud_candidates .. ", AI: " .. ai_count .. "/" .. env.max_ai_candidates .. ")")
-        else
-            logger.info("parsed_data 为 nil 或不包含 candidates 数组")
-        end
-    end)
-    if not ok then
-        logger.error("tcp_socket.translate 调用失败: " .. tostring(err))
+        return
     end
 
-    -- 检查是否有智能合成结果
-    if #ordered_candidates > 0 then
+    yield(first_original_cand)
 
-        -- 获取候选词的 spans
-
-        -- 这里获取的是原始第一个候选词的分割信息, 原始是的 nihk`haha`wode, 这个候选词本身就是我自己合成出来的, 所以是不存在spans信息的
-        -- 但在产生的时候候选信息已经被我保存下来了.
-        -- 获取所有分割点
-        -- 检查是否已有spans信息（用于光标跳转功能）
-        -- 云输入候选词成为第一候选词后，用户可能需要光标跳转重新编辑
-        local existing_spans = spans_manager.get_spans(context)
-
-        if existing_spans then
-            logger.info("已存在spans信息，来源: " .. existing_spans.source)
-        else
-            -- 从原生候选词中提取spans信息（原生候选词包含准确的spans信息）
-            -- first_original_cand 是Rime原生生成的候选词，包含正确的分割信息
-            local success = spans_manager.extract_and_save_from_candidate(context, first_original_cand, input,
-                "cloud_ai_filter_v2")
-            if success then
-                logger.info("extract_and_save_from_candidate创建spans信息")
-            else
-                logger.info("从原生候选词中提取spans信息失败，可能该候选词不包含spans信息")
-            end
-        end
-        -- for i, vertex in ipairs(vertices) do
-        --    logger.info("spans Vertex " .. i .. ": " .. vertex)
-        -- end
-
-        -- 我之前应该处理过这种情况,如果seg的类型不对的话,应该是直接跳过的.
-        -- 按顺序创建候选词（保持返回结果的顺序）
-        for i, cand_info in ipairs(ordered_candidates) do
-            logger.info("创建候选词 " .. i .. ": " .. cand_info.text .. " (类型: " .. cand_info.type .. ")" ..
-                            " segment._start :" .. segment._start .. " segment._end: " .. segment._end)
-            if cand_info.type == "baidu_cloud" then
-                cand_comment = "   [云输入]"
-            elseif cand_info.type == "ai_cloud" then
-                cand_comment = "   [AI识别]"
-            end
-            local candidate = Candidate(cand_info.type, segment._start, segment._end, cand_info.text, cand_comment)
-            candidate.preedit = original_preedit
-            yield(candidate)
-        end
-
-    end
-
-    -- for i, vertex in ipairs(vertices) do
-    --    logger.info("spans Vertex " .. i .. ": " .. vertex)
-    -- end
-
-    -- 输出原始候选词
     for _, cand in ipairs(long_candidates_table) do
-        yield(cand)
+        if cand ~= first_original_cand then -- 避免重复输出第一个候选词
+            yield(cand)
+        end
     end
 
     for _, cand in ipairs(no_long_candidates_table) do
@@ -559,9 +642,6 @@ function translator.func(translation, env)
     end
 
     for cand in translation:iter() do
-        logger.info(string.format("剩余选词信息: text=%s, preedit=%s, start=%s, end=%s, type=%s, comment=%s",
-            tostring(cand.text), tostring(cand.preedit), tostring(cand.start), tostring(cand._end), tostring(cand.type),
-            tostring(cand.comment)))
         yield(cand)
     end
     logger.info("所有候选词输出完成.")

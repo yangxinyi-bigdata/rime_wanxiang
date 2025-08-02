@@ -119,6 +119,7 @@ function punct_eng_chinese_filter.func(translation, env)
         -- 遍历所有候选词并进行标点符号替换
         local punch_flag = false -- 是否存在标点符号
         local ai_flag = false
+        local ai_chat = false
         for cand in translation:iter() do
 
             count = count + 1
@@ -134,17 +135,17 @@ function punct_eng_chinese_filter.func(translation, env)
                     -- 对AI回复类型的候选词直接输出，不进行标点符号替换
                     ai_flag = true
 
-                    -- elseif cand.type and ai_chat_triggers[cand.type] then
-                    --     logger.info("候选词类型为AI聊天触发器标签，豁免标点符号替换: " .. cand.type)
-                    --     -- 对AI聊天触发器类型的候选词直接输出，不进行标点符号替换
-                    --     ai_flag = true
+                elseif cand.type and ai_chat_triggers[cand.type] then
+                    -- logger.info("候选词类型为AI聊天触发器标签,应该标点符号替换,但是不保存spans信息.")
+                    ai_chat = true
+                    logger.info("ai_chat: true")
 
                 else
                     -- logger.info("cand.text: " .. cand.text)
                     if cand.text and text_splitter.has_punctuation_no_backtick(cand.text, logger) then
                         punch_flag = true
                         logger.info("punch_flag: true")
-                        -- 对于标点符号替换，我们不需要额外处理spans信息
+                        -- 对于标点符号替换，等于说直接生成了新的候选词,所以需要保存spans信息.
                         -- 普通候选词的spans信息可以直接通过candidate:spans()获取
                         -- backtick_combo类型的spans信息已经在backtick_translator中保存到spans_manager了
                     end
@@ -169,8 +170,25 @@ function punct_eng_chinese_filter.func(translation, env)
                     local chinese_pos = cand.comment
                     new_text = text_splitter.replace_punct_skip_pos(cand_text, chinese_pos, logger)
                 else
-                    logger.info("候选词不是chinese_pos ,按照原来的处理即可")
+                    logger.info("候选词不是chinese_pos ,按照原来的处理即可, 也就是没有反引号.")
                     new_text = text_splitter.replace_punct(cand_text)
+
+                    -- 从候选词中提取spans信息并保存, 对于at:这类候选词,也是到了这个地方,但是abc为什么会产生这样的spans信息呢? 
+                    -- 不对, 应该是两个segment,所以分成了两段. 
+                    local spans = cand:spans()
+                    
+                    logger.info(" cand.type: " .. cand.type .. " cand.start: " .. cand.start .. " cand._end: " .. cand._end)
+                    if cand.text then
+                        local vertices = spans.vertices
+                        logger.info("vertices: " .. table.concat(vertices, ", "))
+                        logger.info("cand.text: " .. cand.text)
+                        if not ai_chat then
+                            spans_manager.save_spans(context, vertices, input, "punct_eng_chinese_filter")
+                        end
+                        
+                    end
+                    
+                    -- 这里的标点符号的候选词是不是应该在abc创建的时候是有spans信息的?
                 end
 
                 -- if not segment:has_tag("backtick") then
