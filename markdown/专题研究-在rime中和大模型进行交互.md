@@ -64,7 +64,8 @@ openai的大模型api是否支持连接网络搜索功能,如果支持,如何实
 
 - [ ] 除此之外，用户应该也可以配置到底要不要输出前边的前缀，例如可以开启翻译模式，那么不需要在前边输入特定的标识符，也可以一直自动触发翻译结果。
 - [ ] 翻译模式在服务端中开启之后的功能.
-思路:
+
+### AI模式常开功能开发
 功能畅享: 
 当服务端开启某个开关,则rime这边输入中文文本,点击上屏之后,这个上屏的动作应该被拦截.然后清空所有输入内容,然后服务端接收到这个文本内容,然后进行粘贴.
 看来这个功能必须修改rime这边的配置,rime这边应该有一个配置开关,开启之后,则上屏动作会被拦截,转而将准备上屏的文本发送给服务端.
@@ -92,9 +93,25 @@ rime提示词:
 首先这个值的属性信息应该从哪里获取? 应该是从服务器进行获取,在每次和服务器通信的过程中,服务器会发过来命令,如果存在设置这个属性的命令,就会设置这个属性. 
 然后应该每次将这个属性的值发送给服务端.
 
-我希望在rime输入法中添加一个属性, 根据属性设置的值去自动调用各种ai功能,例如cat_ai_chat,normal_ai_chat,translate_ai_chat等. 
-首先应该在src/rime_config_manager/config_manager.py当中提取rime配置文件wanxiang_pro.schema.yaml中的ai_assistant.chat_triggers中的所有配置项.
-然后在config当中添加一个配置保存当前启用哪个ai对话功能, 例如 ENABLE_CHAT_TRIGGER: "translate_ai_chat".
+KEEPON_CHAT_TRIGGER
+keepon_chat_trigger
+1. 读取配置中的上屏按钮,如果用户输入的是所有的上屏按钮,都应该获取到这个按钮,然后分析这个按钮按下去之后,会不会触发上屏操作,也就是候选词长度是不是一直延伸到末尾.
+2. 如果是延伸到末尾,则应该进行拦截,然后计算出将要上屏的文本,然后发送socket的ai指令.
+3. 然后清空当前input即可.
+keepon_chat_trigger这个属性的值先不用着急去开发,可以先实现服务端和客户端之间的这个属性的功能传递,然后有了这个属性的值再去进行下一步的开发.
+
+
+4. 首先在src/rime_config_manager/config_manager.py当中提取rime配置文件wanxiang_pro.schema.yaml中的ai_assistant.chat_triggers中的所有配置项.
+我希望通过服务端来管理rime配置文件wanxiang_pro.schema.yaml中的ai_assistant.chat_triggers中的所有配置项.
+所以应该在服务端config中保存相同的ai_assistant.,然后在前端软件中可以通过配置新增一个ai_assistant, 或者删除一个配置项,来对rime中的ai_assistant进行管理.
+关于rime配置文件wanxiang_pro.schema.yaml在本项目中
+
+
+我希望在rime输入法中添加一个属性keepon_chat_trigger, 根据属性设置的值去自动调用各种ai功能,例如cat_ai_chat,normal_ai_chat,translate_ai_chat等. 
+
+对于所有的ai_assistant.chat_triggers应该由python服务端完全托管,也就是rime中ai_assistant配置完全由服务端进行管理.所以应该在服务端config中保存相同的ai_assistant.,然后在前端软件中可以通过配置新增一个ai_assistant, 或者删除一个配置项,来对rime中的ai_assistant进行管理.
+
+然后在config当中添加一个配置保存当前启用哪个ai对话功能, 例如 KEEPON_CHAT_TRIGGER: "translate_ai_chat".
 然后在frontend/src/views/RimeSettings.vue中添加对于这个配置项的管理.
 当启用了某个ai能力的时候, rime输入法中的每次上屏文本都会自动向服务端发送消息.
 

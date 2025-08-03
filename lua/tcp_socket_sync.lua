@@ -757,6 +757,36 @@ function M.handle_socket_command(command_messege, context)
         end
         return true
 
+    elseif command == "set_property" then
+        -- 修改属性
+        logger.debug("command_messege.property_name: " .. tostring(command_messege.property_name))
+        logger.debug("command_messege.property_value: " .. tostring(command_messege.property_value))
+        if context then
+            context:set_property(command_messege.property_name, command_messege.property_value)
+            logger.debug("已设置属性: " .. tostring(command_messege.property_name) .. " = " ..
+                             tostring(command_messege.property_value))
+            local response = {
+                response = "property_set",
+                property_name = command_messege.property_name,
+                success = true,
+                timestamp = get_current_time_ms(),
+                responding_to = "set_property"
+            }
+            M.write_to_rime_socket(json.encode(response))
+        else
+            logger.warn("context为nil，无法设置属性: " .. tostring(command_messege.property_name))
+            local response = {
+                response = "property_set",
+                property_name = command_messege.property_name,
+                success = false,
+                error = "context is nil",
+                timestamp = get_current_time_ms(),
+                responding_to = "set_property"
+            }
+            M.write_to_rime_socket(json.encode(response))
+        end
+        return true
+
     elseif command == "server_ping" then
         -- 响应服务端ping命令
         logger.debug("📞 收到服务端ping命令")
@@ -915,7 +945,8 @@ function M.sync_with_server(context, option_info, send_commit_text)
             messege_type = "state",
             is_composing = context:is_composing(),
             timestamp = current_time,
-            switches_option = {} -- 初始化为空表,
+            switches_option = {}, -- 初始化为空表
+            properties = {} -- 初始化属性表
         }
 
         if send_commit_text then
@@ -925,8 +956,7 @@ function M.sync_with_server(context, option_info, send_commit_text)
 
         if option_info then
             -- 构建完整的带有option当前配置的状态数据
-            local simple_switches = {"ascii_punct", "full_shape", "tone_display", "prediction", "s2s", "s2t", "s2hk",
-                                     "s2tw"}
+            local simple_switches = {"ascii_punct"}
             for _, switch_name in ipairs(simple_switches) do
                 local switch_state = context:get_option(switch_name)
                 table.insert(state_data.switches_option, {
@@ -936,6 +966,17 @@ function M.sync_with_server(context, option_info, send_commit_text)
                     state_index = switch_state and 1 or 0
                 })
             end
+        end
+
+        -- 构建属性数据（始终发送）
+        local property_names = {"keepon_chat_trigger"}
+        for _, property_name in ipairs(property_names) do
+            local property_value = context:get_property(property_name) or ""
+            table.insert(state_data.properties, {
+                name = property_name,
+                type = "string",
+                value = property_value
+            })
         end
 
         logger.debug("state_data: " .. tostring(state_data))
