@@ -1,4 +1,57 @@
+ai_para_input_method
+para_ai_input_methos
 ### 1. 用户配置
+
+aipara_stroke 笔画反查删除:
+reverse_stroke 
+
+aipara_radical  部件拆字反插
+radical_lookup
+radical_reverse
+lookup
+
+super_comment
+super_tips
+
+
+### 出现的辅助码commet
+我自己开发的aux_code_filter_v3竟然也受到了影响.
+为什么当辅助码出现的时候, 没有匹配上长句呢? 那说明长句根本就没有产生.
+
+分析:
+辅助码到底是如何工作的? 
+set_fuzhu_schema
+__include: 间接辅助
+
+speller:
+当中的algebra
+```
+  comment_format:          # 清空comment提示
+    - xform/.*//           # 清空所有comment信息
+
+  spelling_hints: 0          # 关闭拼写提示
+  comment_format:            # 清空comment提示
+    - xform/.*//             # 清空所有comment信息
+
+```
+
+
+```
+set_cn_en:                     #中英混输
+  user_dict: en_dicts/zrm      #可选的值有：en_dicts/pinyin， en_dicts/zrm， en_dicts/flypy ，en_dicts/mspy， en_dicts/sogou， en_dicts/pinyin
+
+# 中英混合词汇
+cn_en:
+  dictionary: ""
+  __include: set_cn_en
+  db_class: stabledb
+  enable_completion: true
+  enable_sentence: false
+  initial_quality: 0.5
+  comment_format:
+    - xform/^.+$//
+```
+　
 
 ## 输入第一个字母后的候选词提示
 考虑是否需要这个功能：当输入 a 的时候，除了第一个候选词以外，后面的候选词都是 ai ， ar 之类的，并且在备注中说明这是什么。
@@ -105,6 +158,9 @@ keepon_chat_trigger这个属性的值先不用着急去开发,可以先实现服
 我希望通过服务端来管理rime配置文件wanxiang_pro.schema.yaml中的ai_assistant.chat_triggers中的所有配置项.
 所以应该在服务端config中保存相同的ai_assistant.,然后在前端软件中可以通过配置新增一个ai_assistant, 或者删除一个配置项,来对rime中的ai_assistant进行管理.
 关于rime配置文件wanxiang_pro.schema.yaml在本项目中
+
+
+
 
 
 我希望在rime输入法中添加一个属性keepon_chat_trigger, 根据属性设置的值去自动调用各种ai功能,例如cat_ai_chat,normal_ai_chat,translate_ai_chat等. 
