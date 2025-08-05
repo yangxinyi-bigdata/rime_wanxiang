@@ -49,7 +49,8 @@
               "title": "Rime英文模式重构"
             }
           }
-        ]
+        ],
+        "currentTab": 2
       }
     ],
     "direction": "vertical"
@@ -170,13 +171,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "librime-lua.wiki/Objects.md",
+                "file": "Rime英文模式重构.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Objects 的大纲"
+              "title": "Rime英文模式重构 的大纲"
             }
           }
         ],
@@ -196,8 +197,9 @@
       "command-palette:打开命令面板": false
     }
   },
-  "active": "4e88b11ac9a6f9af",
+  "active": "b430ae3576bb3620",
   "lastOpenFiles": [
+    "librime-lua.wiki/Objects.md",
     "Rime英文模式重构.md",
     "lua/backtick_translator.lua.md",
     "lua/cloud_input_processor.lua.md",
@@ -208,7 +210,6 @@
     "专题研究-在rime中和大模型进行交互.md",
     "专题研究：多个模式之间的互相影响怎么办？.md",
     "README_script_backtick_translator.md",
-    "librime-lua.wiki/Objects.md",
     "AI连续对话测试.md",
     "未命名",
     "AI对话核心提示.md",
