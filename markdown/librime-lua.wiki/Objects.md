@@ -376,33 +376,33 @@ commit_history | CommitHistory | 上屏历史记录
 
 方法：
 
-方法名 | 参数 | 返回值 | 解释
---- | --- | --- | ---
-commit | | | 上屏剩余字符串 
-get_commit_text | | string | 获取即将上屏的文本
-get_script_text | | string | 按音节分割的脚本文本
-get_preedit | | Preedit | 获取预编辑信息
-is_composing | | boolean | 是否正在输入（输入字符串非空或候选词菜单非空）
-has_menu | | boolean | 是否有候选词（选项菜单）
-get_selected_candidate | | Candidate | 返回选中的候选词
-push_input(text) | text: string | boolean | 在caret_pos位置插入指定的text编码字符串，caret_pos跟隨右移 *W
-pop_input(num) | num: number | boolean | 在caret_pos位置往左删除num指定数量的编码字符串，caret_pos跟隨左移 *W
-delete_input(start, end) | start: number, end: number | boolean | 删除指定位置范围的输入
-clear | | | 清空正在输入的编码字符串及候选词 *W
-select(index) | index: number | boolean | 选择第index个候选词（序号从0开始）
-confirm_current_selection | | boolean | 确认选择当前高亮选择的候选词（默认为第0个）
-delete_current_selection | | boolean | 删除当前高亮选择的候选词（自造词组从词典中删除；固有词则删除用户输入词频）（returning true doesn't mean anything is deleted for sure） <br> [https://github.com/rime/librime/.../src/context.cc#L125-L137](https://github.com/rime/librime/blob/fbe492eefccfcadf04cf72512d8548f3ff778bf4/src/context.cc#L125-L137)
-confirm_previous_selection | | boolean | 确认前一个选择
-reopen_previous_selection | | boolean | 重新打开前一个选择 *W
-clear_previous_segment | | boolean | 清除前一个片段
-reopen_previous_segment | | boolean | 重新打开前一个片段 *W
-clear_non_confirmed_composition | | | 清空未确认的组合编辑
-refresh_non_confirmed_composition | | | 刷新未确认的组合编辑，重新计算候选词 *W
-set_option(option, value) | option: string, value: boolean | | 设置选项开关（如简繁转换等）
-get_option(option) | option: string | boolean | 获取选项开关状态
-set_property(key, value) | key: string, value: string | | 设置属性值，只能使用字符串类型，可以用于存储上下文信息（可配合 `property_update_notifier` 使用）
-get_property(key) | key: string | string | 获取属性值
-clear_transient_options | | | 清除临时选项
+| 方法名                               | 参数                             | 返回值       | 解释                                                                                                                                                                                                                                                                          |
+| --------------------------------- | ------------------------------ | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| commit                            |                                |           | 上屏剩余字符串                                                                                                                                                                                                                                                                     |
+| get_commit_text                   |                                | string    | 获取即将上屏的文本                                                                                                                                                                                                                                                                   |
+| get_script_text                   |                                | string    | 按音节分割的脚本文本                                                                                                                                                                                                                                                                  |
+| get_preedit                       |                                | Preedit   | 获取预编辑信息                                                                                                                                                                                                                                                                     |
+| is_composing                      |                                | boolean   | 是否正在输入（输入字符串非空或候选词菜单非空）                                                                                                                                                                                                                                                     |
+| has_menu                          |                                | boolean   | 是否有候选词（选项菜单）                                                                                                                                                                                                                                                                |
+| get_selected_candidate            |                                | Candidate | 返回选中的候选词                                                                                                                                                                                                                                                                    |
+| push_input(text)                  | text: string                   | boolean   | 在caret_pos位置插入指定的text编码字符串，caret_pos跟隨右移 *W                                                                                                                                                                                                                                 |
+| pop_input(num)                    | num: number                    | boolean   | 在caret_pos位置往左删除num指定数量的编码字符串，caret_pos跟隨左移 *W                                                                                                                                                                                                                              |
+| delete_input(start, end)          | start: number, end: number     | boolean   | 删除指定位置范围的输入                                                                                                                                                                                                                                                                 |
+| clear                             |                                |           | 清空正在输入的编码字符串及候选词 *W                                                                                                                                                                                                                                                         |
+| select(index)                     | index: number                  | boolean   | 选择第index个候选词（序号从0开始）                                                                                                                                                                                                                                                        |
+| confirm_current_selection         |                                | boolean   | 确认选择当前高亮选择的候选词（默认为第0个）                                                                                                                                                                                                                                                      |
+| delete_current_selection          |                                | boolean   | 删除当前高亮选择的候选词（自造词组从词典中删除；固有词则删除用户输入词频）（returning true doesn't mean anything is deleted for sure） <br> [https://github.com/rime/librime/.../src/context.cc#L125-L137](https://github.com/rime/librime/blob/fbe492eefccfcadf04cf72512d8548f3ff778bf4/src/context.cc#L125-L137) |
+| confirm_previous_selection        |                                | boolean   | 确认前一个选择                                                                                                                                                                                                                                                                     |
+| reopen_previous_selection         |                                | boolean   | 重新打开前一个选择 *W                                                                                                                                                                                                                                                                |
+| clear_previous_segment            |                                | boolean   | 清除前一个片段                                                                                                                                                                                                                                                                     |
+| reopen_previous_segment           |                                | boolean   | 重新打开前一个片段 *W                                                                                                                                                                                                                                                                |
+| clear_non_confirmed_composition   |                                |           | 清空未确认的组合编辑                                                                                                                                                                                                                                                                  |
+| refresh_non_confirmed_composition |                                |           | 刷新未确认的组合编辑，重新计算候选词 *W                                                                                                                                                                                                                                                       |
+| set_option(option, value)         | option: string, value: boolean |           | 设置选项开关（如简繁转换等）                                                                                                                                                                                                                                                              |
+| get_option(option)                | option: string                 | boolean   | 获取选项开关状态                                                                                                                                                                                                                                                                    |
+| set_property(key, value)          | key: string, value: string     |           | 设置属性值，只能使用字符串类型，可以用于存储上下文信息（可配合 `property_update_notifier` 使用）                                                                                                                                                                                                              |
+| get_property(key)                 | key: string                    | string    | 获取属性值                                                                                                                                                                                                                                                                       |
+| clear_transient_options           |                                |           | 清除临时选项                                                                                                                                                                                                                                                                      |
 
 ### 通知器触发流程分析
 
@@ -570,10 +570,10 @@ local segmentation = composition:toSegmentation()
 
 属性：
 
-属性名 | 类型 | 解释
---- | --- | ---
-input | string | 活动中的原始（未preedit）输入编码
-size | number | Segment的数量
+| 属性名   | 类型     | 解释                   |
+| ----- | ------ | -------------------- |
+| input | string | 活动中的原始（未preedit）输入编码 |
+| size  | number | Segment的数量           |
 
 方法：
 

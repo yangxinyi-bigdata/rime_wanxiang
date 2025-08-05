@@ -4,8 +4,8 @@ local charsfilter = {}
 
 -- 初始化函数，在模块加载时调用
 function charsfilter.init(env)
-    -- 使用 ReverseLookup 方法加载字符集，从 wanxiang_charset 方案中获取字符集定义
-    env.charset = ReverseLookup("wanxiang_charset")
+    -- 使用 ReverseLookup 方法加载字符集，从 aipara_charset 方案中获取字符集定义
+    env.charset = ReverseLookup("aipara_charset")
     -- 创建缓存表，用于存储字符检查结果，提高性能
     env.memo = {}
 end

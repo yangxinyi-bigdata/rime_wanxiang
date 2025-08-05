@@ -522,6 +522,9 @@ function smart_cursor_processor.func(key, env)
 
     local key_repr = key:repr()
 
+    -- local script_text = context:get_script_text()
+    -- logger.info("script_text: " .. script_text)
+
     local success, result = pcall(function()
 
         -- local segmentation = context.composition:toSegmentation()
