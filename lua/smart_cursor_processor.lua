@@ -51,31 +51,6 @@ function smart_cursor_processor.init(env)
     env.search_move_cursor = config:get_string("key_binder/search_move_cursor")
     env.shuru_schema = config:get_string("schema/my_shuru_schema")
 
-    -- 读取菜单配置
-    local ok_menu, err_menu = pcall(function()
-        env.page_size = config:get_int("menu/page_size")
-        env.alternative_select_keys = config:get_string("menu/alternative_select_keys")
-    end)
-    if ok_menu then
-        logger.info("env.page_size: " .. tostring(env.page_size))
-        logger.info("env.alternative_select_keys: " .. tostring(env.alternative_select_keys))
-        
-        -- 从alternative_select_keys中截取前page_size个字符
-        if env.alternative_select_keys and env.page_size then
-            env.alternative_select_keys = env.alternative_select_keys:sub(1, env.page_size)
-            logger.info("截取后的env.alternative_select_keys: " .. tostring(env.alternative_select_keys))
-        end
-    else
-        logger.error("获取菜单配置失败: " .. tostring(err_menu))
-        -- 设置默认值
-        env.page_size = 5
-        env.alternative_select_keys = "123456789"
-        -- 截取默认值
-        env.alternative_select_keys = env.alternative_select_keys:sub(1, env.page_size)
-        logger.info("使用默认菜单配置 - page_size: " .. env.page_size .. ", alternative_select_keys: " ..
-                        env.alternative_select_keys)
-    end
-
     -- 定义标点符号集合
     env.punctuation_chars = {
         [","] = true,
@@ -616,6 +591,14 @@ function smart_cursor_processor.func(key, env)
 
         end
 
+        -- 如果是ac:nihk 那么匹配不到中文, 也就是script_text_chinese为空, going_commit_text只有候选词
+        -- local script_text = context:get_script_text()
+        -- logger.info("script_text: " .. script_text)
+        -- local commit_text = context:get_commit_text()
+        -- logger.info("commit_text: " .. commit_text)
+        -- local get_preedit = context:get_preedit()
+        -- logger.info("get_preedit.text: " .. get_preedit.text)
+
         ------------------------------------------------------------------------
         -- -- 判断只要input发生了变化, 就清空属性
         -- local my_spans_input = context:get_property("my_spans_input")
@@ -629,11 +612,11 @@ function smart_cursor_processor.func(key, env)
 
         ------------------------------------------------------------------------
 
-        if spans_manager.get_spans(context) then
-            logger.debug("当前存在spans信息")
-        else
-            logger.debug("当前不存在spans信息")
-        end
+        -- if spans_manager.get_spans(context) then
+        --     logger.debug("当前存在spans信息")
+        -- else
+        --     logger.debug("当前不存在spans信息")
+        -- end
 
         -- 检测自定义的智能移动快捷键
         if key_repr == "Tab" then

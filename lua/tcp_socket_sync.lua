@@ -717,8 +717,7 @@ function M.handle_socket_command(command_messege, context)
     ]]
 
     -- 🎯 处理TCP命令: set_option option_name: super_tips
-    logger.debug("🎯 处理TCP命令: " .. command_messege.command .. " option_name: " ..
-                     (command_messege.option_name or "N/A"))
+    logger.debug("🎯 处理TCP命令: " .. command_messege.command)
 
     local command = command_messege.command
     if command == "ping" then
@@ -971,7 +970,7 @@ function M.sync_with_server(context, option_info, send_commit_text)
         -- 构建属性数据（始终发送）
         local property_names = {"keepon_chat_trigger"}
         for _, property_name in ipairs(property_names) do
-            local property_value = context:get_property(property_name) or ""
+            local property_value = context:get_property(property_name)
             table.insert(state_data.properties, {
                 name = property_name,
                 type = "string",
@@ -979,10 +978,10 @@ function M.sync_with_server(context, option_info, send_commit_text)
             })
         end
 
-        logger.debug("state_data: " .. tostring(state_data))
-
         -- 序列化状态数据
         local json_data = json.encode(state_data)
+
+        logger.info("json_data: " .. json_data)
 
         -- 写入Rime状态服务TCP套接字
         M.write_to_rime_socket(json_data)
@@ -1270,7 +1269,7 @@ function M.send_paste_command()
 end
 
 -- 公开接口：发送对话消息到AI服务（仅发送）
-function M.send_chat_message(commit_text, chat_type)
+function M.send_chat_message(commit_text, chat_type, response_key)
     local success, error_msg = pcall(function()
         local current_time = get_current_time_ms()
 
@@ -1279,6 +1278,7 @@ function M.send_chat_message(commit_text, chat_type)
             messege_type = "chat",
             commit_text = commit_text, -- 对话内容
             chat_type = chat_type, -- AI对话类型
+            response_key = response_key,
             timestamp = current_time
         }
 

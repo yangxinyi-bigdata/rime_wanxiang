@@ -39,19 +39,19 @@ local function load_ai_config(env)
 
     -- 读取 behavior 配置
     ai_assistant_config.behavior = {}
-    ai_assistant_config.behavior.commit_input = config:get_bool("ai_assistant/behavior/commit_input") or false
+    ai_assistant_config.behavior.commit_question = config:get_bool("ai_assistant/behavior/commit_question") or false
     ai_assistant_config.behavior.auto_commit = config:get_bool("ai_assistant/behavior/auto_commit") or false
     ai_assistant_config.behavior.clipboard_mode = config:get_bool("ai_assistant/behavior/clipboard_mode") or false
     ai_assistant_config.behavior.prompt_chat = config:get_string("ai_assistant/behavior/prompt_chat")
 
-    logger.info("行为配置 - commit_input: " .. tostring(ai_assistant_config.behavior.commit_input))
+    logger.info("行为配置 - commit_question: " .. tostring(ai_assistant_config.behavior.commit_question))
     logger.info("行为配置 - auto_commit: " .. tostring(ai_assistant_config.behavior.auto_commit))
     logger.info("行为配置 - clipboard_mode: " .. tostring(ai_assistant_config.behavior.clipboard_mode))
     logger.info("行为配置 - prompt_chat: " .. tostring(ai_assistant_config.behavior.prompt_chat))
 
     -- 动态读取 chat_triggers 配置
     ai_assistant_config.chat_triggers = {}
-    ai_assistant_config.reply_messages = {}
+    ai_assistant_config.reply_messages_preedits = {}
     ai_assistant_config.reply_tags = {}
     ai_assistant_config.chat_names = {}
     ai_assistant_config.clean_prefix_to_trigger = {} -- 去掉冒号的前缀到触发器的映射
@@ -66,7 +66,7 @@ local function load_ai_config(env)
         -- 遍历配置中的所有触发器
         for _, trigger_name in ipairs(trigger_keys) do
             local trigger_value = config:get_string("ai_assistant/chat_triggers/" .. trigger_name)
-            local reply_message = config:get_string("ai_assistant/reply_messages/" .. trigger_name)
+            local reply_messages_preedit = config:get_string("ai_assistant/reply_messages_preedits/" .. trigger_name)
             local chat_name = config:get_string("ai_assistant/chat_names/" .. trigger_name)
 
             if trigger_value then
@@ -83,9 +83,9 @@ local function load_ai_config(env)
                 logger.info("预处理触发器前缀 - " .. clean_prefix .. " -> " .. trigger_name)
             end
 
-            if reply_message then
-                ai_assistant_config.reply_messages[trigger_name] = reply_message
-                logger.info("回复消息 - " .. trigger_name .. ": " .. reply_message)
+            if reply_messages_preedit then
+                ai_assistant_config.reply_messages_preedits[trigger_name] = reply_messages_preedit
+                logger.info("回复消息 - " .. trigger_name .. ": " .. reply_messages_preedit)
             end
 
             if chat_name then

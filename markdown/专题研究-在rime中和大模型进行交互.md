@@ -1,6 +1,6 @@
 ai_para_input_method
 para_ai_input_methos
-### 1. 用户配置
+### 1. 删除的配置
 
 aipara_stroke 笔画反查删除:
 reverse_stroke 
@@ -14,7 +14,7 @@ super_comment
 super_tips
 
 
-### 出现的辅助码commet
+### 出现的辅助码commet处理
 我自己开发的aux_code_filter_v3竟然也受到了影响.
 为什么当辅助码出现的时候, 没有匹配上长句呢? 那说明长句根本就没有产生.
 
@@ -53,7 +53,7 @@ cn_en:
 ```
 　
 
-## 输入第一个字母后的候选词提示
+### 输入第一个字母后的候选词提示
 考虑是否需要这个功能：当输入 a 的时候，除了第一个候选词以外，后面的候选词都是 ai ， ar 之类的，并且在备注中说明这是什么。
 对于双拼这个没问题，但是对于全拼来说可能会存在不好的体验。
 这个到时候再说吧。
@@ -115,22 +115,24 @@ openai的大模型api是否支持连接网络搜索功能,如果支持,如何实
 
 接下来应该搞一个什么功能？
 
+- [ ] 考虑把所有ai_assistant配置中的冒号去掉,添加到代码中.
 - [ ] 除此之外，用户应该也可以配置到底要不要输出前边的前缀，例如可以开启翻译模式，那么不需要在前边输入特定的标识符，也可以一直自动触发翻译结果。
 - [ ] 翻译模式在服务端中开启之后的功能.
+- [ ] 对menu中各个方法功能进行测试.
 
-### AI模式常开功能开发
-功能畅享: 
+## AI模式常开功能开发
+**功能畅享:** 
 当服务端开启某个开关,则rime这边输入中文文本,点击上屏之后,这个上屏的动作应该被拦截.然后清空所有输入内容,然后服务端接收到这个文本内容,然后进行粘贴.
 看来这个功能必须修改rime这边的配置,rime这边应该有一个配置开关,开启之后,则上屏动作会被拦截,转而将准备上屏的文本发送给服务端.
 服务端翻译之后,将内容发送回给rime.
 rime这边的开关状态是动态变化的,不需要重新加载配置,所以应该是实时监控的,如果服务端开启了,会给rime这边发送一个虚拟按键,虚拟按键会激活和服务端的通信,从而改变option开关的配置.
 开关改变之后,则上屏动作会被拦截.
 
-最终形态:
+**最终形态:**
 1. 在服务端点击配置开关,以及翻译形态.
 2. 在rime中输入文本,空格或者数字键上屏之后,会情况当前输入,然后弹出翻译的内容.
 
-开发流程:
+**开发流程:**
 1. 在服务端添加一个接口,当接受到某个类型的消息的时候,不再发送回车键,而是直接发送消息.
 2. 在服务端UI中添加一个开关,可以设置当前的模式,有翻译模式,对话模式, 猫娘模式等等,任意一个模式都可以配置, 配置了之后, 在config中添加配置,翻译的状态配置.
 3. 在rime配置中添加一个属性,这个属性如果存在某个值,就是处于某种ai对话模式当中.
@@ -153,38 +155,80 @@ keepon_chat_trigger
 3. 然后清空当前input即可.
 keepon_chat_trigger这个属性的值先不用着急去开发,可以先实现服务端和客户端之间的这个属性的功能传递,然后有了这个属性的值再去进行下一步的开发.
 
-
 4. 首先在src/rime_config_manager/config_manager.py当中提取rime配置文件wanxiang_pro.schema.yaml中的ai_assistant.chat_triggers中的所有配置项.
-我希望通过服务端来管理rime配置文件wanxiang_pro.schema.yaml中的ai_assistant.chat_triggers中的所有配置项.
-所以应该在服务端config中保存相同的ai_assistant.,然后在前端软件中可以通过配置新增一个ai_assistant, 或者删除一个配置项,来对rime中的ai_assistant进行管理.
-关于rime配置文件wanxiang_pro.schema.yaml在本项目中
 
+我希望通过服务端来管理rime配置文件wanxiang_pro.schema.yaml中的ai_assistant中的所有配置项. 所以应该在UI页面当中读取到当前的ai_assistant的配置项, 然后可以在前端中可以新增一个ai_assistant的配置, 或者删除一个配置项,来对rime中的ai_assistant进行管理.
+rime的配置文件在/Users/yangxinyi/Library/Rime/aipara_pro.schema.yaml中, 本项目中的Rime文件是备份使用.
 
+我在rime输入法中添加了一个属性keepon_chat_trigger, 当属性被设置的时候, 例如属性设置为: "cat_ai_chat", 用户的所有对话,不需要添加前缀"ac:"就会自动触发和猫娘对话的功能.
+帮我在src/rime_config_manager/prompt_manager.py当中添加一个配置保存当前启用哪个ai对话功能, 例如 KEEPON_CHAT_TRIGGER: "translate_ai_chat".
+然后在frontend/src/views/RimeSettings.vue和frontend/src/views/components/AiAssistantIntegratedConfig.vue中添加对于这个配置项的管理.
+rime输入法会将当前KEEPON_CHAT_TRIGGER的属性值同步到服务端来, 服务端接收到属性值之后, 应该和服务端中设置的这个属性的值进行比较, 如果属性的值不同, 以服务端设置为准, 则需要给rime中发送一条更改属性值的命令, 在src/rime_socket_serve.py的"_处理Rime状态"函数中, 以及pending_commands = self._检查待处理配置变更(client_id)中进行命令的处理.
 
-
-
-我希望在rime输入法中添加一个属性keepon_chat_trigger, 根据属性设置的值去自动调用各种ai功能,例如cat_ai_chat,normal_ai_chat,translate_ai_chat等. 
-
-对于所有的ai_assistant.chat_triggers应该由python服务端完全托管,也就是rime中ai_assistant配置完全由服务端进行管理.所以应该在服务端config中保存相同的ai_assistant.,然后在前端软件中可以通过配置新增一个ai_assistant, 或者删除一个配置项,来对rime中的ai_assistant进行管理.
-
-然后在config当中添加一个配置保存当前启用哪个ai对话功能, 例如 KEEPON_CHAT_TRIGGER: "translate_ai_chat".
-然后在frontend/src/views/RimeSettings.vue中添加对于这个配置项的管理.
-当启用了某个ai能力的时候, rime输入法中的每次上屏文本都会自动向服务端发送消息.
+注意事项:
+1. 在前端开发中应该使用Electron的后端IPC访问方式.
+2. 后端的访问端口是8000
+3. 前端会自动更新不需要重新启动
+4. 后端不会自动更新,修改完代码之后需要重启服务器
 
 我希望将在rime_option_intime分支中开发的实时和rime同步配置的代码重新添加到本分支中来, 相关代码已经复制到了src/temp文件夹当中,可以参考这部分代码进行添加. 
 但是原来同步的那些简体,中英文等配置不再需要实时同步,而是新添加的ENABLE_CHAT_TRIGGER功能需要实时同步, rime会在每次发送过来的状态信息当中说明当前这个属性的值, 如果发现属性的值,和服务器当中配置的不同,则应该进行修改.
 
 　
+**20250804**
+今天开发流程：
+集中在 rime 这边的代码开发
+1. 首先判断输入的字符是不是env.alternative_select_keys中的字符
+2. 如果是则判断当前这个选词按键输入之后,会不会完成一次完整的输入法输入,也就是完成上屏操作.
+3. 如果是完成上屏操作,则应该将这个按键拦截不再发送,同时获取即将上屏的文本, 调用lua/ai_assistant_translator.lua中的向服务端发送消息的代码:
 
-提示词:
-AI提问:将拼音转换成中文的过程，如果不使用翻译这个词汇的话，还有哪个词可以比较准确地描述这一个过程？
 
-转换convert, 
-当前项目中,将使用百度云接口和ai大模型将拼音转换成中文这一过程成为翻译translate, 和新实现的ai翻译功能产生名称冲突,容易造成误解.
-我想要将拼音转换成中文这一过程, 称为"转换convert", 用转换convert来代替原来的"翻译translate", 这一过程涉及到src/ai_converter.py, src/rime_socket_serve.py, src/main.py, src/config.py, src/cloud_pinyin_translate.py 以及前端的frontend/src/views/RimeSettings.vue,等一系列文件, 不只是这些文件,也可能存在其他的文件也需要修改.
-我希望你能帮我进行一次大范围的代码重构,对这个翻译的代码进行修改.
-但是注意用于大模型中英文翻译的代码不要进行修改.
+如果是对于这种情况呢? 
+在连续ai对话过程中, 如果获取了一个回复,  但是没有输入空格上屏.
+然后再输入新的内容, 这是个时候再按空格上屏, 则因为标签没有匹配到ai_reply,则会变成一个粘贴的命令? 
 
+对了,因为现在这样输入很容易忘记,还不如自动在前边添加 猫娘对话: 这样的内容, 不就方便多了吗? 
+两种方案都保留下来,后面根据情况测试使用哪个.
+
+- [x] 上屏的空格按键没有拦截啊
+- [ ] 想一下是不是把云提示词和英文原文上屏的功能,换成两个不同的按键,因为现在有一些不安全感,很容易搞错.
+- [ ] 1. 在某种模式当中的时候, 给用户一个prompt提示信息, 但是要考虑和其他的提示信息之间会不会有冲突问题.
+- [x] 现在是直接清空,应该可以通过配置文件控制,不清空,而是正常上屏.
+
+- [ ] 自动空格上屏
+- [ ] 现在属性状态的同步总是有延迟,应该要第一时间生效,也就是可以考虑我主动发送一个虚拟快捷键,来让rime马上更新状态.
+- [x] 原来的翻译函数中对AI Trans那部分的处理可以删除了
+	- [x] 整个翻译功能应该都不需要了,直接替换成原来老的就可以了.
+
+- [ ] 还有另外一种方案: 就是当keepon_chat_trigger属性设置了,直接在前边添加"AI回复"这类的内容,然后自动触发原来的逻辑,就可以了.
+
+
+
+分析都有哪些分支需要考虑:
+和ai对话的功能中,有这么几种可能:
+1. 使用前缀触发 at:, at:等, 或者在context:get_property('keepon_chat_trigger')属性的值存在的时候, 不需要输入任何字符则自动触发这种ai对话功能.
+2. 1. ai对话中用户输入的文本不上屏, 2. ai对话中用户输入的文本去除掉前边的chat_names,例如"猫娘对话:"这部分内容,其他内容正常上屏. 3.用户输入的全部文本上屏
+所以一共有6种可能性, 如果判断处于这些可能性呢? 
+
+1.判断context:get_property('keepon_chat_trigger')属性的值, 进入这个分支, 如果
+
+但在context:get_property('keepon_chat_trigger')这个分支中可能根本就没有 "猫娘对话:" 这部分内容,也就不需要除去. 或者我换成另外一种对话方式则需要去除.
+添加一个参数strip_chat_prefix,控制是否要去除前缀.
+
+所以如果
+context:get_property('keepon_chat_trigger')启用:
+判断commit_input为true, 则再判断strip_chat_prefix, 如果strip_chat_prefix为true, 则拦截提交内容,清空,再重新手动上屏字符串.
+如果strip_chat_prefix为false, 则什么都不用做,直接上屏就可以.
+
+如果commit_input为false,则拦截提交,清空,并且向服务端发送消息,表示不用输入空格换行.
+
+不管context:get_property('keepon_chat_trigger') 是否启用:
+如果用户输入之前的内容代表标识: 例如 ac:
+则判断commit_input为true, 则再判断strip_chat_prefix, 如果strip_chat_prefix为true, 则拦截提交内容,清空,再重新手动上屏字符串.
+如果strip_chat_prefix为false, 则什么都不用做,直接上屏就可以.
+如果commit_input为false,则拦截提交,清空,并且向服务端发送消息,表示不用输入空格换行.
+
+如果要拦截就不能使用现在的commit_notifier
 
 
 - [x] 将ai云输入法的功能，也变成流式的。这个可能会比较麻烦啊。
@@ -192,7 +236,7 @@ AI提问:将拼音转换成中文的过程，如果不使用翻译这个词汇�
 local stream_result = tcp_socket.read_translate_result(timeout)
 read_translate_result 这个用上了超时时间
 
-### ai云输入法的功能，也变成流式的
+## (完成)ai云输入法的功能，也变成流式的
 这个比较复杂，先梳理一个完整的思路。
 1. 首先前边给服务器发送消息这部分应该是没有什么区别的, 还是直接tcp_socket.translate发送候选词.
 2. 原来是parsed_data.cloud_candidates or parsed_data.ai_candidates获取返回的候选词,这部分应该不用修改,还是直接这样就可以。
@@ -471,7 +515,6 @@ AI翻译：什么是最美丽的东西？
 
 - [x] 不再使用reply_tags,而是直接在chat_triggers的key中添加reply, 例如role_chat,变成role_chat_reply
 
-### 待办事项列表
 - [x] 突然想到可以所有和大模型对话的功能都以a开头, 然后输入a,就会出现一系列的候选词提示,比如说ac, ab, ar,ai等等,然后我们选择对应的选项,就可以实现各种不同的功能.
 
 
@@ -486,7 +529,7 @@ AI翻译：什么是最美丽的东西？
 
 
 
-### 4.1 AI 写作状态机
+## 4.1 AI 写作状态机
 为了满足用户对于稳健逻辑的需求，我们必须将整个交互过程建模为一个状态机。该状态机由 Lua 翻译器在 Rime 内部进行管理，可以使用一个全局表（table）来存储当前状态。
 
 **状态定义**：
@@ -499,7 +542,7 @@ AI翻译：什么是最美丽的东西？
 - `AI_SELECTED`：用户通过方向键或鼠标悬停等方式，高亮选中了 AI 候选词。
 
 
-### 4.2 用户操作处理矩阵
+## 4.2 用户操作处理矩阵
 下表是本报告的核心部分，它为编程实现提供了一份详尽、可操作的指南。该矩阵将每一种可能的用户输入，根据当前所处的状态，映射到特定的系统响应。这种方法强制对每一种交互可能性进行严谨和系统的分析，是“覆盖各种分支”和“减少 bug”的唯一途径，将设计从抽象概念转化为具体、可测试的规范。
 
 | 用户操作                  | 当前状态                                         | 前提条件                  | 系统响应与逻辑                                                      | 新状态                         |
@@ -515,3 +558,11 @@ AI翻译：什么是最美丽的东西？
 | 按 `PageDown`/`PageUp` | `AI_STREAMING`, `AI_COMPLETE`                | 候选菜单可见。               | 执行标准 Rime 翻页行为。如果 AI 候选词因此被高亮，则更新状态。                         | `AI_SELECTED` 或 `COMPOSING` |
 | `鼠标点击` AI 候选词         | `AI_STREAMING`, `AI_COMPLETE`                | -                     | 选中并立即上屏该 AI 候选词。                                             | `IDLE`                      |
 | Rime 窗口失去焦点           | `AWAITING_AI`, `AI_STREAMING`                | -                     | 向代理发送 `CANCEL` 消息。清理当前状态。                                    | `IDLE`                      |
+
+
+
+
+
+
+
+

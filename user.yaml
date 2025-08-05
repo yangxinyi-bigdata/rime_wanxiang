@@ -1,5 +1,5 @@
 var:
-  last_build_time: 1754193521
+  last_build_time: 1754362929
   option:
     ascii_punct: false
     chinese_english: false
@@ -9,6 +9,7 @@ var:
     prediction: false
     s2t: false
     s2tw: false
+    search_single_char: true
     super_tips: false
     tone_display: true
     tone_hint: false

@@ -30,7 +30,28 @@ cloud_ai_filter:
 
 ########################以下是方案配置######################################################
 
+# 菜单
+menu:
+  page_size: 5  # 候选词个数，不得超过6个，7890代表声调
+  alternative_select_labels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]    # 修改候选项标签，Windows用这行会自动加点
+  #alternative_select_labels: [ ⒈, ⒉, ⒊, ⒋, ⒌, ⒍, ⒎, ⒏, ⒐, ⒑ ]  # 修改候选项标签，Linux用这行用了加点字符
+  alternative_select_keys: 123456789  # 如编码字符占用数字键，则需另设选字键
 
+
+# 方案选单相关
+switcher:
+  caption: 「方案选单」
+  hotkeys:
+    - Control+grave
+    # - Alt+grave
+  save_options:  # 开关记忆（方案中的 switches），从方案选单（而非快捷键）切换时会记住的选项，需要记忆的开关不能设定 reset, 也就是如果你在某一款应用(例如notion)中切换了开关状态,那么切换到方案选单时会记住你在notion中切换的开关状态
+    - traditionalization
+    - emoji
+    - charset_filter
+    - chinese_english
+  fold_options: false            # 呼出时是否折叠，多方案时建议折叠 true ，一个方案建议展开 false
+  abbreviate_options: false      # 折叠时是否缩写选项
+  option_list_separator: ' / '  # 折叠时的选项分隔符
 # 开关
 # reset註釋掉: 注释掉后，切换窗口时不会重置到默认状态。
 # reset:0 每次启动输入法或切换到该方案时，该开关都会被重置为第一个状态. 
@@ -45,7 +66,7 @@ switches:
     states: [。, .]
     reset: 1
   - name: full_shape                   #全角、半角字符输出
-    states: [半, 全]
+    states: [半角, 全角]
     reset: 0
   - name: emoji                        #候选出现emoji滤镜，会显示在相应的候选后面，万象侧重于tips提示，避免候选被占用，因此默认为reset: 0，归属opencc emoji滤镜
     states: [🙃, 😄]
@@ -56,9 +77,6 @@ switches:
   - options: [s2s, s2t, s2hk, s2tw]    # 简繁转换开关组，可以在一个空选项和多个实际“- simplifier@s2hk”引入的项目之前切换，这是一个开关组，你可以将其中任意一个s2s等设置为toggle快捷键，多次按下将轮询
     states: [简体, 通繁, 港繁, 臺繁]
     reset: 0
-  - name: search_single_char          #多体现在编码重合但候选有单字或者多字的情况`引导的辅码查词时是否单字优先，全拼常见，类似于特定编码情况下、反查状态下的调序能力。归属：search.lua
-    abbrev: [词, 单]
-    states: [正常, 单字]
 
 
 # 输入引擎
@@ -125,7 +143,7 @@ engine:
     - simplifier@chinese_english                    #中英翻译滤镜
     - lua_filter@*text_formatting                   #给自定义用户词扩展一个换行:\n, 制表符：\t, 回车符：\r, 空格：\s
     # - lua_filter@*baidu_filter                      #百度云输入法API调用，支持百度云输入法的候选词获取
-    # - lua_filter@*aux_code_filter_v3                #辅助码处理器，读取txt文件，匹配输入的最后三个字母，返回候选词
+    - lua_filter@*aux_code_filter_v3                #辅助码处理器，读取txt文件，匹配输入的最后三个字母，返回候选词
     - lua_filter@*cloud_ai_filter_v2                 #AI大模型转换的候选词
     - lua_filter@*punct_eng_chinese_filter          # 将候选项当中的英文标点转换为中文标点
     - uniquifier                                    #去重
@@ -133,11 +151,11 @@ engine:
 ai_assistant:
   enabled: true
   behavior:
-    commit_input: true           # 是否将用户提问问题上屏
-    auto_commit: false          # 是否自动上屏
+    auto_commit: false          # 是否自动上屏, 也就是ai回复内容出现在候选框, 内容完成之后,直接上屏
     clipboard_mode: true        # 是否使用剪贴板模式
     prompt_chat: "a"    # 触发提示消息的字母
-  # 触发器配置：定义所有AI助手的前缀    
+    strip_chat_prefix: true
+    commit_question: true
   chat_triggers:
     simple_ai_chat: "a:"          # 简单对话
     normal_ai_chat: "ai:"                # AI对话
@@ -145,8 +163,8 @@ ai_assistant:
     role_ai_chat: "ar:"              # 角色扮演对话
     queen_ai_chat: "aq:"             # 女王对话
     cat_ai_chat: "ac:"               # 猫娘对话
-    translate_ai_chat: "at:"     # 中英翻译
-    trans_ai_chat: "t:"     # 中英翻译
+    trans_ai_chat: "at:"     # 普通中英翻译
+    translate_ai_chat: "t:"     # 结构化翻译中英翻译
     code_ai_chat: "code:"       # 编程助手
     write_ai_chat: "write:"     # 写作助手
     search_ai_chat: "as:"        # 搜索助手
@@ -154,7 +172,6 @@ ai_assistant:
     summarize_ai_chat: "sum:"             # 总结工具
     explain_ai_chat: "exp:"               # 解释工具
     improve_ai_chat: "imp:"               # 改进工具
-  # 定义每个触发器对应的显示消息
   chat_names:
     simple_ai_chat: "AI提问:"
     normal_ai_chat: "AI提问:"
@@ -162,8 +179,8 @@ ai_assistant:
     role_ai_chat: "角色对话:"
     cat_ai_chat: "猫娘对话:"
     queen_ai_chat: "与女王对话:"
-    translate_ai_chat: "AI翻译:"
     trans_ai_chat: "AI翻译:"
+    translate_ai_chat: "AI翻译:"
     code_ai_chat: "AI编程:"
     write_ai_chat: "AI写作:"
     search_ai_chat: "AI搜索:"
@@ -171,7 +188,6 @@ ai_assistant:
     summarize_ai_chat: "AI总结:"
     explain_ai_chat: "AI解释:"
     improve_ai_chat: "AI改进:"
-  # 回复消息配置：回复消息时候使用的名称
   reply_messages_preedit:
     simple_ai_chat: "AI回复:"
     normal_ai_chat: "AI回复:"
@@ -179,8 +195,8 @@ ai_assistant:
     role_ai_chat: "角色:"
     cat_ai_chat: "猫娘:"
     queen_ai_chat: "女王:"
-    translate_ai_chat: "AI翻译:"
     trans_ai_chat: "AI翻译:"
+    translate_ai_chat: "AI翻译:"
     code_ai_chat: "AI编程:"
     write_ai_chat: "AI写作:"
     search_ai_chat: "AI搜索:"
@@ -203,6 +219,7 @@ ai_assistant:
 #节日：ojr 或者 /jr
 #问候模板：/day 或者 oday
 #生日信息：/sr或者osr
+    test_ai_chat: 'AI回复:'
 birthday_reminder:  #日期格式：必须是4位数字，格式为MMDD（月份和日期），例如：1月27日 → 0127 ，#备注格式：在日期后添加逗号，然后添加任意文本作为备注，例如："0501,我的好朋友"，也可以无备注
   solar_birthdays:  # 公历生日, 姓名: "日期,备注" or 姓名: "日期"
     小明: "0501,准备礼物"
@@ -1293,7 +1310,7 @@ speller:
     - xform/◯/;/  #对于微软双拼、搜狗双拼，前面将分号保护了起来，现在放出来让其发挥作用
 
 # 基础派生规则 - 保证基础输入功能正常
-基础派生规则:  
+基础派生规则:
   __append:
     # 基础双拼派生，确保纯双拼输入能匹配词库
     - derive/^(.*?)(\d?);.*$/$1/       # 纯双拼的情况
