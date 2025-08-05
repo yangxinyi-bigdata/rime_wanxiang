@@ -577,22 +577,22 @@ size | number | Segment的数量
 
 方法：
 
-方法名 | 参数 | 返回值 | 解释
---- | --- | --- | ---
-empty | | boolean | 是否包含 Segment 或 Menu
-back | | Segment | 队尾（对应input最右侧的输入字符）的 Segment 
-pop_back | | | 移除队列最后的 Segment
-reset_length(length) | length: number | | 保留 n 個 Segment
-add_segment(seg) | seg: Segment | boolean | 添加 Segment <br>（librime v1.7.3：如果已包含 Segment 且起始位置相同，会取较长的Segment 并且合并 Segment.tags）
-forward | | boolean | 新增 一個 kVoid 的 Segment(start_pos = 前一個 end_pos , end_pos = start_pos)
-trim | | | 摘除队列最末位的0长度 Segment （0长度 Segment 用于语句流输入法中标记已确认`kConfirmed`但未上屏的 Segment 结束，用于开启一个新的 Segment）
-has_finished_segmentation | | boolean | 是否完成分词
-get_current_start_position | | number | 获取当前开始位置
-get_current_end_position | | number | 获取当前结束位置
-get_current_segment_length | | number | 获取当前片段长度
-get_confirmed_position | | number | 属性 input 中已经确认（处理完）的长度 <br> （通过判断 status 为 `kSelected` 或 `kConfirmed` 的 Segment 的 _end 来判断 confirmed_position） <br> [https://github.com/rime/librime/.../src/segmentation.cc#L127](https://github.com/rime/librime/blob/cea389e6eb5e90f5cd5b9ca1c6aae7a035756405/src/segmentation.cc#L127)
-get_segments | | table | 获取所有Segment对象的列表
-get_at(index) | index: number | Segment | 根据索引获取Segment，支持负数索引
+| 方法名                        | 参数             | 返回值     | 解释                                                                                                                                                                                                                                                                                         |
+| -------------------------- | -------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| empty                      |                | boolean | 是否包含 Segment 或 Menu                                                                                                                                                                                                                                                                        |
+| back                       |                | Segment | 队尾（对应input最右侧的输入字符）的 Segment                                                                                                                                                                                                                                                               |
+| pop_back                   |                |         | 移除队列最后的 Segment                                                                                                                                                                                                                                                                            |
+| reset_length(length)       | length: number |         | 保留 n 個 Segment                                                                                                                                                                                                                                                                             |
+| add_segment(seg)           | seg: Segment   | boolean | 添加 Segment <br>（librime v1.7.3：如果已包含 Segment 且起始位置相同，会取较长的Segment 并且合并 Segment.tags）                                                                                                                                                                                                       |
+| forward                    |                | boolean | 新增 一個 kVoid 的 Segment(start_pos = 前一個 end_pos , end_pos = start_pos)                                                                                                                                                                                                                       |
+| trim                       |                |         | 摘除队列最末位的0长度 Segment （0长度 Segment 用于语句流输入法中标记已确认`kConfirmed`但未上屏的 Segment 结束，用于开启一个新的 Segment）                                                                                                                                                                                              |
+| has_finished_segmentation  |                | boolean | 是否完成分词                                                                                                                                                                                                                                                                                     |
+| get_current_start_position |                | number  | 获取当前开始位置                                                                                                                                                                                                                                                                                   |
+| get_current_end_position   |                | number  | 获取当前结束位置                                                                                                                                                                                                                                                                                   |
+| get_current_segment_length |                | number  | 获取当前片段长度                                                                                                                                                                                                                                                                                   |
+| get_confirmed_position     |                | number  | 属性 input 中已经确认（处理完）的长度 <br> （通过判断 status 为 `kSelected` 或 `kConfirmed` 的 Segment 的 _end 来判断 confirmed_position） <br> [https://github.com/rime/librime/.../src/segmentation.cc#L127](https://github.com/rime/librime/blob/cea389e6eb5e90f5cd5b9ca1c6aae7a035756405/src/segmentation.cc#L127) |
+| get_segments               |                | table   | 获取所有Segment对象的列表                                                                                                                                                                                                                                                                           |
+| get_at(index)              | index: number  | Segment | 根据索引获取Segment，支持负数索引                                                                                                                                                                                                                                                                       |
 
 e.g.
 ```txt

@@ -243,6 +243,7 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
                         logger.info("候选词文本: " .. candidate_text)
 
                         -- 如果是ac:nihk 那么匹配不到中文, 也就是script_text_chinese为空, going_commit_text只有候选词
+                        -- 如果前面有一个纯英文片段, 而且中文是一次性选择到的,script_text: at: this is why wo ui zv hk de
                         local script_text = context:get_script_text()
                         logger.info("script_text: " .. script_text)
 
@@ -300,7 +301,7 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
                                     engine:commit_text(final_commit_text)
                                     return kAccepted
                                 else
-                                    -- 正常上屏操作
+                                    -- 正常上屏操作, 不去除前缀的话,就会正常的向后推动,变成一个普通的上屏操作
                                     return kNoop
                                 end
 
@@ -341,7 +342,7 @@ function cloud_input_processor.init(env)
     -- 获取输入法引擎和上下文   
     local config = env.engine.schema.config
     -- 初始化时清空日志文件
-    -- logger.clear()
+    logger.clear()
     logger.info("云输入处理器初始化完成")
     delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
     logger.info("当前分隔符: " .. delimiter)
@@ -490,7 +491,9 @@ function cloud_input_processor.func(key, env)
     -- 如果是ai_talk标签的segment, 则需要判断是不是将要上屏, 如果要上屏,则进行拦截后处理
     local last_segment = segmentation:back()
     local first_segment = segmentation:get_at(0)
-    if first_segment:has_tag("ai_talk") then
+    -- 英文模式豁免
+    logger.info("property: backtick_prompt: " .. context:get_property("backtick_prompt"))
+    if first_segment:has_tag("ai_talk") and context:get_property("backtick_prompt") == "0" then
         logger.info("first_segment.tags: ai_talk")
         -- for element, _ in pairs(first_segment.tags) do
         --     logger.info("first_segment.tags: " .. element)
@@ -504,45 +507,45 @@ function cloud_input_processor.func(key, env)
             break
         end
 
+        debug_utils.print_segmentation_info(segmentation, logger)
         -- 处理AI会话是否要进行传输等操作
         local result = handle_ai_chat_selection(key_repr, tag_chat_trigger, env, last_segment)
+        logger.info("handle_ai_chat_selection result: " .. tostring(result))
         if result then
             return result
         end
 
     end
 
-    -- 开始判断连续ai对话分支内容
-    -- context:set_property("keepon_chat_trigger", "translate_ai_chat")
-    local keepon_chat_trigger = context:get_property('keepon_chat_trigger')
-    logger.info("keepon_chat_trigger: " .. keepon_chat_trigger)
-    -- 属性存在值代表要进入自动ai对话模式
-    if keepon_chat_trigger ~= "" then
-        logger.info("keepon_chat_trigger: " .. keepon_chat_trigger)
+    -- -- 开始判断连续ai对话分支内容
+    -- -- context:set_property("keepon_chat_trigger", "translate_ai_chat")
+    -- local keepon_chat_trigger = context:get_property('keepon_chat_trigger')
+    -- logger.info("keepon_chat_trigger: " .. keepon_chat_trigger)
+    -- -- 属性存在值代表要进入自动ai对话模式
+    -- if keepon_chat_trigger ~= "" then
+    --     logger.info("keepon_chat_trigger: " .. keepon_chat_trigger)
 
-        -- 应该有豁免,对于两种情况是豁免发送的,1. AI:对话消息,2:AI回复消息
-        -- segment.tags 是一个Set，遍历输出其中的内容
-        -- local tags_str = ""
-        -- if first_segment.tags and type(first_segment.tags) == "table" then
-        --     for tag, _ in pairs(first_segment.tags) do
-        --         tags_str = tags_str .. tostring(tag) .. " "
-        --     end
-        -- end
-        -- logger.info("first_segment.tags: " .. tags_str)
-        if first_segment:has_tag("ai_talk") or first_segment:has_tag("ai_reply") then
-            logger.info("first_segment.tags: ai_talk or ai_reply")
-            return kNoop
-        end
+    --     -- 应该有豁免,对于两种情况是豁免发送的,1. AI:对话消息,2:AI回复消息
+    --     -- segment.tags 是一个Set，遍历输出其中的内容
+    --     -- local tags_str = ""
+    --     -- if first_segment.tags and type(first_segment.tags) == "table" then
+    --     --     for tag, _ in pairs(first_segment.tags) do
+    --     --         tags_str = tags_str .. tostring(tag) .. " "
+    --     --     end
+    --     -- end
+    --     -- logger.info("first_segment.tags: " .. tags_str)
+    --     if first_segment:has_tag("ai_talk") or first_segment:has_tag("ai_reply") then
+    --         logger.info("first_segment.tags: ai_talk or ai_reply")
+    --         return kNoop
+    --     end
 
-        -- 处理AI会话是否要进行传输等操作
-        local result = handle_ai_chat_selection(key_repr, keepon_chat_trigger, env, last_segment)
-        if result then
-            return result
-        end
+    --     -- -- 处理AI会话是否要进行传输等操作
+    --     -- local result = handle_ai_chat_selection(key_repr, keepon_chat_trigger, env, last_segment)
+    --     -- if result then
+    --     --     return result
+    --     -- end
 
-
-
-    end
+    -- end
 
     -- 使用 pcall 捕获所有可能的错误
     local success, result = pcall(function()

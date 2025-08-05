@@ -1,4 +1,4 @@
--- 反引号分词器,判断如果当前输入的input当中存在反引号段, 将整个一段打上标签backtick
+-- 整个这段是非常简单的,就是判断如果说last_segment中含有反引号, 就将整个segmentation延伸到最后,全部标记上backtick标签
 -- 然后由translator当中的lua/script_backtick_translator.lua 处理
 
 local logger_module = require("logger")
@@ -51,14 +51,15 @@ function segmentor.func(segmentation, env)
         segmentation:pop_back()
         
         local new_segment = Segment(segment.start, end_position)
-        new_segment.tags = Set{"backtick", "abc"}
+        -- 累加标签
+        new_segment.tags = Set{"backtick"} + segment.tags
         segmentation:forward()
         if segmentation:add_segment(new_segment) then
             logger.info("成功将最后一个segment延长到末尾, 新的segment长度: " .. new_segment._end - new_segment.start)
         else
             logger.error("无法将最后一个segment延长到末尾")
             new_segment = Segment(segment.start, segment._end)
-            new_segment.tags = Set{"backtick", "abc"}
+            new_segment.tags = Set{"backtick"} + segment.tags
             if segmentation:add_segment(new_segment) then
                 logger.info("使用segment._end添加成功, 新的segment长度: " .. new_segment._end - new_segment.start)
             else
@@ -66,10 +67,8 @@ function segmentor.func(segmentation, env)
             end
 
         end
-        debug_utils.print_segmentation_info(segmentation, logger)
+        -- debug_utils.print_segmentation_info(segmentation, logger)
     end
-
-    
 
         
     logger.info("")

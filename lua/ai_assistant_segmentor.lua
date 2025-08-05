@@ -168,12 +168,11 @@ function segmentor.func(segmentation, env)
     local matched_trigger = nil
     local matched_prefix = nil
 
-    if env.ai_assistant_config.chat_triggers  then
+    if env.ai_assistant_config.chat_triggers then
 
         -- 
         -- local confirmed_pos_input = segmentation.input:sub(confirmed_pos + 1)
         -- logger.info("confirmed_pos_input: " .. confirmed_pos_input)
-        
 
         -- 检查是否是提示触发符号, 例如"a"
         local prompt_chat = env.ai_assistant_config.behavior.prompt_chat
