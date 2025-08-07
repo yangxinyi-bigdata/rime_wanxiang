@@ -52,7 +52,7 @@ local default_config = {
     unique_file_log = false,  -- 是否统一输出到同一个日志文件（普通参数，由各个文件自己控制）
     unique_file_log_file = "all_modules.log",  -- 统一日志文件名
     console_output = false,  -- 是否同时输出到控制台
-    log_level = "INFO",  -- 日志输出级别：DEBUG, INFO, WARN, ERROR
+    log_level = "DEBUG",  -- 日志输出级别：DEBUG, INFO, WARN, ERROR
     show_line_info = true  -- 是否显示文件名和行号信息
 }
 
@@ -69,7 +69,7 @@ function logger.set_global_unique_file_log(enabled, filename)
 end
 
 function logger.set_unified_mode(enabled, filename)
-    default_config.unique_file_log = enabled
+    global_overrides.force_unique_file_log = enabled
     if filename then
         default_config.unique_file_log_file = filename
     end

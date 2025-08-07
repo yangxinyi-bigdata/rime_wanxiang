@@ -20,7 +20,7 @@ if chat_triggers_config then
         -- 处理配置值...
     end
 else
-    logger.warning("未找到 chat_triggers 配置")
+    logger.warn("未找到 chat_triggers 配置")
 end
 ```
 
@@ -84,7 +84,7 @@ if chat_triggers_config and not chat_triggers_config:empty() then
         end
     end
 else
-    logger.warning("chat_triggers 配置为空或不存在")
+    logger.warn("chat_triggers 配置为空或不存在")
 end
 ```
 
@@ -137,7 +137,7 @@ local function load_ai_config(config, env)
     
     local chat_triggers = config:get_map("ai_assistant/chat_triggers")
     if not chat_triggers or chat_triggers:empty() then
-        logger.warning("chat_triggers 配置为空")
+        logger.warn("chat_triggers 配置为空")
         return false
     end
     
@@ -156,7 +156,7 @@ local function load_ai_config(config, env)
                 env.ai_assistant_config.reply_tags[trigger_name] = tag or trigger_name
                 logger.info("✓ 加载触发器: " .. trigger_name)
             else
-                logger.warning("✗ 触发器前缀为空: " .. trigger_name)
+                logger.warn("✗ 触发器前缀为空: " .. trigger_name)
             end
         end)
         

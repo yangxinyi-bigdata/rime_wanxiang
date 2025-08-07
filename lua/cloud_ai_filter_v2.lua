@@ -17,6 +17,8 @@ local logger = logger_module.create("cloud_ai_filter_v2", {
     unique_file_log = false, -- 启用日志以便测试
     log_level = "INFO"
 })
+-- 清空日志文件
+logger.clear()
 
 -- 添加 ARM64 Homebrew 的 Lua 路径
 local function setup_lua_paths()
@@ -106,7 +108,7 @@ function cloud_ai_filter.update_current_config(config)
             end
         end
     else
-        logger.warning("未找到 chat_triggers 配置")
+        logger.warn("未找到 chat_triggers 配置")
     end
 
     -- 读取其他配置项
@@ -215,7 +217,6 @@ end
 
 function cloud_ai_filter.init(env)
     -- 初始化时清空日志文件
-    logger.clear()
     logger.info("云输入处理器初始化完成")
 
     -- 获取 schema 信息，配置更新由 cloud_input_processor 统一管理

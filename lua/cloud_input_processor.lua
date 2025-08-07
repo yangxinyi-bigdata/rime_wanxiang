@@ -6,9 +6,14 @@ local logger = logger_module.create("cloud_input_processor", {
     unique_file_log = false,
     log_level = "DEBUG"
 })
+
+-- 初始化时清空日志文件
+logger.clear()
+
 -- 引入文本切分模块
 -- local text_splitter = require("text_splitter")
 local debug_utils = require("debug_utils")
+
 
 -- 其他需要更新配置的lua脚本
 local smart_cursor_processor = nil
@@ -19,6 +24,7 @@ local ai_assistant_translator = nil
 local aux_code_filter_v3 = nil
 local cloud_ai_filter_v2 = nil
 local punct_eng_chinese_filter = nil
+local text_splitter = nil
 
 -- 安全加载模块，防止脚本不存在时出错
 local function safe_require(module_name)
@@ -27,7 +33,7 @@ local function safe_require(module_name)
         logger.debug("成功加载模块: " .. module_name)
         return module
     else
-        logger.warning("加载模块失败: " .. module_name .. " - " .. tostring(module))
+        logger.warn("加载模块失败: " .. module_name .. " - " .. tostring(module))
         return nil
     end
 end
@@ -40,6 +46,7 @@ ai_assistant_translator = safe_require("ai_assistant_translator")
 aux_code_filter_v3 = safe_require("aux_code_filter_v3")
 cloud_ai_filter_v2 = safe_require("cloud_ai_filter_v2")
 punct_eng_chinese_filter = safe_require("punct_eng_chinese_filter")
+text_splitter = safe_require("text_splitter")
 
 -- 引入TCP同步模块
 local tcp_socket = nil
@@ -67,6 +74,10 @@ function cloud_input_processor.update_current_config(config)
     -- 读取分隔符配置
     cloud_input_processor.delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
     logger.debug("当前分隔符: " .. cloud_input_processor.delimiter)
+    
+    -- 读取云转换触发符号配置
+    cloud_input_processor.cloud_convert_symbol = config:get_string("translator/cloud_convert_symbol") or "Return"
+    logger.debug("云转换触发符号: " .. cloud_input_processor.cloud_convert_symbol)
 
     -- 初始化配置对象
     cloud_input_processor.ai_assistant_config = {}
@@ -131,7 +142,7 @@ function cloud_input_processor.update_current_config(config)
             end
         end
     else
-        logger.warning("未找到 chat_triggers 配置")
+        logger.warn("未找到 chat_triggers 配置")
     end
 
     -- 创建触发器前缀到回复消息的映射
@@ -210,6 +221,9 @@ function cloud_input_processor.update_all_modules_config(config)
     end
     if punct_eng_chinese_filter and punct_eng_chinese_filter.update_current_config then
         punct_eng_chinese_filter.update_current_config(config)
+    end
+    if text_splitter and text_splitter.update_current_config then
+        text_splitter.update_current_config(config)
     end
 
     logger.info("所有模块配置更新完成")
@@ -533,7 +547,7 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
                     end
 
                 else
-                    logger.warning("无法获取候选词对象")
+                    logger.warn("无法获取候选词对象")
                 end
             else
                 logger.debug("菜单为空或选词索引超出范围: " .. select_key_index .. " > " ..
@@ -591,8 +605,6 @@ function cloud_input_processor.init(env)
     local config = env.engine.schema.config
     local current_schema_id = env.engine.schema.schema_id
     
-    -- 初始化时清空日志文件
-    logger.clear()
 
     -- 检查是否需要更新配置（第一次初始化或 schema 发生变化）
     local need_update = false
@@ -641,12 +653,12 @@ function cloud_input_processor.func(key, env)
         return kAccepted
     end
 
-    if context:get_property("should_intercept_shift_release") == "1" then
+    if context:get_property("should_intercept_key_release") == "1" then
         -- 检查是否需要拦截Release+Shift_L按键
         if key_repr == "Release+Shift_L" or key_repr == "Release+Shift_R" then
             logger.debug("拦截Release+Shift_L按键（由于之前处理了Shift+组合键）")
             -- 清除标志，避免影响后续操作
-            context:set_property("should_intercept_shift_release", "0")
+            context:set_property("should_intercept_key_release", "0")
             return kAccepted
         end
     end
@@ -929,8 +941,8 @@ function cloud_input_processor.func(key, env)
 
                 -- 如果是Shift+XXX按键，设置属性用于拦截后续的Release+Shift_L
                 if key_repr:match("^Shift%+") then
-                    context:set_property("should_intercept_shift_release", "1")
-                    logger.debug("检测到Shift+组合键，设置拦截Shift释放标志")
+                    context:set_property("should_intercept_key_release", "1")
+                    logger.debug("检测到Shift+组合键，设置拦截按键释放标志")
                 end
 
                 -- 将按键对应的字符添加到输入中
@@ -1106,9 +1118,13 @@ function cloud_input_processor.func(key, env)
         set_cloud_convert_flag(context)
 
         -- 检查当前按键是否为预设的触发键
-        if key:repr() == "Return" and context:get_property("cloud_convert_flag") == "1" then
+        if key:repr() == cloud_input_processor.cloud_convert_symbol and context:get_property("cloud_convert_flag") == "1" then
             logger.debug("触发云输入处理cloud_convert, 添加option")
             context:set_option("cloud_convert", true)
+            
+            -- 设置拦截标志，用于拦截后续的按键释放事件
+            context:set_property("should_intercept_key_release", "1")
+            logger.debug("设置拦截按键释放标志")
 
             -- 返回已处理,阻止其他处理器处理这个按键
             return kAccepted

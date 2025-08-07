@@ -11,6 +11,9 @@ local logger = logger_module.create("ai_assistant_segmentor", {
     log_level = "DEBUG"
 })
 
+-- 初始化时清空日志文件
+logger.clear()
+
 -- 模块级配置缓存
 local segmentor = {}
 segmentor.enabled = false
@@ -95,7 +98,7 @@ function segmentor.update_current_config(config)
             logger.info("动态生成回复标签 - " .. trigger_name .. ": " .. reply_tag)
         end
     else
-        logger.warning("未找到 chat_triggers 配置")
+        logger.warn("未找到 chat_triggers 配置")
     end
 
     -- 创建回复消息到触发器的反向映射（使用触发器前缀加 _reply: 后缀）
@@ -110,7 +113,6 @@ function segmentor.update_current_config(config)
 end
 
 function segmentor.init(env)
-    logger.clear()
     logger.info("AI对话分词器初始化完成")
 
     -- 配置更新由 cloud_input_processor 统一管理，无需在此处调用

@@ -7,6 +7,8 @@ local logger = logger_module.create("ai_assistant_translator", {
     unique_file_log = false,
     log_level = "DEBUG"
 })
+-- 清空日志文件
+logger.clear()
 
 -- 添加 ARM64 Homebrew 的 Lua 路径
 local function setup_lua_paths()
@@ -92,7 +94,7 @@ function translator.update_current_config(config)
             logger.info("动态生成AI回复标签 - " .. trigger_name .. ": " .. reply_tag)
         end
     else
-        logger.warning("未找到 chat_triggers 配置")
+        logger.warn("未找到 chat_triggers 配置")
     end
     
     -- 创建标签到触发器的反向映射

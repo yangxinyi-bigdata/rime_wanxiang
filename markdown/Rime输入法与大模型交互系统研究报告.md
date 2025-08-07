@@ -1524,7 +1524,7 @@ class ConfigManager:
             with open(file_path, 'r', encoding='utf-8') as f:
                 return yaml.safe_load(f)
         except FileNotFoundError:
-            logger.warning(f"配置文件不存在: {file_path}")
+            logger.warn(f"配置文件不存在: {file_path}")
             return {}
         except yaml.YAMLError as e:
             logger.error(f"配置文件格式错误: {file_path}, {e}")
@@ -1922,7 +1922,7 @@ class RetryManager:
                 
                 if attempt < self.max_retries:
                     wait_time = (self.backoff_factor ** attempt)
-                    logger.warning(f"第{attempt + 1}次尝试失败，{wait_time}秒后重试: {e}")
+                    logger.warn(f"第{attempt + 1}次尝试失败，{wait_time}秒后重试: {e}")
                     await asyncio.sleep(wait_time)
                 else:
                     logger.error(f"重试{self.max_retries}次后仍然失败: {e}")
@@ -2284,7 +2284,7 @@ class MemoryManager:
         logger.debug(f"内存使用: {memory_mb:.1f}MB ({usage_ratio:.1%})")
         
         if usage_ratio > self.cleanup_threshold:
-            logger.warning(f"内存使用率过高: {usage_ratio:.1%}")
+            logger.warn(f"内存使用率过高: {usage_ratio:.1%}")
             await self._perform_cleanup()
     
     async def _perform_cleanup(self):

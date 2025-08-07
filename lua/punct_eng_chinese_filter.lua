@@ -13,6 +13,8 @@ local logger = logger_module.create("punct_eng_chinese_filter", {
     unique_file_log = false, -- 启用日志以便测试
     log_level = "DEBUG"
 })
+-- 清空日志文件
+logger.clear()
 
 local punct_eng_chinese_filter = {}
 
@@ -20,6 +22,7 @@ local punct_eng_chinese_filter = {}
 punct_eng_chinese_filter.delimiter = ""
 punct_eng_chinese_filter.ai_reply_tags = {}
 punct_eng_chinese_filter.ai_chat_triggers = {}
+punct_eng_chinese_filter.cloud_convert_symbol = "shift+Return"
 
 -- 配置更新函数
 function punct_eng_chinese_filter.update_current_config(config)
@@ -30,6 +33,10 @@ function punct_eng_chinese_filter.update_current_config(config)
     
     punct_eng_chinese_filter.delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
     logger.info("更新分隔符: " .. punct_eng_chinese_filter.delimiter)
+    
+    -- 读取云转换触发符号配置
+    punct_eng_chinese_filter.cloud_convert_symbol = config:get_string("translator/cloud_convert_symbol") or "shift+Return"
+    logger.info("云转换触发符号: " .. punct_eng_chinese_filter.cloud_convert_symbol)
     
     -- 重新初始化AI标签
     punct_eng_chinese_filter.ai_reply_tags = {}
@@ -60,7 +67,6 @@ end
 
 function punct_eng_chinese_filter.init(env)
     -- 初始化时清空日志文件
-    logger.clear()
     logger.info("标点英中文过滤器初始化完成")
     
     -- 配置更新由 cloud_input_processor 统一管理，无需在此处调用
@@ -86,7 +92,7 @@ function punct_eng_chinese_filter.func(translation, env)
             -- logger.info("当前cloud_convert_prompt状态: ".. tostring(context:get_option("cloud_convert_prompt")))
 
             -- 定义两种提示文本
-            local cloud_prompt_text = "    ▶ [回车AI转换]  "
+            local cloud_prompt_text = "    ▶ [" .. punct_eng_chinese_filter.cloud_convert_symbol .. " AI转换]  "
             local rawenglish_prompt_text = "    ▶ [英文模式]  "
             local search_move_prompt = "    ▶ [搜索模式]  "
             local search_move_prompt_char = "    ▶ [搜索模式:%s]  "
@@ -156,7 +162,7 @@ function punct_eng_chinese_filter.func(translation, env)
                     logger.info("ai_chat: true")
 
                 else
-                    -- logger.info("cand.text: " .. cand.text)
+                    logger.info("cand.text: " .. cand.text)
                     if cand.text and text_splitter.has_punctuation_no_rawenglish(cand.text, logger) then
                         punch_flag = true
                         logger.info("punch_flag: true")
@@ -184,6 +190,7 @@ function punct_eng_chinese_filter.func(translation, env)
 
                     logger.info("cand.comment: " .. cand.comment .. " cand_text: " .. cand_text)
                     local chinese_pos = cand.comment
+                    logger.info("chinese_pos: " .. chinese_pos)
                     new_text = text_splitter.replace_punct_skip_pos(cand_text, chinese_pos, logger)
                 else
                     logger.info("候选词不是chinese_pos ,按照原来的处理即可, 也就是没有反引号.")

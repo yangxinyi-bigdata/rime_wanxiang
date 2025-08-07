@@ -13,6 +13,8 @@ local logger = logger_module.create("rawenglish_translator", {
     unique_file_log = false, -- 启用日志以便测试
     log_level = "DEBUG"
 })
+-- 清空日志文件
+logger.clear()
 
 local rawenglish_translator = {}
 
@@ -70,8 +72,6 @@ end
 
 function rawenglish_translator.init(env)
     logger.info("脚本反引号翻译器初始化开始")
-    -- 清空日志文件
-    logger.clear()
 
     local engine = env.engine
     local config = env.engine.schema.config
@@ -274,13 +274,14 @@ function rawenglish_translator.func(input, seg, env)
     logger.info("segmentation信息: ")
     debug_utils.print_segmentation_info(segmentation, logger)
 
-    -- 检查输入如果长度是1, 而且只有一个反引号, 则单独进行处理, 如果不是反引号而且只有一个字符,则直接退出
+    -- 检查输入如果长度是1, 而且只有一个英文模式符号, 则单独进行处理, 如果不是英文模式符号而且只有一个字符,则直接退出
     if #input == 1 then
-        if input == "`" then
-            local candidate1 = Candidate("punct", seg.start, seg._end, "```", "")
-            candidate1.preedit = "`"
-            -- logger.info("反引号上屏: " .. input)
-            -- local candidate2 = Candidate("punct", seg.start, seg._end, "`", "")
+        if input == rawenglish_translator.english_mode_symbol then
+            local triple_symbol = rawenglish_translator.english_mode_symbol .. rawenglish_translator.english_mode_symbol .. rawenglish_translator.english_mode_symbol
+            local candidate1 = Candidate("punct", seg.start, seg._end, triple_symbol, "")
+            candidate1.preedit = rawenglish_translator.english_mode_symbol
+            -- logger.info("英文模式符号上屏: " .. input)
+            -- local candidate2 = Candidate("punct", seg.start, seg._end, rawenglish_translator.english_mode_symbol, "")
             yield(candidate1)
             -- yield(candidate2)
             return
@@ -303,7 +304,7 @@ function rawenglish_translator.func(input, seg, env)
         logger.info("没有包含rawenglish或single_rawenglish标签，不处理")
         return
     end
-    logger.info("含有rawenglish标签, 进入反引号translator")
+    logger.info("含有rawenglish_combo 或 single_rawenglish 标签, 进入反引号translator")
 
     -- 处理single_rawenglish类型的片段
     if seg:has_tag("single_rawenglish") then
@@ -312,7 +313,7 @@ function rawenglish_translator.func(input, seg, env)
         -- 检查输入是否以反引号开头和结尾
         local inner_content, replaced_content
 
-        if input:sub(-1) == english_mode_symbol then
+        if input:sub(-1) == rawenglish_translator.english_mode_symbol then
             -- 完整的反引号片段，提取反引号内的内容
             inner_content = input:sub(2, -2)
             logger.info("完整反引号片段，内容: '" .. inner_content .. "'")
@@ -323,7 +324,7 @@ function rawenglish_translator.func(input, seg, env)
         end
 
         -- 替换成配置的分隔符
-        replaced_content = rawenglish_delimiter_before .. inner_content .. rawenglish_delimiter_after
+        replaced_content = rawenglish_translator.rawenglish_delimiter_before .. inner_content .. rawenglish_translator.rawenglish_delimiter_after
         logger.info("替换后内容: '" .. replaced_content .. "'")
 
         -- 生成候选词
@@ -339,8 +340,8 @@ function rawenglish_translator.func(input, seg, env)
     -- 这里输入的input应该不是完整的input,而是剩余的seg当中的input,所以返回的也是这个结果,但是我需要确认前边已经有多少内容被确认了. 
     -- 这里是将当前片段的input输入进去, 但是前边可能有其他片段的input,导致计算出来的切分坐标不对.
     -- 计算在input前边还有多少已经处理完的内容, 在script计算的start和end值中添加这个长度
-    local segments = text_splitter.split_by_rawenglish_with_log(input, seg.start, seg._end, rawenglish_delimiter_before,
-        rawenglish_delimiter_after, logger)
+    local segments = text_splitter.split_by_rawenglish_with_log(input, seg.start, seg._end, rawenglish_translator.rawenglish_delimiter_before,
+        rawenglish_translator.rawenglish_delimiter_after, logger)
 
     if not segments or #segments == 0 then
         logger.error("切分失败或无结果")
@@ -399,7 +400,7 @@ function rawenglish_translator.func(input, seg, env)
             -- todo
             -- 判断是否开启辅助码all模式
             local segment_content = segment.content
-            if env.single_fuzhu and env.fuzhu_mode == "all" then
+            if rawenglish_translator.single_fuzhu and rawenglish_translator.fuzhu_mode == "all" then
                 -- 当最后一个seg, 如果有奇数个字母, 则放弃最后一个, 不获取它的候选词
 
                 -- 对于标点符号来说，是不能算在内的，首先判断是否存在标点符号，如果存在标点符号，就替换掉，然后再计算。

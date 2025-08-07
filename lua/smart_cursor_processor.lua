@@ -13,6 +13,9 @@ local logger = logger_module.create("smart_cursor_processor", {
     log_level = "DEBUG"
 })
 
+-- 初始化时清空日志文件
+logger.clear()
+
 local tcp_socket = nil
 local ok, err = pcall(function()
     tcp_socket = require("tcp_socket_sync")
@@ -80,7 +83,7 @@ function smart_cursor_processor.update_current_config(config)
             end
         end
     else
-        logger.warning("未找到 chat_triggers 配置")
+        logger.warn("未找到 chat_triggers 配置")
     end
 
     logger.info("smart_cursor_processor模块配置更新完成")
@@ -91,7 +94,6 @@ function smart_cursor_processor.init(env)
     local context = engine.context
     local schema = engine.schema
     local config = schema.config
-    logger.clear()
     logger.info("智能光标移动处理器初始化完成")
 
     -- 配置更新由 cloud_input_processor 统一管理，无需在此处调用

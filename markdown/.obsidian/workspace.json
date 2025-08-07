@@ -184,9 +184,11 @@
   },
   "active": "7a8353859d7f5a74",
   "lastOpenFiles": [
-    "CleanShot 2025-08-07 at 15.13.38@2x.png",
     "librime-lua.wiki/Objects.md",
     "专题研究-在rime中和大模型进行交互.md",
+    "AI段落输入法宣传相关.md",
+    "CleanShot 2025-08-07 at 17.22.24@2x.png",
+    "CleanShot 2025-08-07 at 15.13.38@2x.png",
     "专题研究：多个模式之间的互相影响怎么办？.md",
     "NiceGUI文档.md",
     "大模型收集.md",
@@ -211,7 +213,6 @@
     "AI对话核心提示.md",
     "lua/backtick_translator.lua.md",
     "lua/cloud_input_processor.lua.md",
-    "lua/cloud_ai_filter_v2.lua.md",
     "lua",
     "CleanShot 2025-07-29 at 22.22.36@2x.png",
     "Templates"

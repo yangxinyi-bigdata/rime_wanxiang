@@ -2,6 +2,18 @@
 -- 用于处理反引号和标点符号的智能切分
 local text_splitter = {}
 
+-- 模块级别的配置变量
+text_splitter.english_mode_symbol = "`"  -- 默认值为反引号
+
+-- 配置更新函数
+function text_splitter.update_current_config(config)
+    -- 读取英文模式符号配置
+    local symbol = config:get_string("translator/english_mode_symbol")
+    if symbol and symbol ~= "" then
+        text_splitter.english_mode_symbol = symbol
+    end
+end
+
 -- 英文标点符号到中文标点符号的映射表
 local punct_map = {
     [","] = "，", -- 逗号
@@ -147,6 +159,7 @@ function text_splitter.replace_punct(text)
     return result
 end
 
+
 -- 标点符号替换函数, 对于传递进来的坐标范围进行替换
 function text_splitter.replace_punct_skip_pos(text, chinese_pos_str, logger)
     -- chinese_pos = "chinese_pos:3,6,"
@@ -236,9 +249,9 @@ function text_splitter.replace_punct_skip_rawenglish(text, logger)
 
     local result = text
 
-    -- 1. 首先判断是否存在反引号，如果不存在，就使用原来的搜索方式
-    if not string.find(result, "`") then
-        logger.info("未发现反引号, 使用原来的标点符号替换模式")
+    -- 1. 首先判断是否存在英文模式符号，如果不存在，就使用原来的搜索方式
+    if not string.find(result, text_splitter.english_mode_symbol) then
+        logger.info("未发现英文模式符号, 使用原来的标点符号替换模式")
         -- 先处理成对引号
         result = text_splitter.replace_quotes(result)
 
@@ -247,7 +260,7 @@ function text_splitter.replace_punct_skip_rawenglish(text, logger)
             result = result:gsub(eng_punct:gsub("([%(%)%.%+%-%*%?%[%]%^%$%%])", "%%%1"), chn_punct)
         end
     else
-        -- 如果有反引号，则进入反引号模式, 替换之前首先判断是否在反引号索引范围之内
+        -- 如果有英文模式符号，则进入英文模式符号模式, 替换之前首先判断是否在英文模式符号索引范围之内
         logger.info("发现反引号, 使用跳过反引号的标点符号替换模式")
 
         -- 针对中文字符串的反引号切分功能
@@ -259,11 +272,11 @@ function text_splitter.replace_punct_skip_rawenglish(text, logger)
 
         while index <= #result do
             if in_rawenglish then
-                -- 查找结束反引号
-                local end_index = string.find(result, "`", index)
+                -- 查找结束英文模式符号
+                local end_index = string.find(result, text_splitter.english_mode_symbol, index)
                 if end_index then
-                    -- 找到配对的反引号
-                    local rawenglish_content = string.sub(result, index - 1, end_index) -- 包含两个反引号
+                    -- 找到配对的英文模式符号
+                    local rawenglish_content = string.sub(result, index - 1, end_index) -- 包含两个英文模式符号
                     table.insert(segments, {
                         type = "rawenglish_combo",
                         content = rawenglish_content
@@ -271,8 +284,8 @@ function text_splitter.replace_punct_skip_rawenglish(text, logger)
                     index = end_index + 1
                     in_rawenglish = false
                 else
-                    -- 没有配对的反引号，剩余部分都是反引号内容
-                    local rawenglish_content = string.sub(result, index - 1) -- 包含开始的反引号
+                    -- 没有配对的英文模式符号，剩余部分都是英文模式符号内容
+                    local rawenglish_content = string.sub(result, index - 1) -- 包含开始的英文模式符号
                     table.insert(segments, {
                         type = "rawenglish_combo",
                         content = rawenglish_content
@@ -280,10 +293,10 @@ function text_splitter.replace_punct_skip_rawenglish(text, logger)
                     break
                 end
             else
-                -- 查找开始反引号
-                local start_pos = string.find(result, "`", index)
+                -- 查找开始英文模式符号
+                local start_pos = string.find(result, text_splitter.english_mode_symbol, index)
                 if start_pos then
-                    -- 找到反引号，保存之前的普通内容
+                    -- 找到英文模式符号，保存之前的普通内容
                     if start_pos > index then
                         local normal_content = string.sub(result, index, start_pos - 1)
                         table.insert(segments, {
@@ -294,7 +307,7 @@ function text_splitter.replace_punct_skip_rawenglish(text, logger)
                     index = start_pos + 1
                     in_rawenglish = true
                 else
-                    -- 没有更多反引号，剩余部分都是普通内容
+                    -- 没有更多英文模式符号，剩余部分都是普通内容
                     if index <= #result then
                         local normal_content = string.sub(result, index)
                         table.insert(segments, {
@@ -325,7 +338,7 @@ function text_splitter.replace_punct_skip_rawenglish(text, logger)
 
                 new_result = new_result .. processed_segment
             else
-                -- 反引号段落保持原样
+                -- 英文模式符号段落保持原样
                 new_result = new_result .. segment.content
             end
         end
@@ -446,22 +459,22 @@ function text_splitter.split_and_convert_input_with_delimiter(input, rawenglish_
     rawenglish_delimiter_after = rawenglish_delimiter_after or "" -- 默认无分隔符
     replace_punct_enabled = replace_punct_enabled or false -- 默认不替换标点符号
 
-    -- 先处理反引号 - 支持多对反引号
+    -- 先处理英文模式符号 - 支持多对英文模式符号
     -- nihk`hello`wode`dream3`keyi 应该处理成：nihk + `hello` + wode + `dream3` + keyi
     -- nihk`hello`wode`dream3 应该处理成：nihk + `hello` + wode + `dream3（后面所有内容不处理）
-    local rawenglish_positions = {} -- 所有反引号位置
+    local rawenglish_positions = {} -- 所有英文模式符号位置
 
-    -- 先找到所有反引号的位置
+    -- 先找到所有英文模式符号的位置
     for i = 1, #input do
         local char = input:sub(i, i)
-        if char == "`" then
+        if char == text_splitter.english_mode_symbol then
             table.insert(rawenglish_positions, i)
         end
     end
 
-    -- 检查反引号数量
+    -- 检查英文模式符号数量
     local rawenglish_count = #rawenglish_positions
-    local has_unpaired_rawenglish = (rawenglish_count % 2 == 1) -- 奇数个反引号表示有未配对的
+    local has_unpaired_rawenglish = (rawenglish_count % 2 == 1) -- 奇数个英文模式符号表示有未配对的
 
     -- 定义标点符号模式
     local punct_pattern = "[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-`'\"']"
@@ -470,16 +483,16 @@ function text_splitter.split_and_convert_input_with_delimiter(input, rawenglish_
     local segments = {} -- 片段列表
     local current_segment = "" -- 当前片段
     local i = 1
-    local in_rawenglish = false -- 在反引号中
-    local rawenglish_content = "" -- 反引号内容
-    local rawenglish_pair_index = 0 -- 当前处理到第几个反引号
+    local in_rawenglish = false -- 在英文模式符号中
+    local rawenglish_content = "" -- 英文模式符号内容
+    local rawenglish_pair_index = 0 -- 当前处理到第几个英文模式符号
 
     while i <= #input do
         local char = input:sub(i, i) -- 当前字符
 
-        -- 检查是否到达未配对的最后一个反引号
-        if has_unpaired_rawenglish and rawenglish_pair_index == rawenglish_count - 1 and char == "`" then
-            -- 最后一个未配对的反引号，从这里开始到末尾都不处理
+        -- 检查是否到达未配对的最后一个英文模式符号
+        if has_unpaired_rawenglish and rawenglish_pair_index == rawenglish_count - 1 and char == text_splitter.english_mode_symbol then
+            -- 最后一个未配对的英文模式符号，从这里开始到末尾都不处理
             if current_segment ~= "" then
                 local segment_start = i - #current_segment - 1 -- 转换为0基索引
                 table.insert(segments, {
@@ -493,31 +506,31 @@ function text_splitter.split_and_convert_input_with_delimiter(input, rawenglish_
                 current_segment = ""
             end
 
-            -- 对于未配对的反引号，包装其内容
+            -- 对于未配对的英文模式符号，包装其内容
             local remaining_content = input:sub(i + 1)
             local processed_content = rawenglish_delimiter_before .. remaining_content .. rawenglish_delimiter_after
             table.insert(segments, {
                 type = "rawenglish_combo",
                 content = processed_content,
-                original = "`" .. remaining_content,
-                start = i - 1, -- 转换为0基索引，从反引号开始
+                original = text_splitter.english_mode_symbol .. remaining_content,
+                start = i - 1, -- 转换为0基索引，从英文模式符号开始
                 _end = #input, -- 开区间，到字符串末尾
                 length = #input - i + 1
             })
             break
-        elseif char == "`" then
-            -- 不是最后一个未配对的反引号
+        elseif char == text_splitter.english_mode_symbol then
+            -- 不是最后一个未配对的英文模式符号
             rawenglish_pair_index = rawenglish_pair_index + 1
             if not in_rawenglish then
-                -- 开始反引号内容
-                if current_segment ~= "" then -- 遇到反引号，且之前不是在反引号当中,将之前积累的内容直接添加成片段
+                -- 开始英文模式符号内容
+                if current_segment ~= "" then -- 遇到英文模式符号，且之前不是在英文模式符号当中,将之前积累的内容直接添加成片段
                     local segment_start = i - #current_segment - 1 -- 转换为0基索引
                     table.insert(segments, {
                         type = "abc",
                         content = current_segment,
                         original = current_segment,
                         start = segment_start,
-                        _end = i - 1, -- 开区间，不包含反引号位置
+                        _end = i - 1, -- 开区间，不包含英文模式符号位置
                         length = #current_segment
                     }) -- 类型=文本，内容
                     current_segment = ""
@@ -525,15 +538,15 @@ function text_splitter.split_and_convert_input_with_delimiter(input, rawenglish_
                 in_rawenglish = true
                 rawenglish_content = ""
             else
-                -- 结束反引号内容，添加分隔符
+                -- 结束英文模式符号内容，添加分隔符
                 local processed_content = rawenglish_delimiter_before .. rawenglish_content .. rawenglish_delimiter_after
-                local rawenglish_start = i - #rawenglish_content - 2 -- 转换为0基索引，包含开始反引号
+                local rawenglish_start = i - #rawenglish_content - 2 -- 转换为0基索引，包含开始英文模式符号
                 table.insert(segments, {
                     type = "rawenglish_combo",
                     content = processed_content,
-                    original = "`" .. rawenglish_content .. "`",
+                    original = text_splitter.english_mode_symbol .. rawenglish_content .. text_splitter.english_mode_symbol,
                     start = rawenglish_start,
-                    _end = i, -- 开区间，不包含结束反引号后的位置
+                    _end = i, -- 开区间，不包含结束英文模式符号后的位置
                     length = #rawenglish_content + 2
                 })
                 in_rawenglish = false
@@ -572,13 +585,13 @@ function text_splitter.split_and_convert_input_with_delimiter(input, rawenglish_
 
     -- 处理最后一个片段
     if in_rawenglish then
-        -- 未闭合的反引号内容，添加分隔符
+        -- 未闭合的英文模式符号内容，添加分隔符
         local processed_content = rawenglish_delimiter_before .. rawenglish_content .. rawenglish_delimiter_after
-        local rawenglish_start = #input - #rawenglish_content - 1 -- 转换为0基索引，包含反引号
+        local rawenglish_start = #input - #rawenglish_content - 1 -- 转换为0基索引，包含英文模式符号
         table.insert(segments, {
             type = "rawenglish_combo",
             content = processed_content,
-            original = "`" .. rawenglish_content,
+            original = text_splitter.english_mode_symbol .. rawenglish_content,
             start = rawenglish_start,
             _end = #input, -- 开区间，到字符串末尾
             length = #rawenglish_content + 1
@@ -598,38 +611,38 @@ function text_splitter.split_and_convert_input_with_delimiter(input, rawenglish_
     return segments
 end
 
--- 只处理反引号的切分函数
+-- 只处理英文模式符号的切分函数
 function text_splitter.split_by_rawenglish(input, seg_start, seg_end, delimiter_before, delimiter_after)
     delimiter_before = delimiter_before or "" -- 默认无分隔符
     delimiter_after = delimiter_after or "" -- 默认无分隔符
     seg_start = seg_start or 0 -- 默认起始位置为0
 
-    -- 先找到所有反引号的位置
+    -- 先找到所有英文模式符号的位置
     local rawenglish_positions = {}
     for i = 1, #input do
         local char = input:sub(i, i)
-        if char == "`" then
+        if char == text_splitter.english_mode_symbol then
             table.insert(rawenglish_positions, i)
         end
     end
 
-    -- 检查反引号数量
+    -- 检查英文模式符号数量
     local rawenglish_count = #rawenglish_positions
-    local has_unpaired_rawenglish = (rawenglish_count % 2 == 1) -- 奇数个反引号表示有未配对的
+    local has_unpaired_rawenglish = (rawenglish_count % 2 == 1) -- 奇数个英文模式符号表示有未配对的
 
     local segments = {} -- 片段列表
     local current_segment = "" -- 当前片段
     local i = 1
-    local in_rawenglish = false -- 在反引号中
-    local rawenglish_content = "" -- 反引号内容
-    local rawenglish_pair_index = 0 -- 当前处理到第几个反引号
+    local in_rawenglish = false -- 在英文模式符号中
+    local rawenglish_content = "" -- 英文模式符号内容
+    local rawenglish_pair_index = 0 -- 当前处理到第几个英文模式符号
 
     while i <= #input do
         local char = input:sub(i, i) -- 当前字符
 
-        -- 检查是否到达未配对的最后一个反引号
-        if has_unpaired_rawenglish and rawenglish_pair_index == rawenglish_count - 1 and char == "`" then
-            -- 最后一个未配对的反引号，从这里开始到末尾都不处理
+        -- 检查是否到达未配对的最后一个英文模式符号
+        if has_unpaired_rawenglish and rawenglish_pair_index == rawenglish_count - 1 and char == text_splitter.english_mode_symbol then
+            -- 最后一个未配对的英文模式符号，从这里开始到末尾都不处理
             if current_segment ~= "" then
                 local segment_start = seg_start + i - #current_segment - 1 -- 添加seg_start偏移
                 table.insert(segments, {
@@ -637,30 +650,30 @@ function text_splitter.split_by_rawenglish(input, seg_start, seg_end, delimiter_
                     content = current_segment,
                     original = current_segment,
                     start = segment_start,
-                    _end = seg_start + i - 1, -- 添加seg_start偏移，开区间，不包含反引号位置
+                    _end = seg_start + i - 1, -- 添加seg_start偏移，开区间，不包含英文模式符号位置
                     length = #current_segment
                 })
                 current_segment = ""
             end
 
-            -- 对于未配对的反引号，包装其内容
+            -- 对于未配对的英文模式符号，包装其内容
             local remaining_content = input:sub(i + 1)
             local processed_content = delimiter_before .. remaining_content .. delimiter_after
-            -- 添加原始反引号内容字段
+            -- 添加原始英文模式符号内容字段
             table.insert(segments, {
                 type = "rawenglish_combo",
                 content = processed_content,
-                original = "`" .. remaining_content,
-                start = seg_start + i - 1, -- 添加seg_start偏移，从反引号开始
+                original = text_splitter.english_mode_symbol .. remaining_content,
+                start = seg_start + i - 1, -- 添加seg_start偏移，从英文模式符号开始
                 _end = seg_start + #input, -- 添加seg_start偏移，开区间，到字符串末尾
                 length = #input - i + 1
             })
             break
-        elseif char == "`" then
-            -- 不是最后一个未配对的反引号
+        elseif char == text_splitter.english_mode_symbol then
+            -- 不是最后一个未配对的英文模式符号
             rawenglish_pair_index = rawenglish_pair_index + 1
             if not in_rawenglish then
-                -- 开始反引号内容
+                -- 开始英文模式符号内容
                 if current_segment ~= "" then
                     local segment_start = seg_start + i - #current_segment - 1 -- 添加seg_start偏移
                     table.insert(segments, {
@@ -668,7 +681,7 @@ function text_splitter.split_by_rawenglish(input, seg_start, seg_end, delimiter_
                         content = current_segment,
                         original = current_segment,
                         start = segment_start,
-                        _end = seg_start + i - 1, -- 添加seg_start偏移，开区间，不包含反引号位置
+                        _end = seg_start + i - 1, -- 添加seg_start偏移，开区间，不包含英文模式符号位置
                         length = #current_segment
                     })
                     current_segment = ""
@@ -676,16 +689,16 @@ function text_splitter.split_by_rawenglish(input, seg_start, seg_end, delimiter_
                 in_rawenglish = true
                 rawenglish_content = ""
             else
-                -- 结束反引号内容，添加分隔符
+                -- 结束英文模式符号内容，添加分隔符
                 local processed_content = delimiter_before .. rawenglish_content .. delimiter_after
-                -- 添加原始反引号内容字段
-                local rawenglish_start = seg_start + i - #rawenglish_content - 2 -- 添加seg_start偏移，包含开始反引号
+                -- 添加原始英文模式符号内容字段
+                local rawenglish_start = seg_start + i - #rawenglish_content - 2 -- 添加seg_start偏移，包含开始英文模式符号
                 table.insert(segments, {
                     type = "rawenglish_combo",
                     content = processed_content,
-                    original = "`" .. rawenglish_content .. "`",
+                    original = text_splitter.english_mode_symbol .. rawenglish_content .. text_splitter.english_mode_symbol,
                     start = rawenglish_start,
-                    _end = seg_start + i, -- 添加seg_start偏移，开区间，不包含结束反引号后的位置
+                    _end = seg_start + i, -- 添加seg_start偏移，开区间，不包含结束英文模式符号后的位置
                     length = #rawenglish_content + 2
                 })
                 in_rawenglish = false
@@ -703,14 +716,14 @@ function text_splitter.split_by_rawenglish(input, seg_start, seg_end, delimiter_
 
     -- 处理最后一个片段
     if in_rawenglish then
-        -- 未闭合的反引号内容，添加分隔符
+        -- 未闭合的英文模式符号内容，添加分隔符
         local processed_content = delimiter_before .. rawenglish_content .. delimiter_after
-        -- 添加原始反引号内容字段
-        local rawenglish_start = seg_start + #input - #rawenglish_content - 1 -- 添加seg_start偏移，包含反引号
+        -- 添加原始英文模式符号内容字段
+        local rawenglish_start = seg_start + #input - #rawenglish_content - 1 -- 添加seg_start偏移，包含英文模式符号
         table.insert(segments, {
             type = "rawenglish_combo",
             content = processed_content,
-            original = "`" .. rawenglish_content,
+            original = text_splitter.english_mode_symbol .. rawenglish_content,
             start = rawenglish_start,
             _end = seg_start + #input, -- 添加seg_start偏移，开区间，到字符串末尾
             length = #rawenglish_content + 1
@@ -747,7 +760,7 @@ end
 -- 带日志记录和分隔符的版本
 function text_splitter.split_and_convert_input_with_log_and_delimiter(input, logger, rawenglish_delimiter_before,
     rawenglish_delimiter_after, replace_punct_enabled)
-    logger.info("开始处理输入: " .. input .. "，反引号分隔符: '" .. (rawenglish_delimiter_before or "") ..
+    logger.info("开始处理输入: " .. input .. "，英文模式符号分隔符: '" .. (rawenglish_delimiter_before or "") ..
                     "' '" .. (rawenglish_delimiter_after or "") .. "'")
     logger.info("标点符号替换开关: " .. tostring(replace_punct_enabled or false))
 
@@ -778,13 +791,13 @@ function text_splitter.split_by_rawenglish_with_log(input, seg_start, seg_end, d
     return segments
 end
 
--- 搜索功能 - 跳过反引号包围的部分, 我自己的版本
+-- 搜索功能 - 跳过英文模式符号包围的部分, 我自己的版本
 function text_splitter.find_text_skip_rawenglishs(input, search_str, start_pos, logger)
 
-    --[[  1. 首先判断是否存在反引号，如果不存在，就使用原来的搜索方式: local found_pos = string.find(confirmed_pos_input, add_search_move_str, search_start_pos, true)
-    2. 首先找出字符串中所有反引号包裹的范围, 记录下反引号的索引范围.
-    2.  如果存在反引号, 首先使用string.find搜索第一个符合字符串位置, 得到光标位置, 判断是否处于反引号范围当中, 如果处于反引号当中, 则从搜索到的光标位置继续向后搜索. 
-    3. 如果不处于反引号当中,则返回对应索引值.
+    --[[  1. 首先判断是否存在英文模式符号，如果不存在，就使用原来的搜索方式: local found_pos = string.find(confirmed_pos_input, add_search_move_str, search_start_pos, true)
+    2. 首先找出字符串中所有英文模式符号包裹的范围, 记录下英文模式符号的索引范围.
+    2.  如果存在英文模式符号, 首先使用string.find搜索第一个符合字符串位置, 得到光标位置, 判断是否处于英文模式符号范围当中, 如果处于英文模式符号当中, 则从搜索到的光标位置继续向后搜索. 
+    3. 如果不处于英文模式符号当中,则返回对应索引值.
     ]]
 
     start_pos = start_pos or 1
@@ -792,9 +805,9 @@ function text_splitter.find_text_skip_rawenglishs(input, search_str, start_pos, 
     logger.info(string.format("开始搜索: 输入='%s', 搜索字符串='%s', 起始位置=%d", input, search_str,
         start_pos))
 
-    -- 1. 首先判断是否存在反引号，如果不存在，就使用原来的搜索方式
-    if not string.find(input, "`") then
-        logger.info("未发现反引号，使用原来的搜索方式")
+    -- 1. 首先判断是否存在英文模式符号，如果不存在，就使用原来的搜索方式
+    if not string.find(input, text_splitter.english_mode_symbol) then
+        logger.info("未发现英文模式符号，使用原来的搜索方式")
         local found_pos = string.find(input, search_str, start_pos, true)
         if found_pos then
             logger.info(string.format("找到匹配: 位置=%d", found_pos))
@@ -804,7 +817,7 @@ function text_splitter.find_text_skip_rawenglishs(input, search_str, start_pos, 
         return found_pos
     end
 
-    -- 2&3. 如果存在反引号，使用string.find搜索，但跳过反引号区域
+    -- 2&3. 如果存在英文模式符号，使用string.find搜索，但跳过英文模式符号区域
     local current_search_pos = start_pos
 
     while current_search_pos <= #input do
@@ -819,14 +832,14 @@ function text_splitter.find_text_skip_rawenglishs(input, search_str, start_pos, 
 
         logger.info(string.format("string.find找到候选位置: %d", found_pos))
 
-        -- 判断是否处于反引号范围当中
+        -- 判断是否处于英文模式符号范围当中
         if not text_splitter.if_in_rawenglish(input, found_pos) then
-            -- 如果不处于反引号当中，返回对应索引值
+            -- 如果不处于英文模式符号当中，返回对应索引值
             logger.info(string.format("找到有效匹配: 位置=%d", found_pos))
             return found_pos
         else
-            -- 如果处于反引号当中，则从搜索到的光标位置继续向后搜索
-            logger.info(string.format("位置%d处于反引号区域内，继续搜索", found_pos))
+            -- 如果处于英文模式符号当中，则从搜索到的光标位置继续向后搜索
+            logger.info(string.format("位置%d处于英文模式符号区域内，继续搜索", found_pos))
             current_search_pos = found_pos + 1
         end
     end
@@ -859,28 +872,28 @@ function text_splitter.find_text_skip_rawenglishs_with_wrap(input, search_str, s
     return nil
 end
 
--- 函数功能：给字符串，和索引值，然后判断索引值是否在反引号范围之内，如果在，返回真，如果不在返回假
+-- 函数功能：给字符串，和索引值，然后判断索引值是否在英文模式符号范围之内，如果在，返回真，如果不在返回假
 function text_splitter.if_in_rawenglish(input, pos)
     if not input or not pos or pos <= 0 or pos > #input then
         return false
     end
 
-    -- 解析反引号区域
+    -- 解析英文模式符号区域
     local rawenglish_regions = {}
     local in_rawenglish = false
     local rawenglish_start = nil
     local rawenglish_count = 0
 
-    -- 统计反引号数量和位置
+    -- 统计英文模式符号数量和位置
     for i = 1, #input do
-        if input:sub(i, i) == "`" then
+        if input:sub(i, i) == text_splitter.english_mode_symbol then
             rawenglish_count = rawenglish_count + 1
             if not in_rawenglish then
-                -- 开始反引号区域
+                -- 开始英文模式符号区域
                 rawenglish_start = i
                 in_rawenglish = true
             else
-                -- 结束反引号区域
+                -- 结束英文模式符号区域
                 table.insert(rawenglish_regions, {
                     start = rawenglish_start,
                     _end = i
@@ -891,7 +904,7 @@ function text_splitter.if_in_rawenglish(input, pos)
         end
     end
 
-    -- 如果有未配对的反引号（奇数个），最后一个反引号到末尾都跳过
+    -- 如果有未配对的英文模式符号（奇数个），最后一个英文模式符号到末尾都跳过
     if rawenglish_count % 2 == 1 and rawenglish_start then
         table.insert(rawenglish_regions, {
             start = rawenglish_start,
@@ -899,7 +912,7 @@ function text_splitter.if_in_rawenglish(input, pos)
         })
     end
 
-    -- 检查位置是否在反引号区域内
+    -- 检查位置是否在英文模式符号区域内
     for _, region in ipairs(rawenglish_regions) do
         if pos >= region.start and pos <= region._end then
             return true

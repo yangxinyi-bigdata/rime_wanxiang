@@ -59,13 +59,83 @@ local function test_extract_leading_chinese()
     print("测试完成")
 end
 
+-- 英文标点符号到中文标点符号的映射表
+local punct_map = {
+    [","] = "，", -- 逗号
+    ["."] = "。", -- 句号
+    ["?"] = "？", -- 问号  
+    ["!"] = "！", -- 感叹号
+    [":"] = "：", -- 冒号
+    [";"] = "；", -- 分号
+    ["("] = "（", -- 左括号
+    [")"] = "）", -- 右括号
+    -- ["["] = "【",    -- 左方括号
+    -- ["]"] = "】",    -- 右方括号
+    ["{"] = "｛", -- 左花括号
+    ["}"] = "｝", -- 右花括号
+    ["<"] = "《", -- 左书名号
+    [">"] = "》" -- 右书名号
+}
+
+-- 成对引号的映射表
+local quote_map = {
+    ["\""] = {"“", "”"}, -- 双引号：前引号、后引号
+    ["'"] = {"‘", "’"} -- 单引号：前引号、后引号
+}
+
 -- 执行测试
 test_extract_leading_chinese()
 
 
-local select_key_index = string.find("12345", "1", 1, true)
-print(select_key_index)
+local function replace_quotes(text)
 
-local current_start_input = "nihk`,'\""
-local _, rawenglish_count = current_start_input:gsub("`", "")
-print(rawenglish_count)
+    local result = text
+
+    -- 处理双引号
+    local double_quote_open = true -- 跟踪双引号状态，true表示下一个是开引号
+    result = result:gsub("\"", function()
+        if double_quote_open then
+            double_quote_open = false
+            return "“" -- 前引号
+        else
+            double_quote_open = true
+            return "”" -- 后引号
+        end
+    end)
+
+    -- -- 处理单引号, 因为单引号是音节分隔符, 所以这里不能使用单引号. 
+    -- local single_quote_open = true  -- 跟踪单引号状态，true表示下一个是开引号
+    -- result = result:gsub("'", function()
+    --     if single_quote_open then
+    --         single_quote_open = false
+    --         return "‘"  -- 前引号
+    --     else
+    --         single_quote_open = true
+    --         return "’"  -- 后引号
+    --     end
+    -- end)
+
+    return result
+end
+
+-- 标点符号替换函数
+local function replace_punct(text)
+    if not text or text == "" then
+        return text
+    end
+
+    local result = text
+
+    -- 先处理成对引号
+    result = replace_quotes(result)
+
+    -- 再处理其他标点符号
+    for eng_punct, chn_punct in pairs(punct_map) do
+        result = result:gsub(eng_punct:gsub("([%(%)%.%+%-%*%?%[%]%^%$%%])", "%%%1"), chn_punct)
+    end
+
+    return result
+end
+
+
+print(replace_punct("你好\"我\""))

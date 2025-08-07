@@ -10,6 +10,9 @@ local logger = logger_module.create("rawenglish_segment", {
     log_level = "DEBUG"
 })
 
+-- 初始化时清空日志文件
+logger.clear()
+
 local segmentor = {}
 segmentor.english_mode_symbol = "`"  -- 默认值
 
@@ -24,8 +27,6 @@ function segmentor.update_current_config(config)
 end
 
 function segmentor.init(env)
-    logger.clear()
-    
     -- 配置更新由 cloud_input_processor 统一管理，无需在此处调用
     local config = env.engine.schema.config
     logger.info("等待 cloud_input_processor 统一更新配置")
@@ -42,6 +43,7 @@ function segmentor.func(segmentation, env)
     logger.info(">>> 新的分词处理 <<<")
     logger.info("输入文本: '" .. input .. "'")
     logger.info("输入整个input长度: " .. #input)
+
 
     local current_start = segmentation:get_current_start_position()
     local current_end = segmentation:get_current_end_position()
@@ -70,6 +72,8 @@ function segmentor.func(segmentation, env)
 
         -- 删除当前的segment
         local last_segment = segmentation:back()
+        logger.debug("刚进入时的segmentation:")
+        debug_utils.print_segmentation_info(segmentation, logger)
         segmentation:pop_back()
 
         -- 添加反引号片段的segment
@@ -82,7 +86,18 @@ function segmentor.func(segmentation, env)
                             (current_start + rawenglish_length) .. ")")
 
             -- 完成分割后直接返回，不继续后续处理
-            logger.info("反引号片段分割完成，跳过后续处理")
+            local left_segment = Segment(current_start + rawenglish_length, current_end)
+            left_segment.tags = Set {"abc"}
+            segmentation:forward()
+            if segmentation:add_segment(left_segment) then
+                logger.info("成功将剩余片段添加为abc segment (start: " .. current_start + rawenglish_length .. ", end: " ..
+                            (current_end) .. ")")
+
+                debug_utils.print_segmentation_info(segmentation, logger)
+            else
+                logger.error("无法将剩余片段添加为abc")
+            end
+
             return false
         else
             logger.error("无法添加反引号片段segment")

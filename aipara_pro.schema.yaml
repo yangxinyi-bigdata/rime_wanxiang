@@ -142,8 +142,7 @@ engine:
     - simplifier@s2hk                               #简繁切换港繁
     - simplifier@chinese_english                    #中英翻译滤镜
     - lua_filter@*text_formatting                   #给自定义用户词扩展一个换行:\n, 制表符：\t, 回车符：\r, 空格：\s
-    # - lua_filter@*baidu_filter                      #百度云输入法API调用，支持百度云输入法的候选词获取
-    # - lua_filter@*aux_code_filter_v3                #辅助码处理器，读取txt文件，匹配输入的最后三个字母，返回候选词
+    - lua_filter@*aux_code_filter_v3                #辅助码处理器，读取txt文件，匹配输入的最后三个字母，返回候选词
     - lua_filter@*cloud_ai_filter_v2                 #AI大模型转换的候选词
     - lua_filter@*punct_eng_chinese_filter          # 将候选项当中的英文标点转换为中文标点
     - uniquifier                                    #去重
@@ -284,6 +283,7 @@ translator:
 #    - "^[a-z]{1,6}"    #基本的6码3字不调频
   enable_correction: false #是否开启自动纠错
   initial_quality: 3       # 初始质量拼音的权重应该比英文大
+  cloud_convert_symbol: "Shift+Return"  # 云输入符号转换，按下 Shift+Return 键触发
   english_mode_symbol: "`"  # 英文模式下的符号
   rawenglish_delimiter_before: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
   rawenglish_delimiter_after: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
@@ -465,7 +465,7 @@ editor:
     space: confirm                         # 空格键：上屏候选项
     Return: commit_raw_input               # 回车键：上屏原始输入
     # Super+Return: commit_raw_input        # Super+回车键：上屏原始输入
-    Shift+Return: commit_raw_input       # Shift+回车键：上屏脚 
+    # Shift+Return: commit_raw_input       # Shift+回车键：上屏脚 
     Control+Return: commit_script_text     # Ctrl+回车键：上屏变换后输入（经过 preedit转换的）
     Control+Shift+Return: commit_comment   # Ctrl+Shift+回车键：上屏 comment
     BackSpace: revert                      # 退格键：向前删除（撤消上次输入）

@@ -9,10 +9,12 @@ local debug_utils = require("debug_utils")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("aux_code_filter_v3", {
-    enabled = false, -- 启用日志以便测试
+    enabled = true, -- 启用日志以便测试
     unique_file_log = false, -- 启用日志以便测试
     log_level = "DEBUG"
 })
+-- 清空日志文件
+logger.clear()
 
 local aux_code_filter = {}
 local last_segment_input = ""
@@ -31,6 +33,7 @@ function aux_code_filter.update_current_config(config)
     aux_code_filter.single_fuzhu = config:get_bool("aux_code/single_fuzhu") or false
     aux_code_filter.fuzhu_mode = config:get_string("aux_code/fuzhu_mode") or ""
     aux_code_filter.shuangpin_zrm_txt = config:get_string("aux_code/shuangpin_zrm_txt") or ""
+    aux_code_filter.english_mode_symbol = config:get_string("translator/english_mode_symbol") or ""
     
     logger.info("single_fuzhu: " .. tostring(aux_code_filter.single_fuzhu))
     logger.info("fuzhu_mode: " .. aux_code_filter.fuzhu_mode)
@@ -44,15 +47,11 @@ end
 
 function aux_code_filter.init(env)
 
-    logger.clear()
     logger.info("aux_code_filter_v3 init")
     logger.info("=" .. string.rep("=", 60))
 
     local engine = env.engine
-    local config = engine.schema.config
-
-    -- 配置更新由 cloud_input_processor 统一管理，无需在此处调用
-    logger.info("等待 cloud_input_processor 统一更新配置")
+    local context = engine.context
 
     ----------------------------
     -- 每一次选词上屏, 判断aux_code_filter.set_fuzhuma的值, 如果存在辅助码就把辅助码删除掉 --
@@ -296,12 +295,22 @@ function aux_code_filter.func(translation, env)
         return
     end
 
-    local has_rawenglish = segmente_input:match("`") ~= nil
+    local has_rawenglish = segmente_input:match(aux_code_filter.english_mode_symbol) ~= nil
     if has_rawenglish then
-        -- 将segmente_input中的反引号``包裹的片段删除
-        segmente_input = segmente_input:gsub("`[^`]*`", "")
-        logger.debug("删除反引号包裹片段后的segmente_input: " .. segmente_input)
-        -- -- 如果删除反引号片段之后,只剩下一个字母, 不应该触发删除辅助码
+        -- 将segmente_input中的英文模式符号包裹的片段删除
+        -- 首先处理配对的英文模式符号
+        local pattern = aux_code_filter.english_mode_symbol .. "[^" .. aux_code_filter.english_mode_symbol .. "]*" .. aux_code_filter.english_mode_symbol
+        segmente_input = segmente_input:gsub(pattern, "")
+        
+        -- 然后处理未配对的英文模式符号（从最后一个英文模式符号开始到末尾）
+        local last_symbol_pos = segmente_input:match(".*" .. aux_code_filter.english_mode_symbol .. "()")
+        if last_symbol_pos then
+            -- 如果还有未配对的英文模式符号，移除从该位置开始的所有内容
+            segmente_input = segmente_input:sub(1, last_symbol_pos - 2)
+        end
+        
+        logger.debug("删除英文模式符号包裹片段后的segmente_input: " .. segmente_input)
+        -- -- 如果删除英文模式符号片段之后,只剩下一个字母, 不应该触发删除辅助码
         -- aux_code_filter.set_fuzhuma = false
     end
 
