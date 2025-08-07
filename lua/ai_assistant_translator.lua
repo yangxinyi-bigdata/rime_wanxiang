@@ -38,30 +38,24 @@ else
     end
 end
 
--- 配置缓存机制
-local config_cache = {}
-local last_schema_id = nil
+-- 模块级配置缓存
+local translator = {}
+translator.reply_tags = {}
+translator.chat_triggers = {}
+translator.reply_messages_preedit = {}
+translator.chat_names = {}
+translator.tag_to_trigger = {}
 
--- 读取配置的辅助函数
-local function load_ai_config(env)
-    local schema = env.engine.schema
-    local config = schema.config
-    local schema_id = schema.schema_id
+-- 配置更新函数
+function translator.update_current_config(config)
+    logger.info("开始更新ai_assistant_translator模块配置")
     
-    -- 如果schema没有变化且已有缓存，直接使用缓存
-    if last_schema_id == schema_id and config_cache.ai_assistant_config then
-        logger.info("使用缓存的AI助手配置 (schema: " .. schema_id .. ")")
-        return config_cache.ai_assistant_config
-    end
-    
-    logger.info("重新加载AI助手配置 (schema: " .. schema_id .. ")")
-    
-    -- 读取AI助手配置
-    local ai_assistant_config = {}
-    ai_assistant_config.reply_tags = {}
-    ai_assistant_config.chat_triggers = {}
-    ai_assistant_config.reply_messages_preedit = {}
-    ai_assistant_config.chat_names = {}
+    -- 重新初始化所有配置表
+    translator.reply_tags = {}
+    translator.chat_triggers = {}
+    translator.reply_messages_preedit = {}
+    translator.chat_names = {}
+    translator.tag_to_trigger = {}
     
     -- 动态读取 chat_triggers 配置
     local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
@@ -77,24 +71,24 @@ local function load_ai_config(env)
             local chat_name = config:get_string("ai_assistant/chat_names/" .. trigger_name)
             
             if trigger_value then
-                ai_assistant_config.chat_triggers[trigger_name] = trigger_value
+                translator.chat_triggers[trigger_name] = trigger_value
                 logger.info("AI触发器 - " .. trigger_name .. ": " .. trigger_value)
             end
         
             
             if reply_message_preedit then
-                ai_assistant_config.reply_messages_preedit[trigger_name] = reply_message_preedit
+                translator.reply_messages_preedit[trigger_name] = reply_message_preedit
                 logger.info("AI回复预编辑消息 - " .. trigger_name .. ": " .. reply_message_preedit)
             end
             
             if chat_name then
-                ai_assistant_config.chat_names[trigger_name] = chat_name
+                translator.chat_names[trigger_name] = chat_name
                 logger.info("AI聊天名称 - " .. trigger_name .. ": " .. chat_name)
             end
             
             -- 动态生成回复标签（触发器名称 + "_reply"）
             local reply_tag = trigger_name .. "_reply"
-            ai_assistant_config.reply_tags[trigger_name] = reply_tag
+            translator.reply_tags[trigger_name] = reply_tag
             logger.info("动态生成AI回复标签 - " .. trigger_name .. ": " .. reply_tag)
         end
     else
@@ -102,26 +96,20 @@ local function load_ai_config(env)
     end
     
     -- 创建标签到触发器的反向映射
-    ai_assistant_config.tag_to_trigger = {}
-    for trigger, tag in pairs(ai_assistant_config.reply_tags) do
-        ai_assistant_config.tag_to_trigger[tag] = trigger
+    for trigger, tag in pairs(translator.reply_tags) do
+        translator.tag_to_trigger[tag] = trigger
     end
     
-    -- 缓存配置
-    config_cache.ai_assistant_config = ai_assistant_config
-    last_schema_id = schema_id
-    
-    return ai_assistant_config
+    logger.info("ai_assistant_translator模块配置更新完成")
 end
-
-local translator = {}
 
 function translator.init(env)
     -- logger.clear()
     logger.info("AI对话翻译器初始化完成")
 
-    -- 使用配置加载函数
-    env.ai_assistant_config = load_ai_config(env)
+    -- 配置更新由 cloud_input_processor 统一管理，无需在此处调用
+    local config = env.engine.schema.config
+    logger.info("等待 cloud_input_processor 统一更新配置")
 
     local engine = env.engine
     local context = engine.context
@@ -213,15 +201,15 @@ function translator.func(input, segment, env)
     local is_prefix_display = false
     
     -- 检查所有配置的AI触发器标签
-    if env.ai_assistant_config and env.ai_assistant_config.chat_triggers then
+    if translator.chat_triggers then
 
-        for trigger_name, trigger_prefix in pairs(env.ai_assistant_config.chat_triggers) do
+        for trigger_name, trigger_prefix in pairs(translator.chat_triggers) do
             if segment:has_tag(trigger_name) then
                 matched_reply_tag = trigger_name
                 matched_trigger = trigger_name
                 is_prefix_display = true  -- 这是前缀显示
                 -- 从配置中获取聊天名称，如果没有则使用触发器前缀
-                reply_message = env.ai_assistant_config.chat_names[trigger_name] or (trigger_prefix .. " AI助手")
+                reply_message = translator.chat_names[trigger_name] or (trigger_prefix .. " AI助手")
                 logger.info("检测到AI触发器标签: " .. trigger_name .. " (前缀显示)")
                 break
             end
@@ -229,14 +217,14 @@ function translator.func(input, segment, env)
     end
     
     -- 检查所有配置的AI回复标签
-    if not matched_reply_tag and env.ai_assistant_config and env.ai_assistant_config.tag_to_trigger then
-        for tag, trigger in pairs(env.ai_assistant_config.tag_to_trigger) do
+    if not matched_reply_tag and translator.tag_to_trigger then
+        for tag, trigger in pairs(translator.tag_to_trigger) do
             if segment:has_tag(tag) then
                 matched_reply_tag = tag
                 matched_trigger = trigger
                 is_prefix_display = false  -- 这是回复显示
                 -- 从配置中获取回复预编辑消息
-                reply_message = env.ai_assistant_config.reply_messages_preedit[trigger] or "AI助手:"
+                reply_message = translator.reply_messages_preedit[trigger] or "AI助手:"
                 logger.info("检测到AI回复标签: " .. tag .. " (触发器: " .. trigger .. ")")
                 break
             end
@@ -349,8 +337,8 @@ function translator.func(input, segment, env)
     -- candidate.comment = "〔" .. reply_message:gsub("[:：]", "") .. "〕"
     
     -- 为AI回复候选词设置 preedit（使用 reply_messages_preedit 配置）
-    if env.ai_assistant_config.reply_messages_preedit[matched_trigger] then
-        candidate.preedit = env.ai_assistant_config.reply_messages_preedit[matched_trigger]
+    if translator.reply_messages_preedit[matched_trigger] then
+        candidate.preedit = translator.reply_messages_preedit[matched_trigger]
         logger.info("为AI回复设置预编辑文本: " .. candidate.preedit)
     end
     

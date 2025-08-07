@@ -28,7 +28,7 @@ chinese_pos:1,4,7,10,
 ## 创建过程
 
 ### 1. 数据生成位置
-**文件**: `lua/script_backtick_translator.lua`
+**文件**: `lua/script_rawenglish_translator.lua`
 
 ### 2. 生成逻辑
 ```lua
@@ -59,7 +59,7 @@ end
 ### 4. 存储方式
 生成的 `chinese_pos` 字符串被存储在候选词的 `comment` 字段中：
 ```lua
-local new_cand = Candidate("backtick_combo", segment.start, segment._end, final_text, chinese_pos)
+local new_cand = Candidate("rawenglish_combo", segment.start, segment._end, final_text, chinese_pos)
 ```
 
 ## 使用过程
@@ -172,7 +172,7 @@ end
 
 ## 相关文件
 
-- **创建**: `lua/script_backtick_translator.lua`
+- **创建**: `lua/script_rawenglish_translator.lua`
 - **使用**: `lua/punct_eng_chinese_filter.lua`
 - **工具**: `lua/text_splitter.lua`
 - **日志**: `log/` 目录下的相关日志文件

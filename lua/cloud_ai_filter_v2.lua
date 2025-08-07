@@ -48,10 +48,6 @@ else
     end
 end
 
--- 配置缓存机制
-local config_cache = {}
-local last_schema_id = nil
-
 -- 云输入结果缓存机制
 local cloud_result_cache = {
     last_input = "", -- 上次输入的内容
@@ -61,44 +57,31 @@ local cloud_result_cache = {
     cache_timeout = 60 -- 缓存有效期（秒）
 }
 
--- 读取AI助手配置的辅助函数
-local function load_ai_config(env)
-    local schema = env.engine.schema
-    local config = schema.config
-    local schema_id = schema.schema_id
+-- 模块级配置缓存
+local cloud_ai_filter = {}
+cloud_ai_filter.behavior = {}
+cloud_ai_filter.chat_triggers = {}
+cloud_ai_filter.chat_names = {}
+cloud_ai_filter.schema_name = ""
+cloud_ai_filter.shuru_schema = ""
+cloud_ai_filter.max_cloud_candidates = 2
+cloud_ai_filter.max_ai_candidates = 1
+cloud_ai_filter.delimiter = " "
+cloud_ai_filter.rawenglish_delimiter_before = ""
+cloud_ai_filter.rawenglish_delimiter_after = ""
+cloud_ai_filter.ziranma_mapping_config = nil
 
-    -- 如果schema没有变化且已有缓存，直接使用缓存并应用配置
-    if last_schema_id == schema_id and config_cache.ai_assistant_config then
-        logger.info("使用缓存的AI助手配置 (schema: " .. schema_id .. ")")
-        local ai_assistant_config = config_cache.ai_assistant_config
-
-        -- 应用配置到环境变量
-        env.schema_name = ai_assistant_config.schema_name
-        env.shuru_schema = ai_assistant_config.shuru_schema
-        env.max_cloud_candidates = ai_assistant_config.max_cloud_candidates
-        env.max_ai_candidates = ai_assistant_config.max_ai_candidates
-
-        -- 将全局变量也保存到env中
-        env.ziranma_mapping_config = ai_assistant_config.ziranma_mapping_config
-        env.backtick_delimiter_before = ai_assistant_config.backtick_delimiter_before
-        env.backtick_delimiter_after = ai_assistant_config.backtick_delimiter_after
-        env.delimiter = ai_assistant_config.delimiter
-
-        return ai_assistant_config
-    end
-
-    logger.info("重新加载AI助手配置 (schema: " .. schema_id .. ")")
-
-    -- 读取 ai_assistant 配置
-    local ai_assistant_config = {}
-
+-- 配置更新函数
+function cloud_ai_filter.update_current_config(config)
+    logger.info("开始更新cloud_ai_filter_v2模块配置")
+    
     -- 读取 behavior 配置
-    ai_assistant_config.behavior = {}
-    ai_assistant_config.behavior.prompt_chat = config:get_string("ai_assistant/behavior/prompt_chat")
+    cloud_ai_filter.behavior = {}
+    cloud_ai_filter.behavior.prompt_chat = config:get_string("ai_assistant/behavior/prompt_chat")
 
-    -- 动态读取 chat_triggers 配置
-    ai_assistant_config.chat_triggers = {}
-    ai_assistant_config.chat_names = {}
+    -- 重新初始化配置表
+    cloud_ai_filter.chat_triggers = {}
+    cloud_ai_filter.chat_names = {}
 
     -- 获取 chat_triggers 配置项
     local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
@@ -113,12 +96,12 @@ local function load_ai_config(env)
             local chat_name = config:get_string("ai_assistant/chat_names/" .. trigger_name)
 
             if trigger_value then
-                ai_assistant_config.chat_triggers[trigger_name] = trigger_value
+                cloud_ai_filter.chat_triggers[trigger_name] = trigger_value
                 logger.info("AI触发器 - " .. trigger_name .. ": " .. trigger_value)
             end
 
             if chat_name then
-                ai_assistant_config.chat_names[trigger_name] = chat_name
+                cloud_ai_filter.chat_names[trigger_name] = chat_name
                 logger.info("AI聊天名称 - " .. trigger_name .. ": " .. chat_name)
             end
         end
@@ -126,48 +109,29 @@ local function load_ai_config(env)
         logger.warning("未找到 chat_triggers 配置")
     end
 
-    -- 读取其他配置项并添加到ai_assistant_config中
-    ai_assistant_config.schema_name = env.engine.schema.schema_name
-    ai_assistant_config.shuru_schema = config:get_string("schema/my_shuru_schema") or ""
+    -- 读取其他配置项
+    cloud_ai_filter.shuru_schema = config:get_string("schema/my_shuru_schema") or ""
 
     -- 读取候选词数量限制配置
-    ai_assistant_config.max_cloud_candidates = config:get_int("cloud_ai_filter/max_cloud_candidates") or 2
-    ai_assistant_config.max_ai_candidates = config:get_int("cloud_ai_filter/max_ai_candidates") or 1
+    cloud_ai_filter.max_cloud_candidates = config:get_int("cloud_ai_filter/max_cloud_candidates") or 2
+    cloud_ai_filter.max_ai_candidates = config:get_int("cloud_ai_filter/max_ai_candidates") or 1
 
     -- 读取分隔符配置
-    ai_assistant_config.delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
+    cloud_ai_filter.delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
 
     -- 读取反引号分隔符配置
-    ai_assistant_config.backtick_delimiter_before = config:get_string("translator/backtick_delimiter_before") or ""
-    ai_assistant_config.backtick_delimiter_after = config:get_string("translator/backtick_delimiter_after") or ""
+    cloud_ai_filter.rawenglish_delimiter_before = config:get_string("cloud_ai_filter/rawenglish_delimiter_before") or ""
+    cloud_ai_filter.rawenglish_delimiter_after = config:get_string("cloud_ai_filter/rawenglish_delimiter_after") or ""
 
     -- 加载自然码映射表
-    ai_assistant_config.ziranma_mapping_config = config:get_map("speller/ziranma_to_quanpin")
+    cloud_ai_filter.ziranma_mapping_config = config:get_map("speller/ziranma_to_quanpin")
 
-    logger.info("云候选词最大数量: " .. ai_assistant_config.max_cloud_candidates)
-    logger.info("AI候选词最大数量: " .. ai_assistant_config.max_ai_candidates)
-    logger.info("当前分隔符: " .. ai_assistant_config.delimiter)
-
-    -- 应用配置到环境变量
-    env.schema_name = ai_assistant_config.schema_name
-    env.shuru_schema = ai_assistant_config.shuru_schema
-    env.max_cloud_candidates = ai_assistant_config.max_cloud_candidates
-    env.max_ai_candidates = ai_assistant_config.max_ai_candidates
-
-    -- 将全局变量也保存到env中
-    env.ziranma_mapping_config = ai_assistant_config.ziranma_mapping_config
-    env.backtick_delimiter_before = ai_assistant_config.backtick_delimiter_before
-    env.backtick_delimiter_after = ai_assistant_config.backtick_delimiter_after
-    env.delimiter = ai_assistant_config.delimiter
-
-    -- 缓存配置
-    config_cache.ai_assistant_config = ai_assistant_config
-    last_schema_id = schema_id
-
-    return ai_assistant_config
+    logger.info("云候选词最大数量: " .. cloud_ai_filter.max_cloud_candidates)
+    logger.info("AI候选词最大数量: " .. cloud_ai_filter.max_ai_candidates)
+    logger.info("当前分隔符: " .. cloud_ai_filter.delimiter)
+    
+    logger.info("cloud_ai_filter_v2模块配置更新完成")
 end
-
-local translator = {}
 
 local replace_punct_enabled = false
 
@@ -249,13 +213,15 @@ local function set_cloud_convert_flag(cand, context, delimiter)
     end
 end
 
-function translator.init(env)
+function cloud_ai_filter.init(env)
     -- 初始化时清空日志文件
     logger.clear()
     logger.info("云输入处理器初始化完成")
 
-    -- 使用配置加载函数加载AI助手配置（配置会自动应用到env中）
-    env.ai_assistant_config = load_ai_config(env)
+    -- 获取 schema 信息，配置更新由 cloud_input_processor 统一管理
+    local config = env.engine.schema.config
+    cloud_ai_filter.schema_name = env.engine.schema.schema_name
+    logger.info("等待 cloud_input_processor 统一更新配置")
 
     -- 清空云输入结果缓存
     clear_cloud_result_cache()
@@ -263,7 +229,7 @@ function translator.init(env)
     logger.info("AI助手配置加载完成")
 end
 
-function translator.func(translation, env)
+function cloud_ai_filter.func(translation, env)
     local engine = env.engine
     local context = engine.context
     local input = context.input
@@ -320,12 +286,12 @@ function translator.func(translation, env)
 
         -- 生成prompt_triggers列表，与ai_assistant_segmentor.lua中的逻辑一致
         local prompt_triggers = {}
-        if env.ai_assistant_config and env.ai_assistant_config.behavior and env.ai_assistant_config.chat_triggers then
-            local prompt_chat = env.ai_assistant_config.behavior.prompt_chat
+        if cloud_ai_filter.behavior and cloud_ai_filter.chat_triggers then
+            local prompt_chat = cloud_ai_filter.behavior.prompt_chat
             if prompt_chat then
-                for trigger_name, trigger_prefix in pairs(env.ai_assistant_config.chat_triggers) do
+                for trigger_name, trigger_prefix in pairs(cloud_ai_filter.chat_triggers) do
                     if trigger_prefix:sub(1, 1) == prompt_chat then
-                        local chat_name = env.ai_assistant_config.chat_names[trigger_name]
+                        local chat_name = cloud_ai_filter.chat_names[trigger_name]
                         if chat_name then
                             local chat_name_clear = chat_name:gsub(":$", "")
                             table.insert(prompt_triggers, trigger_prefix .. chat_name_clear)
@@ -430,7 +396,7 @@ function translator.func(translation, env)
         logger.info("not cloud_convert, get_cloud_stream ~= true")
         -- 查看有没有云翻译的标识, 没有的话直接返回原有的候选词
         yield(first_original_cand) -- 输出原有第一个候选词
-        set_cloud_convert_flag(first_original_cand, context, env.delimiter)
+        set_cloud_convert_flag(first_original_cand, context, cloud_ai_filter.delimiter)
         for cand in translation:iter() do
             yield(cand) -- 输出原有候选词
         end
@@ -461,7 +427,7 @@ function translator.func(translation, env)
             logger.info("根据segment切片得到 segment_input: " .. segment_input)
 
             -- 发送翻译请求（异步，不等待响应）
-            local send_success = tcp_socket.send_convert_request(env.schema_name, env.shuru_schema, segment_input,
+            local send_success = tcp_socket.send_convert_request(cloud_ai_filter.schema_name, cloud_ai_filter.shuru_schema, segment_input,
                 long_candidates_table)
             if send_success then
                 logger.info("云输入翻译请求发送成功，开始流式获取结果")
@@ -509,10 +475,10 @@ function translator.func(translation, env)
                 -- 处理云输入结果数据，构建候选词
                 if parsed_data.cloud_candidates then
                     for i, cloud_cand in ipairs(parsed_data.cloud_candidates) do
-                        if i <= env.max_cloud_candidates then
+                        if i <= cloud_ai_filter.max_cloud_candidates then
                             local candidate = Candidate("baidu_cloud", segment._start, segment._end,
                                 cloud_cand.value or cloud_cand, "")
-                            candidate.quality = 900 + (env.max_cloud_candidates - i + 1) * 10
+                            candidate.quality = 900 + (cloud_ai_filter.max_cloud_candidates - i + 1) * 10
                             candidate.preedit = first_original_cand.preedit -- 保持原始预编辑文本
                             table.insert(ordered_candidates, candidate)
                             logger.info("添加云候选词: " .. (cloud_cand.value or cloud_cand))
@@ -522,10 +488,10 @@ function translator.func(translation, env)
 
                 if parsed_data.ai_candidates then
                     for i, ai_cand in ipairs(parsed_data.ai_candidates) do
-                        if i <= env.max_ai_candidates then
+                        if i <= cloud_ai_filter.max_ai_candidates then
                             local candidate =
                                 Candidate("ai_cloud", segment._start, segment._end, ai_cand.value or ai_cand, "")
-                            candidate.quality = 950 + (env.max_ai_candidates - i + 1) * 10
+                            candidate.quality = 950 + (cloud_ai_filter.max_ai_candidates - i + 1) * 10
                             candidate.preedit = first_original_cand.preedit -- 保持原始预编辑文本
                             table.insert(ordered_candidates, candidate)
                             logger.info("添加AI候选词: " .. (ai_cand.value or ai_cand))
@@ -567,10 +533,10 @@ function translator.func(translation, env)
                     -- 使用缓存的云候选词
                     if cached_data.cloud_candidates then
                         for i, cloud_cand in ipairs(cached_data.cloud_candidates) do
-                            if i <= env.max_cloud_candidates then
+                            if i <= cloud_ai_filter.max_cloud_candidates then
                                 local candidate = Candidate("cloud", segment._start, segment._end,
                                     cloud_cand.value or cloud_cand, "")
-                                candidate.quality = 900 + (env.max_cloud_candidates - i + 1) * 10
+                                candidate.quality = 900 + (cloud_ai_filter.max_cloud_candidates - i + 1) * 10
                                 candidate.comment = "☁📦" -- 添加缓存标识
                                 candidate.preedit = first_original_cand.preedit
                                 table.insert(ordered_candidates, candidate)
@@ -582,10 +548,10 @@ function translator.func(translation, env)
                     -- 使用缓存的AI候选词
                     if cached_data.ai_candidates then
                         for i, ai_cand in ipairs(cached_data.ai_candidates) do
-                            if i <= env.max_ai_candidates then
+                            if i <= cloud_ai_filter.max_ai_candidates then
                                 local candidate = Candidate("ai", segment._start, segment._end,
                                     ai_cand.value or ai_cand, "")
-                                candidate.quality = 950 + (env.max_ai_candidates - i + 1) * 10
+                                candidate.quality = 950 + (cloud_ai_filter.max_ai_candidates - i + 1) * 10
                                 candidate.comment = "🤖📦" -- 添加缓存标识
                                 candidate.preedit = first_original_cand.preedit
                                 table.insert(ordered_candidates, candidate)
@@ -648,8 +614,8 @@ function translator.func(translation, env)
 
 end
 
-function translator.fini(env)
+function cloud_ai_filter.fini(env)
     logger.info("云输入处理器结束运行")
 end
 
-return translator
+return cloud_ai_filter

@@ -152,7 +152,7 @@ spans_manager.extract_and_save_from_candidate(context, cand, input, "baidu_filte
 
 spans_manager 使用优先级系统来管理多个脚本的 spans 信息：
 
-1. **script_backtick_translator** - 优先级 1（最高）
+1. **script_rawenglish_translator** - 优先级 1（最高）
 2. **baidu_filter** - 优先级 2
 3. **punct_eng_chinese_filter** - 优先级 3
 4. **unknown** - 优先级 99（最低）

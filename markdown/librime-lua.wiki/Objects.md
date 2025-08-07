@@ -931,31 +931,31 @@ select_keys | string | 选词按键（不一定是数字键，视输入方案而
 
 方法：
 
-方法名 | 参数 | 返回值 | 解释
---- | --- | --- | ---
-load_from_file(file_path) | file_path: string | boolean | 从文件加载配置
-save_to_file(file_path) | file_path: string | boolean | 保存配置到文件
-is_null(conf_path) | conf_path: string | boolean | 检查指定路径的配置项是否为null
-is_value(conf_path) | conf_path: string | boolean | 检查指定路径是否为值类型
-is_list(conf_path) | conf_path: string | boolean | 1. 存在且为 ConfigList 返回 true <br> 2. 存在且不为 ConfigList 返回 false <br> 3. 不存在返回 true ⚠️
-is_map(conf_path) | conf_path: string | boolean | 检查指定路径是否为映射类型
-get_bool(conf_path) | conf_path: string | boolean | 获取布尔值
-get_int(conf_path) | conf_path: string | number | 获取整数值
-get_double(conf_path) | conf_path: string | number | 获取浮点数值
-get_string(conf_path) | conf_path: string | string | 根据配置路径 conf_path 获取配置的字符串值
-set_bool(path, value) | path: string, value: boolean | | 设置布尔值
-set_int(path, value) | path: string, value: number | | 设置整数值
-set_double(path, value) | path: string, value: number | | 设置浮点数值
-set_string(path, str) | path: string, str: string | | 设置字符串值
-get_item(path) | path: string | ConfigItem | 获取配置项
-set_item(path, item) | path: string, item: ConfigItem | | 设置配置项
-get_value(path) | path: string | ConfigValue | 获取配置值
-get_list(conf_path) | conf_path: string | ConfigList | 不存在或不为 ConfigList 时返回 nil
-get_map(conf_path) | conf_path: string | ConfigMap | 不存在或不为 ConfigMap 时返回 nil
-set_value(path, value) | path: string, value: ConfigValue | | 设置配置值
-set_list(path, list) | path: string, list: ConfigList | | 设置列表配置
-set_map(path, map) | path: string, map: ConfigMap | | 设置映射配置
-get_list_size(conf_path) | conf_path: string | number | 获取列表大小
+| 方法名                       | 参数                               | 返回值         | 解释                                                                                 |
+| ------------------------- | -------------------------------- | ----------- | ---------------------------------------------------------------------------------- |
+| load_from_file(file_path) | file_path: string                | boolean     | 从文件加载配置                                                                            |
+| save_to_file(file_path)   | file_path: string                | boolean     | 保存配置到文件                                                                            |
+| is_null(conf_path)        | conf_path: string                | boolean     | 检查指定路径的配置项是否为null                                                                  |
+| is_value(conf_path)       | conf_path: string                | boolean     | 检查指定路径是否为值类型                                                                       |
+| is_list(conf_path)        | conf_path: string                | boolean     | 1. 存在且为 ConfigList 返回 true <br> 2. 存在且不为 ConfigList 返回 false <br> 3. 不存在返回 true ⚠️ |
+| is_map(conf_path)         | conf_path: string                | boolean     | 检查指定路径是否为映射类型                                                                      |
+| get_bool(conf_path)       | conf_path: string                | boolean     | 获取布尔值                                                                              |
+| get_int(conf_path)        | conf_path: string                | number      | 获取整数值                                                                              |
+| get_double(conf_path)     | conf_path: string                | number      | 获取浮点数值                                                                             |
+| get_string(conf_path)     | conf_path: string                | string      | 根据配置路径 conf_path 获取配置的字符串值                                                         |
+| set_bool(path, value)     | path: string, value: boolean     |             | 设置布尔值                                                                              |
+| set_int(path, value)      | path: string, value: number      |             | 设置整数值                                                                              |
+| set_double(path, value)   | path: string, value: number      |             | 设置浮点数值                                                                             |
+| set_string(path, str)     | path: string, str: string        |             | 设置字符串值                                                                             |
+| get_item(path)            | path: string                     | ConfigItem  | 获取配置项                                                                              |
+| set_item(path, item)      | path: string, item: ConfigItem   |             | 设置配置项                                                                              |
+| get_value(path)           | path: string                     | ConfigValue | 获取配置值                                                                              |
+| get_list(conf_path)       | conf_path: string                | ConfigList  | 不存在或不为 ConfigList 时返回 nil                                                          |
+| get_map(conf_path)        | conf_path: string                | ConfigMap   | 不存在或不为 ConfigMap 时返回 nil                                                           |
+| set_value(path, value)    | path: string, value: ConfigValue |             | 设置配置值                                                                              |
+| set_list(path, list)      | path: string, list: ConfigList   |             | 设置列表配置                                                                             |
+| set_map(path, map)        | path: string, map: ConfigMap     |             | 设置映射配置                                                                             |
+| get_list_size(conf_path)  | conf_path: string                | number      | 获取列表大小                                                                             |
 
 ## ConfigMap
 
@@ -969,8 +969,9 @@ element |  | 轉換成ConfigItem
 
 方法：
 
-方法名 | 参数 | 返回值 | 解释
---- | --- | --- | ---
+| 方法名 | 参数  | 返回值 | 解释  |
+| --- | --- | --- | --- |
+|     |     |     |     |
 set
 get(key) | key: string | ConfigItem |
 get_value(key) | key: string | ConfigValue | 

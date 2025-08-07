@@ -21,7 +21,7 @@ local SPANS_TIMESTAMP_KEY = "spans_timestamp"
 
 -- 来源优先级（数字越小优先级越高）
 local SOURCE_PRIORITY = {
-    backtick_translator = 1,
+    rawenglish_translator = 1,
     cloud_ai_filter_v2 = 2,
     baidu_filter = 2,
     punct_eng_chinese_filter = 3,

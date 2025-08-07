@@ -1,6 +1,6 @@
--- lua/backtick_translator.lua
+-- lua/rawenglish_translator.lua
 -- 使用脚本翻译器处理反引号切分输入的translator
--- 通过text_splitter.split_by_backtick函数切分输入，对abc类型片段使用script_translator翻译
+-- 通过text_splitter.split_by_rawenglish函数切分输入，对abc类型片段使用script_translator翻译
 local text_splitter = require("text_splitter")
 local logger_module = require("logger")
 local debug_utils = require("debug_utils")
@@ -8,79 +8,76 @@ local debug_utils = require("debug_utils")
 local spans_manager = require("spans_manager")
 
 -- 创建当前模块的日志记录器
-local logger = logger_module.create("backtick_translator", {
+local logger = logger_module.create("rawenglish_translator", {
     enabled = true, -- 启用日志以便测试
     unique_file_log = false, -- 启用日志以便测试
     log_level = "DEBUG"
 })
 
-local backtick_translator = {}
+local rawenglish_translator = {}
 
-local delimiter = ""
-local backtick_delimiter_before = "" -- 反引号分隔符
-local backtick_delimiter_after = ""
-local replace_punct_enabled = false
+
+-- 实时读取配置的函数
+function rawenglish_translator.update_current_config(config)
+    rawenglish_translator.rawenglish_delimiter_before = config:get_string("translator/rawenglish_delimiter_before")
+    rawenglish_translator.rawenglish_delimiter_after = config:get_string("translator/rawenglish_delimiter_after")
+    rawenglish_translator.delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
+
+    rawenglish_translator.replace_punct_enabled = config:get_bool("translator/replace_punct_enabled") or false
+    rawenglish_translator.single_fuzhu = config:get_bool("aux_code/single_fuzhu") or false
+    rawenglish_translator.fuzhu_mode = config:get_string("aux_code/fuzhu_mode") or ""
+    rawenglish_translator.english_mode_symbol = config:get_string("translator/english_mode_symbol") or "`"
+
+end
 
 -- 只在选词完成后回调, 判断当前输入内容当中, 第一个字符是否反引号,
 -- 如果是反引号片段,则再次发送一次确认，确认当前第一个候选项.
-local function backtick_before(context)
-    -- logger.info("选择通知器: 处理反引号片段自动上屏开始")
-    -- 防止递归
-    if context:get_option("_bt_auto") then
-        return
-    end
-    context:set_option("_bt_auto", true)
+-- local function rawenglish_before(context)
+--     -- logger.info("选择通知器: 处理反引号片段自动上屏开始")
+--     -- 防止递归
+--     if context:get_option("_bt_auto") then
+--         return
+--     end
+--     context:set_option("_bt_auto", true)
 
-    -- 连续确认后续带有 backtick 标记的片段
-    logger.info("选择通知器: 开始处理反引号片段自动上屏")
-    logger.info("context:is_composing(): " .. tostring(context:is_composing()))
-    if context:is_composing() then
-        local composition = context.composition
-        local segment = composition:back() -- 当前光标所在段
-        -- debug_utils.print_segment_info(segment, logger)
+--     -- 连续确认后续带有 rawenglish 标记的片段
+--     logger.info("选择通知器: 开始处理反引号片段自动上屏")
+--     logger.info("context:is_composing(): " .. tostring(context:is_composing()))
+--     if context:is_composing() then
+--         local composition = context.composition
+--         local segment = composition:back() -- 当前光标所在段
+--         -- debug_utils.print_segment_info(segment, logger)
 
-        local input = context.input
-        -- 对input进行切片
-        local segment_input = input:sub(segment.start + 1, segment._end) -- 获取当前段的输入内容
-        logger.info("当前段的输入内容: " .. segment_input)
+--         local input = context.input
+--         -- 对input进行切片
+--         local segment_input = input:sub(segment.start + 1, segment._end) -- 获取当前段的输入内容
+--         logger.info("当前段的输入内容: " .. segment_input)
 
-        -- 检查当前seg对应的input, 是否以反引号开头,如果是以反引号开头,则提取出反引号包裹的范围, 直接确认选择.
-        if segment and segment_input:match("^`") then
-            logger.info("当前段是反引号片段，选择第一个候选项")
-            -- context:commit()
-            if context:confirm_current_selection() then
-                logger.info("确认当前选择成功")
-            else
-                logger.error("确认当前选择失败")
-            end
-        end
-    end
+--         -- 检查当前seg对应的input, 是否以反引号开头,如果是以反引号开头,则提取出反引号包裹的范围, 直接确认选择.
+--         if segment and segment_input:match("^`") then
+--             logger.info("当前段是反引号片段，选择第一个候选项")
+--             -- context:commit()
+--             if context:confirm_current_selection() then
+--                 logger.info("确认当前选择成功")
+--             else
+--                 logger.error("确认当前选择失败")
+--             end
+--         end
+--     end
 
-    context:set_option("_bt_auto", false)
-end
+--     context:set_option("_bt_auto", false)
+-- end
 
-function backtick_translator.init(env)
+function rawenglish_translator.init(env)
     logger.info("脚本反引号翻译器初始化开始")
     -- 清空日志文件
     logger.clear()
 
     local engine = env.engine
-    local config = engine.schema.config
-
-    -- 读取反引号分隔符配置
-    -- 获取输入法引擎和上下文   
     local config = env.engine.schema.config
-    delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
-    logger.info("当前分隔符: " .. delimiter)
-
-    backtick_delimiter_before = config:get_string("translator/backtick_delimiter_before") or ""
-    backtick_delimiter_after = config:get_string("translator/backtick_delimiter_after") or ""
-    replace_punct_enabled = config:get_string("translator/replace_punct_enabled") or false
-    -- logger.info("反引号分隔符设置: '" .. backtick_delimiter_before .. "' '" .. backtick_delimiter_after .. "'")
-
-    env.single_fuzhu = config:get_bool("aux_code/single_fuzhu") or false
-    -- fuzhu_mode : "before"   # 辅助模式有三种: 1.single只当input中有三个字符的时候进行匹配 2. all全部都匹配
-    env.fuzhu_mode = config:get_string("aux_code/fuzhu_mode") or ""
+    rawenglish_translator.update_current_config(config)
+    logger.info("rawenglish_delimiter_before: " .. rawenglish_translator.rawenglish_delimiter_before .. " rawenglish_delimiter_after: " ..
+                    rawenglish_translator.rawenglish_delimiter_after)
 
     -- 创建script_translator组件
     env.script_translator = Component.Translator(engine, "translator", "script_translator")
@@ -101,7 +98,7 @@ function backtick_translator.init(env)
     logger.info("脚本反引号翻译器初始化完成")
 
     -- 监听选词事件
-    engine.context.select_notifier:connect(backtick_before)
+    -- engine.context.select_notifier:connect(rawenglish_before)
 
 end
 
@@ -255,12 +252,14 @@ local function get_candidates(input, seg, env, max_count, allow_fallback)
     return valid_candidates, used_fallback
 end
 
-function backtick_translator.func(input, seg, env)
+function rawenglish_translator.func(input, seg, env)
     local engine = env.engine
     local context = engine.context
     local context_input = context.input
     local config = engine.schema.config
-    local english_mode_symbol = config:get_string("translator/english_mode_symbol")
+
+    logger.info("rawenglish_delimiter_before: " .. rawenglish_translator.rawenglish_delimiter_before .. " rawenglish_delimiter_after: " ..
+                    rawenglish_translator.rawenglish_delimiter_after)
 
     -- 自动检查并清除过期的spans信息
     spans_manager.auto_clear_check(context, context_input)
@@ -300,20 +299,20 @@ function backtick_translator.func(input, seg, env)
     end
 
     -- 检查输入是否包含反引号标签
-    if not seg:has_tag("backtick_combo") and not seg:has_tag("single_backtick") then
-        logger.info("没有包含backtick或single_backtick标签，不处理")
+    if not seg:has_tag("rawenglish_combo") and not seg:has_tag("single_rawenglish") then
+        logger.info("没有包含rawenglish或single_rawenglish标签，不处理")
         return
     end
-    logger.info("含有backtick标签, 进入反引号translator")
+    logger.info("含有rawenglish标签, 进入反引号translator")
 
-    -- 处理single_backtick类型的片段
-    if seg:has_tag("single_backtick") then
-        logger.info("检测到single_backtick标签，进行特殊处理")
+    -- 处理single_rawenglish类型的片段
+    if seg:has_tag("single_rawenglish") then
+        logger.info("检测到single_rawenglish标签，进行特殊处理")
 
         -- 检查输入是否以反引号开头和结尾
         local inner_content, replaced_content
-        
-        if input:sub(-1) == "`" then
+
+        if input:sub(-1) == english_mode_symbol then
             -- 完整的反引号片段，提取反引号内的内容
             inner_content = input:sub(2, -2)
             logger.info("完整反引号片段，内容: '" .. inner_content .. "'")
@@ -324,46 +323,36 @@ function backtick_translator.func(input, seg, env)
         end
 
         -- 替换成配置的分隔符
-        replaced_content = backtick_delimiter_before .. inner_content .. backtick_delimiter_after
+        replaced_content = rawenglish_delimiter_before .. inner_content .. rawenglish_delimiter_after
         logger.info("替换后内容: '" .. replaced_content .. "'")
 
         -- 生成候选词
-        local candidate = Candidate("single_backtick", seg.start, seg._end, replaced_content, "")
+        local candidate = Candidate("single_rawenglish", seg.start, seg._end, replaced_content, "")
         candidate.preedit = input
         yield(candidate)
 
-        logger.info("已生成single_backtick候选词: '" .. replaced_content .. "'")
+        logger.info("已生成single_rawenglish候选词: '" .. replaced_content .. "'")
         return
     end
 
-    -- 如果输入的是Enter回车键, context:set_option("cloud_convert", true)
-    -- if context:get_option("cloud_convert") then
-    --     logger.info("百度云处理, 这个脚本跳过")
-    --     return
-    -- end
-    -- if not input:match("`") then
-    --     logger.info("输入不包含反引号，不处理")
-    --     return
-    -- end
-
-    -- 使用text_splitter.split_by_backtick切分输入
+    -- 使用text_splitter.split_by_rawenglish切分输入
     -- 这里输入的input应该不是完整的input,而是剩余的seg当中的input,所以返回的也是这个结果,但是我需要确认前边已经有多少内容被确认了. 
     -- 这里是将当前片段的input输入进去, 但是前边可能有其他片段的input,导致计算出来的切分坐标不对.
     -- 计算在input前边还有多少已经处理完的内容, 在script计算的start和end值中添加这个长度
-    local segments = text_splitter.split_by_backtick_with_log(input, seg.start, seg._end, backtick_delimiter_before,
-        backtick_delimiter_after, logger)
+    local segments = text_splitter.split_by_rawenglish_with_log(input, seg.start, seg._end, rawenglish_delimiter_before,
+        rawenglish_delimiter_after, logger)
 
     if not segments or #segments == 0 then
         logger.error("切分失败或无结果")
         return
     end
 
-    -- 检查第一个片段是否为backtick类型，若是则直接commit_text并返回
-    if segments[1].type == "backtick_combo" then
+    -- 检查第一个片段是否为rawenglish类型，若是则直接commit_text并返回
+    if segments[1].type == "rawenglish_combo" then
         -- 还要考虑新的可能性: 如果是只有一个反引号开头，如何判断
         -- 如果是单引号开头，然后后面跟着一些字母，或者其他内容，反引号暂时未闭合，如何处理？
         -- 如果是一个完整的反引号包裹的内容，如何处理？
-        -- 判断,如果segments中只有一个元素,并且是backtick类型,
+        -- 判断,如果segments中只有一个元素,并且是rawenglish类型,
 
         -- 获取segment的基本信息
         local start_pos = seg.start -- 片段开始位置
@@ -380,7 +369,7 @@ function backtick_translator.func(input, seg, env)
         local chinese_pos = "chinese_pos:" .. seg.start + segments[1].length .. "," .. seg.start + segments[1].length ..
                                 ","
         -- logger.debug("chinese_pos: " .. chinese_pos)
-        local cand_temp = Candidate("backtick_combo", seg.start, seg.start + segments[1].length, segments[1].content,
+        local cand_temp = Candidate("rawenglish_combo", seg.start, seg.start + segments[1].length, segments[1].content,
             chinese_pos)
         yield(cand_temp)
 
@@ -513,18 +502,18 @@ function backtick_translator.func(input, seg, env)
 
             end
 
-        elseif segment.type == "backtick_combo" then
+        elseif segment.type == "rawenglish_combo" then
             -- 反引号内容：固定一个候选项
             logger.info(string.format("处理反引号片段 %d: '%s'", i, segment.content))
-            -- 对于反引号部分, 自己生成一个spans, backtick
-            local backtick_spans = Spans()
+            -- 对于反引号部分, 自己生成一个spans, rawenglish
+            local rawenglish_spans = Spans()
             -- 这个地方的计算有错误, segment.start, segment._end
-            backtick_spans:add_span(segment.start, segment._end)
+            rawenglish_spans:add_span(segment.start, segment._end)
 
             table.insert(candidates_for_segment, {
                 text = segment.content,
                 preedit = segment.original or segment.content,
-                spans = backtick_spans,
+                spans = rawenglish_spans,
                 start = segment.start,
                 _end = segment._end,
                 length = segment.length,
@@ -642,7 +631,7 @@ function backtick_translator.func(input, seg, env)
                             long_span:add_vertex(one_cand.start + vertex)
                         end
 
-                    elseif count > 1 and one_cand.type == "backtick_combo" then
+                    elseif count > 1 and one_cand.type == "rawenglish_combo" then
                         -- 这里是现在重点出错的地方
                         logger.info(string.format(
                             "one_cand属性: text='%s', preedit='%s', start=%d, _end=%d, length=%d, type=%s",
@@ -682,7 +671,7 @@ function backtick_translator.func(input, seg, env)
             end
 
             -- 使用spans_manager保存spans信息（最高优先级）
-            spans_manager.save_spans(context, vertices, context_input, "backtick_translator")
+            spans_manager.save_spans(context, vertices, context_input, "rawenglish_translator")
 
             logger.info("long_span 分割点信息已保存到spans_manager")
 
@@ -721,16 +710,16 @@ function backtick_translator.func(input, seg, env)
             -- string.format("   [组合%d]", combo_index))
             -- 这是原来的候选词, 现在需要在第五个参数中传入反引号范围信息
             logger.debug("output_count为: " .. output_count .. " 候选词: " .. final_text ..
-                             "  生成backtick_pos值为: " .. chinese_pos)
+                             "  生成rawenglish_pos值为: " .. chinese_pos)
             -- 如果final_text中有标点符号,才需要添加chinese_pos
             local candidate = ""
-            if text_splitter.has_punctuation_no_backtick(final_text, logger) then
-                candidate = Candidate("backtick_combo", seg.start, candidate_end, final_text, chinese_pos)
+            if text_splitter.has_punctuation_no_rawenglish(final_text, logger) then
+                candidate = Candidate("rawenglish_combo", seg.start, candidate_end, final_text, chinese_pos)
             else
-                candidate = Candidate("backtick_combo", seg.start, candidate_end, final_text, "")
+                candidate = Candidate("rawenglish_combo", seg.start, candidate_end, final_text, "")
             end
 
-            -- local candidate = Candidate("backtick_combo", seg.start, candidate_end, final_text, chinese_pos)
+            -- local candidate = Candidate("rawenglish_combo", seg.start, candidate_end, final_text, chinese_pos)
             candidate.preedit = final_preedit
             yield(candidate)
 
@@ -741,9 +730,9 @@ function backtick_translator.func(input, seg, env)
 
 end
 
-function backtick_translator.fini(env)
+function rawenglish_translator.fini(env)
     env.notifier:disconnect()
     logger.info("脚本反引号翻译器结束运行")
 end
 
-return backtick_translator
+return rawenglish_translator

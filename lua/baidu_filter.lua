@@ -50,8 +50,8 @@ end
 local translator = {}
 
 local ziranma_mapping_config = {} -- 自然码映射表
-local backtick_delimiter_before = "" -- 反引号分隔符
-local backtick_delimiter_after = ""
+local rawenglish_delimiter_before = "" -- 反引号分隔符
+local rawenglish_delimiter_after = ""
 local delimiter = ""
 local replace_punct_enabled = false
 
@@ -107,15 +107,15 @@ function translator.init(env)
     ziranma_mapping_config = config:get_map("speller/ziranma_to_quanpin")
 
     -- 读取反引号分隔符配置
-    backtick_delimiter_before = config:get_string("translator/backtick_delimiter_before") or ""
-    backtick_delimiter_after = config:get_string("translator/backtick_delimiter_after") or ""
+    rawenglish_delimiter_before = config:get_string("translator/rawenglish_delimiter_before") or ""
+    rawenglish_delimiter_after = config:get_string("translator/rawenglish_delimiter_after") or ""
     -- 获取输入法引擎和上下文   
     local config = env.engine.schema.config
     delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
     logger.info("当前分隔符: " .. delimiter)
 
     --  replace_punct_enabled = config:get_string("translator/replace_punct_enabled") or false
-    -- logger.info("反引号分隔符设置: '" .. backtick_delimiter_before .. "' '" .. backtick_delimiter_after .. "'")
+    -- logger.info("反引号分隔符设置: '" .. rawenglish_delimiter_before .. "' '" .. rawenglish_delimiter_after .. "'")
 
     -- if ziranma_mapping_config then
     --    logger.info("开始打印自然码映射表...")
@@ -331,7 +331,7 @@ function translator.func(translation, env)
         local success, result = pcall(function()
             -- 是否替换中文标点符号
             return text_splitter.split_and_convert_input_with_log_and_delimiter(input, logger,
-                backtick_delimiter_before, backtick_delimiter_after, replace_punct_enabled)
+                rawenglish_delimiter_before, rawenglish_delimiter_after, replace_punct_enabled)
         end)
 
         if success and result then
@@ -361,7 +361,7 @@ function translator.func(translation, env)
                     -- 标点符号：直接添加
                     logger.info(string.format("处理标点片段 %d: '%s'", i, segment.content))
                     return segment.content
-                elseif segment.type == "backtick_combo" then
+                elseif segment.type == "rawenglish_combo" then
                     -- 反引号内容：不处理，直接添加
                     logger.info(string.format("处理反引号片段 %d: '%s'", i, segment.content))
                     return segment.content
@@ -426,7 +426,7 @@ function translator.func(translation, env)
             -- 创建智能合成候选词
             logger.info("创建智能合成候选词: " .. final_result)
             -- local candidate = Candidate("baidu_cloud", cand_start, cand_end, final_result, "   [云输入]")
-            -- 为了替换标点符号,把这个含有反引号片段的百度云返回值也标记成backtick_combo
+            -- 为了替换标点符号,把这个含有反引号片段的百度云返回值也标记成rawenglish_combo
             local candidate = Candidate("baidu_cloud", cand_start, cand_end, final_result, cand_comment)
             candidate.preedit = original_preedit
             yield(candidate)

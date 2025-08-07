@@ -192,12 +192,19 @@ rime输入法会将当前KEEPON_CHAT_TRIGGER的属性值同步到服务端来, �
 
 - [x] 上屏的空格按键没有拦截啊
 - [ ] 想一下是不是把云提示词和英文原文上屏的功能,换成两个不同的按键,因为现在有一些不安全感,很容易搞错.
-- [ ] 1. 在某种模式当中的时候, 给用户一个prompt提示信息, 但是要考虑和其他的提示信息之间会不会有冲突问题.
 - [x] 现在是直接清空,应该可以通过配置文件控制,不清空,而是正常上屏.
 - [ ] 对menu的add_translation, Translation应该是一个由Candidate组成的table,不知道能不能自己合并table,估计够呛.
 - [ ] 自动空格上屏
 - [ ] 现在属性状态的同步总是有延迟,应该要第一时间生效,也就是可以考虑我主动发送一个虚拟快捷键,来让rime马上更新状态.
-- [ ] 研究一下配置直接动态修改,似乎没有必要去重新部署rime直接动态修改就可以了.
+- [x] 研究一下配置直接动态修改,似乎没有必要去重新部署rime直接动态修改就可以了.
+	- [x] 对整个配置的处理进行彻底的重构, 甚至在init里面都不需要重新读入配置, 直接在一个脚本里面都托管了也可以
+
+
+配置实时动态更新
+1. 当配置更新之后, 服务端会发送一个快捷键, 快捷键会添加一个开关,或者属性,并且会触发配置的实时更新.
+2. 每个函数当中,
+
+
 - [ ] 发现修改了输入模式之后,但是不生效的问题,似乎换一个别的软件生效了,但是ob中依然不生效.
 
 - [x] 原来的翻译函数中对AI Trans那部分的处理可以删除了
@@ -214,7 +221,7 @@ rime输入法会将当前KEEPON_CHAT_TRIGGER的属性值同步到服务端来, �
 function text_splitter.replace_punct_skip_pos(text, chinese_pos_str, logger)
 
 在上面的匹配中就应该发现这个标点符号是英文段落中的, 实际上是没有标点符号的,算了太麻烦.还是原来的思路吧.
-if cand.text and text_splitter.has_punctuation_no_backtick(cand.text, logger) then
+if cand.text and text_splitter.has_punctuation_no_rawenglish(cand.text, logger) then
 ```
 这两个 bug 先修复一下。
 这两个怎么回事来着？
@@ -357,26 +364,26 @@ ac:nihk`okokok`wo
 主要是因为前边这段不是abc,如果也是abc,就不存在问题.
 所以是因为不是abc,没有参与运算.
 
-[2025-07-31 17:43:42] [INFO] [backtick_translator:624] long_span.vertices 1: 3
-[2025-07-31 17:43:42] [INFO] [backtick_translator:624] long_span.vertices 2: 4
-[2025-07-31 17:43:42] [INFO] [backtick_translator:624] long_span.vertices 3: 5
-[2025-07-31 17:43:42] [INFO] [backtick_translator:624] long_span.vertices 4: 7
-[2025-07-31 17:43:42] [INFO] [backtick_translator:624] long_span.vertices 5: 12
-[2025-07-31 17:43:42] [INFO] [backtick_translator:624] long_span.vertices 6: 15
-[2025-07-31 17:43:42] [INFO] [backtick_translator:624] long_span.vertices 7: 17
+[2025-07-31 17:43:42] [INFO] [rawenglish_translator:624] long_span.vertices 1: 3
+[2025-07-31 17:43:42] [INFO] [rawenglish_translator:624] long_span.vertices 2: 4
+[2025-07-31 17:43:42] [INFO] [rawenglish_translator:624] long_span.vertices 3: 5
+[2025-07-31 17:43:42] [INFO] [rawenglish_translator:624] long_span.vertices 4: 7
+[2025-07-31 17:43:42] [INFO] [rawenglish_translator:624] long_span.vertices 5: 12
+[2025-07-31 17:43:42] [INFO] [rawenglish_translator:624] long_span.vertices 6: 15
+[2025-07-31 17:43:42] [INFO] [rawenglish_translator:624] long_span.vertices 7: 17
 ```
 
     - lua_segmentor@*ai_assistant_segmentor     #AI对话自定义分词器，分割 a: 和拼音部分
     - abc_segmentor                        #标识常规的文字段落，加上 abc 这个 tag
-    - lua_segmentor@*backtick_segment      #添加反引号分词器
+    - lua_segmentor@*rawenglish_segment      #添加反引号分词器
 
 首先分词流程: ac:nihk`okokok`wo
 在ai_assistant_segmentor将ac:分词 后面 nihk`okokok`wo分词成abc.
 
 cand候选词是rime算出来的, 考虑了前面的a:这部分. 算的是第二段.
 而我的segment script类型是我自己算出来的,没有考虑 a:这部分
-    local segments = text_splitter.split_by_backtick_with_log(input, backtick_delimiter_before,
-        backtick_delimiter_after, logger)
+    local segments = text_splitter.split_by_rawenglish_with_log(input, rawenglish_delimiter_before,
+        rawenglish_delimiter_after, logger)
     如果我把input改成整个input呢?
 
 

@@ -37,38 +37,31 @@ end
 
 -- local RimeTcpServer = require("rime_socket_server")
 
--- 配置缓存机制
-local config_cache = {}
-local last_schema_id = nil
+-- 模块级配置缓存
+local smart_cursor_processor = {}
+smart_cursor_processor.move_next_punct = nil
+smart_cursor_processor.move_prev_punct = nil  
+smart_cursor_processor.search_move_cursor = nil
+smart_cursor_processor.shuru_schema = nil
+smart_cursor_processor.chat_triggers = {}
 
--- 读取配置的辅助函数
-local function load_ai_config(env)
-    local schema = env.engine.schema
-    local config = schema.config
-    local schema_id = schema.schema_id
-
-    -- 如果schema没有变化且已有缓存，直接使用缓存
-    if last_schema_id == schema_id and config_cache.ai_assistant_config then
-        logger.info("使用缓存的AI助手配置 (schema: " .. schema_id .. ")")
-        return config_cache.ai_assistant_config
-    end
-
-    logger.info("重新加载AI助手配置 (schema: " .. schema_id .. ")")
-
-    -- 读取AI助手配置
-    local ai_assistant_config = {}
-    ai_assistant_config.chat_triggers = {}
+-- 读取配置的辅助函数，从config中读取并缓存到模块级变量
+function smart_cursor_processor.update_current_config(config)
+    logger.info("开始更新smart_cursor_processor模块配置")
 
     -- 读取键位绑定配置
-    ai_assistant_config.move_next_punct = config:get_string("key_binder/move_next_punct")
-    ai_assistant_config.move_prev_punct = config:get_string("key_binder/move_prev_punct")
-    ai_assistant_config.search_move_cursor = config:get_string("key_binder/search_move_cursor")
-    ai_assistant_config.shuru_schema = config:get_string("schema/my_shuru_schema")
+    smart_cursor_processor.move_next_punct = config:get_string("key_binder/move_next_punct")
+    smart_cursor_processor.move_prev_punct = config:get_string("key_binder/move_prev_punct")
+    smart_cursor_processor.search_move_cursor = config:get_string("key_binder/search_move_cursor")
+    smart_cursor_processor.shuru_schema = config:get_string("schema/my_shuru_schema")
 
-    logger.info("键位配置 - move_next_punct: " .. tostring(ai_assistant_config.move_next_punct))
-    logger.info("键位配置 - move_prev_punct: " .. tostring(ai_assistant_config.move_prev_punct))
-    logger.info("键位配置 - search_move_cursor: " .. tostring(ai_assistant_config.search_move_cursor))
-    logger.info("键位配置 - shuru_schema: " .. tostring(ai_assistant_config.shuru_schema))
+    logger.info("键位配置 - move_next_punct: " .. tostring(smart_cursor_processor.move_next_punct))
+    logger.info("键位配置 - move_prev_punct: " .. tostring(smart_cursor_processor.move_prev_punct))
+    logger.info("键位配置 - search_move_cursor: " .. tostring(smart_cursor_processor.search_move_cursor))
+    logger.info("键位配置 - shuru_schema: " .. tostring(smart_cursor_processor.shuru_schema))
+
+    -- 重新初始化chat_triggers
+    smart_cursor_processor.chat_triggers = {}
 
     -- 动态读取 chat_triggers 配置
     local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
@@ -82,7 +75,7 @@ local function load_ai_config(env)
             local trigger_value = config:get_string("ai_assistant/chat_triggers/" .. trigger_name)
 
             if trigger_value then
-                ai_assistant_config.chat_triggers[trigger_name] = trigger_value
+                smart_cursor_processor.chat_triggers[trigger_name] = trigger_value
                 logger.info("云输入触发器 - " .. trigger_name .. ": " .. trigger_value)
             end
         end
@@ -90,14 +83,8 @@ local function load_ai_config(env)
         logger.warning("未找到 chat_triggers 配置")
     end
 
-    -- 缓存配置
-    config_cache.ai_assistant_config = ai_assistant_config
-    last_schema_id = schema_id
-
-    return ai_assistant_config
+    logger.info("smart_cursor_processor模块配置更新完成")
 end
-
-local smart_cursor_processor = {}
 
 function smart_cursor_processor.init(env)
     local engine = env.engine
@@ -106,10 +93,9 @@ function smart_cursor_processor.init(env)
     local config = schema.config
     logger.clear()
     logger.info("智能光标移动处理器初始化完成")
-    
-    -- 使用配置加载函数
-    env.ai_assistant_config = load_ai_config(env)
-    logger.info("AI助手配置加载完成")
+
+    -- 配置更新由 cloud_input_processor 统一管理，无需在此处调用
+    logger.info("等待 cloud_input_processor 统一更新配置")
 
     -- 定义标点符号集合
     env.punctuation_chars = {
@@ -205,8 +191,8 @@ function smart_cursor_processor.init(env)
             end
 
             -- 清空反引号英文模式的状态
-            if context:get_property("backtick_prompt") == "1" then
-                context:set_property("backtick_prompt", "0")
+            if context:get_property("rawenglish_prompt") == "1" then
+                context:set_property("rawenglish_prompt", "0")
             end
 
             -- 清空ai回复消息模式的状态
@@ -319,12 +305,12 @@ function smart_cursor_processor.init(env)
 
                 -- 测试另外一种方案,在前边添加字母"a:"这类的内容。
                 -- 思路: 当keepon_chat_trigger属性中存在值的时候,应该通过这个属性获取到 chat_trigger
-                local chat_trigger_name = env.ai_assistant_config.chat_triggers[keepon_chat_trigger]
+                local chat_trigger_name = smart_cursor_processor.chat_triggers[keepon_chat_trigger]
                 logger.info("chat_trigger_name: " .. chat_trigger_name)
                 -- 然后当用户输入第一个字母的时候,应该将chat_trigger_name添加到input的最前边. 
                 -- 第一个字母也伴随着is_composing状态的改变, 也就是说监控到is_composing变成True, 然后再去添加chat_trigger_name?
                 -- 还是应该判断,当从非输入状态变成输入状态,则应该进行添加,这样也不用判断了
-                if #input == 1 then  -- and not first_segment:has_tags("ai_reply") 
+                if #input == 1 then -- and not first_segment:has_tags("ai_reply") 
                     logger.info("input: " .. input)
                     context.input = chat_trigger_name .. input
                     -- context:refresh_non_confirmed_composition()
@@ -521,7 +507,7 @@ function smart_cursor_processor.func(key, env)
     local search_move_prompt = " ▶ [搜索模式:] "
 
     local key_repr = key:repr()
-
+    logger.info("key_repr: " .. key_repr)
     -- local script_text = context:get_script_text()
     -- logger.info("script_text: " .. script_text)
 
@@ -533,7 +519,6 @@ function smart_cursor_processor.func(key, env)
         ------------------------------------------------------------------------
         -- 开始进入搜索模式
         if context:get_option("search_move") then
-            logger.info("key_repr: " .. key_repr)
 
             -- 判断是否为英文字母或标点符号
             local is_valid_char = false
@@ -613,7 +598,7 @@ function smart_cursor_processor.func(key, env)
                         search_start_pos = 1
                     end
 
-                    local found_pos = text_splitter.find_text_skip_backticks_with_wrap(confirmed_pos_input,
+                    local found_pos = text_splitter.find_text_skip_rawenglishs_with_wrap(confirmed_pos_input,
                         add_search_move_str, search_start_pos, logger)
                     if found_pos then
                         local move_pos = confirmed_pos + found_pos - 1 + #add_search_move_str
@@ -731,17 +716,17 @@ function smart_cursor_processor.func(key, env)
             end
             return kNoop
 
-        elseif key_repr == env.ai_assistant_config.move_prev_punct then
+        elseif key_repr == smart_cursor_processor.move_prev_punct then
             logger.debug("触发向左智能移动")
             if smart_cursor_processor.move_to_prev_punctuation(env) then
                 return kAccepted
             end
-        elseif key_repr == env.ai_assistant_config.move_next_punct then
+        elseif key_repr == smart_cursor_processor.move_next_punct then
             logger.debug("触发向右智能移动")
             if smart_cursor_processor.move_to_next_punctuation(env) then
                 return kAccepted
             end
-        elseif key_repr == env.ai_assistant_config.search_move_cursor then
+        elseif key_repr == smart_cursor_processor.search_move_cursor then
             -- 获得队尾的 Segment 对象
             local segment = composition:back()
 

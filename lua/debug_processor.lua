@@ -97,7 +97,7 @@ function debug_precessor.func(key, env)
             "extended_charset",
             "emoji",
             "cloud_convert_flag",
-            "backtick_prompt"
+            "rawenglish_prompt"
         }
         
         -- logger.info("--- 上下文属性状态 ---")

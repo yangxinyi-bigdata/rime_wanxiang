@@ -67,5 +67,5 @@ local select_key_index = string.find("12345", "1", 1, true)
 print(select_key_index)
 
 local current_start_input = "nihk`,'\""
-local _, backtick_count = current_start_input:gsub("`", "")
-print(backtick_count)
+local _, rawenglish_count = current_start_input:gsub("`", "")
+print(rawenglish_count)

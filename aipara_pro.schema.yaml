@@ -83,8 +83,8 @@ switches:
 engine:
   processors:
     # - lua_processor@*debug_processor      #调试处理器，打印输入、分词、环境等信息
-    - lua_processor@*smart_cursor_processor #智能光标移动处理器，在标点符号处停止
     - lua_processor@*cloud_input_processor  #触发云输入法快捷键
+    - lua_processor@*smart_cursor_processor #智能光标移动处理器，在标点符号处停止    
     # - chord_composer                     #并击处理器，与置顶参数：是否启用并击，选项配合使用
     - lua_processor@*select_character     #以词定字，默认左中括号上屏一个词的前一个字，右中括号上屏一个词的后一个字
     - lua_processor@*super_sequence*P      #手动排序，高亮候选 ctrl+j左移动 ctrl+k 右移动 ctrl+0 移除位移
@@ -108,15 +108,15 @@ engine:
     - matcher                              #配合 recognizer 标识符合特定规则的段落，如网址、反查等，加上特定 tag
     - lua_segmentor@*ai_assistant_segmentor     #AI对话自定义分词器，分割 a: 和拼音部分
     - abc_segmentor                        #标识常规的文字段落，加上 abc 这个 tag
-    - lua_segmentor@*backtick_segment      #添加反引号分词器
+    - lua_segmentor@*rawenglish_segment      #添加反引号分词器
     - affix_segmentor@add_user_dict        #自造词加词 tag
     - punct_segmentor                      #标识符号段落〔键入标点符号用〕加上 punct 这个 tag
-    - lua_segmentor@*debug_segmentor2      #添加调试分词器
+    # - lua_segmentor@*debug_segmentor2      #添加调试分词器
     - fallback_segmentor                   #标识其他未标识段落，必须放在最后帮助tag模式切换后回退重新处理
 
   translators:
     # - lua_translator@*debug_translator     #调试翻译器，打印输入、分词、环境等信息
-    - lua_translator@*backtick_translator # 反引号翻译器，对于带有反引号内的内容单独处理
+    - lua_translator@*rawenglish_translator # 反引号翻译器，对于带有反引号内的内容单独处理
     - lua_translator@*ai_assistant_translator   #AI对话前缀翻译器
     - punct_translator                     #配合 punct_segmentor 转换标点符号
     - script_translator                    #脚本翻译器，用于拼音、粤拼等基于音节表的输入方案
@@ -285,8 +285,8 @@ translator:
   enable_correction: false #是否开启自动纠错
   initial_quality: 3       # 初始质量拼音的权重应该比英文大
   english_mode_symbol: "`"  # 英文模式下的符号
-  backtick_delimiter_before: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
-  backtick_delimiter_after: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
+  rawenglish_delimiter_before: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
+  rawenglish_delimiter_after: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
   replace_punct_enabled: true  # 是否启用中文标点替换功能，true 为启用，false 为禁用
   preedit_format:     #影响到输入框的显示和“Shift+回车”上屏的字符，交给super_preedit处理
     # __patch:

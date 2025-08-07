@@ -37,8 +37,8 @@ end
 local translator = {}
 
 local ziranma_mapping_config = {}  -- 自然码映射表
-local backtick_delimiter_before = ""  -- 反引号分隔符
-local backtick_delimiter_after = ""
+local rawenglish_delimiter_before = ""  -- 反引号分隔符
+local rawenglish_delimiter_after = ""
 local replace_punct_enabled = false
 
 function translator.init(env)
@@ -51,11 +51,11 @@ function translator.init(env)
    ziranma_mapping_config = config:get_map("speller/ziranma_to_quanpin")
    
    -- 读取反引号分隔符配置
-    backtick_delimiter_before = config:get_string("translator/backtick_delimiter_before") or ""
-    backtick_delimiter_after = config:get_string("translator/backtick_delimiter_after") or ""
+    rawenglish_delimiter_before = config:get_string("translator/rawenglish_delimiter_before") or ""
+    rawenglish_delimiter_after = config:get_string("translator/rawenglish_delimiter_after") or ""
 
     replace_punct_enabled = config:get_string("translator/replace_punct_enabled") or false
-    -- logger.info("反引号分隔符设置: '" .. backtick_delimiter_before .. "' '" .. backtick_delimiter_after .. "'")
+    -- logger.info("反引号分隔符设置: '" .. rawenglish_delimiter_before .. "' '" .. rawenglish_delimiter_after .. "'")
 
 end
 
@@ -128,21 +128,21 @@ function translator.func(input, seg, env)
          
          -- 定义两种提示文本
          local cloud_prompt_text = "     ▶ 回车AI转换"
-         local backtick_prompt_text = "     ▶ 反引号模式"
+         local rawenglish_prompt_text = "     ▶ 反引号模式"
          
          -- 获取两个状态
-         local backtick_prompt = context:get_property("backtick_prompt")
+         local rawenglish_prompt = context:get_property("rawenglish_prompt")
          local cloud_convert_flag = context:get_property("cloud_convert_flag")
          
-         -- 判断显示哪个提示（backtick_prompt 优先级更高）
-         if backtick_prompt == "1" then
-            -- backtick_prompt 优先级最高
-            if segment.prompt ~= backtick_prompt_text then
-               segment.prompt = backtick_prompt_text
-               logger.info("设置反引号提示: " .. backtick_prompt_text)
+         -- 判断显示哪个提示（rawenglish_prompt 优先级更高）
+         if rawenglish_prompt == "1" then
+            -- rawenglish_prompt 优先级最高
+            if segment.prompt ~= rawenglish_prompt_text then
+               segment.prompt = rawenglish_prompt_text
+               logger.info("设置反引号提示: " .. rawenglish_prompt_text)
             end
          elseif cloud_convert_flag == "1" then
-            -- 只有在 backtick_prompt 为 0 时才显示 cloud_convert_flag 的提示
+            -- 只有在 rawenglish_prompt 为 0 时才显示 cloud_convert_flag 的提示
             if segment.prompt ~= cloud_prompt_text then
                segment.prompt = cloud_prompt_text
                logger.info("设置云输入提示: " .. cloud_prompt_text)
@@ -232,7 +232,7 @@ function translator.func(input, seg, env)
       
       local success, result = pcall(function()
          -- 是否替换中文标点符号
-         return text_splitter.split_and_convert_input_with_log_and_delimiter(input, logger, backtick_delimiter_before, backtick_delimiter_after, replace_punct_enabled)
+         return text_splitter.split_and_convert_input_with_log_and_delimiter(input, logger, rawenglish_delimiter_before, rawenglish_delimiter_after, replace_punct_enabled)
       end)
       
       if success and result then
@@ -259,7 +259,7 @@ function translator.func(input, seg, env)
                -- 标点符号：直接添加
                logger.info(string.format("处理标点片段 %d: '%s'", i, segment.content))
                return segment.content
-            elseif segment.type == "backtick_combo" then
+            elseif segment.type == "rawenglish_combo" then
                -- 反引号内容：不处理，直接添加
                logger.info(string.format("处理反引号片段 %d: '%s'", i, segment.content))
                return segment.content

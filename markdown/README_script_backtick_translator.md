@@ -1,21 +1,21 @@
-# Script Backtick Translator
+# Script rawenglish Translator
 
 这是一个Rime输入法的Lua翻译器，用于处理包含反引号的混合输入。
 
 ## 功能特性
 
-- 使用 `text_splitter.split_by_backtick()` 函数智能切分输入
+- 使用 `text_splitter.split_by_rawenglish()` 函数智能切分输入
 - 对文本片段（abc类型）使用 `script_translator` 进行翻译，保存text和preedit
-- 对反引号内容（backtick类型）text为处理后内容（包含分隔符），preedit保持原始反引号形式
+- 对反引号内容（rawenglish类型）text为处理后内容（包含分隔符），preedit保持原始反引号形式
 - 将所有片段的text和preedit分别拼接，形成最终候选词的text和preedit
 - 完整的日志记录功能便于调试
 
 ## 工作原理
 
-1. **输入切分**: 使用 `text_splitter.split_by_backtick(input, delimiter)` 将输入按反引号切分
+1. **输入切分**: 使用 `text_splitter.split_by_rawenglish(input, delimiter)` 将输入按反引号切分
 2. **类型处理**:
    - `abc` 类型: 使用 `script_translator` 翻译，获取第一个候选词的text和preedit
-   - `backtick` 类型: text为处理后内容（包含分隔符），preedit保持原始反引号形式
+   - `rawenglish` 类型: text为处理后内容（包含分隔符），preedit保持原始反引号形式
 3. **结果拼接**: 将所有片段的text拼接成最终候选词的text，将所有片段的preedit拼接成最终候选词的preedit
 4. **输出候选**: 使用 `yield()` 输出包含完整text和preedit的候选词
 
@@ -29,7 +29,7 @@ wokeyi`hello my love`keai
 ### 处理过程
 1. 切分结果:
    - 片段1: type=abc, content='wokeyi'
-   - 片段2: type=backtick, content=' hello my love ' (包含分隔符)
+   - 片段2: type=rawenglish, content=' hello my love ' (包含分隔符)
    - 片段3: type=abc, content='keai'
 
 2. 翻译处理:
@@ -48,28 +48,28 @@ wokeyi`hello my love`keai
 ```yaml
 engine:
   translators:
-    - script_backtick_translator  # 新增
+    - script_rawenglish_translator  # 新增
     - script_translator
     - table_translator
 
-lua_translator@script_backtick_translator:
-  function: script_backtick_translator.func
-  option_name: script_backtick_translate  # 可选开关
+lua_translator@script_rawenglish_translator:
+  function: script_rawenglish_translator.func
+  option_name: script_rawenglish_translate  # 可选开关
 ```
 
 ### 2. 配置反引号分隔符（可选）
 
 ```yaml
 translator:
-  backtick_delimiter: " "  # 空格分隔符，也可以设置为其他字符或留空
+  rawenglish_delimiter: " "  # 空格分隔符，也可以设置为其他字符或留空
 ```
 
 ## 文件结构
 
-- `script_backtick_translator.lua` - 主翻译器实现
-- `text_splitter.lua` - 文本切分模块（已扩展split_by_backtick_with_log函数）
-- `test_script_backtick_translator.lua` - 测试脚本
-- `script_backtick_translator_config_example.yaml` - 配置示例
+- `script_rawenglish_translator.lua` - 主翻译器实现
+- `text_splitter.lua` - 文本切分模块（已扩展split_by_rawenglish_with_log函数）
+- `test_script_rawenglish_translator.lua` - 测试脚本
+- `script_rawenglish_translator_config_example.yaml` - 配置示例
 
 ## 核心组件
 
@@ -104,5 +104,5 @@ Segment参数主要提供标签信息和位置上下文，不影响候选项结�
 
 运行测试脚本验证功能：
 ```lua
-dofile("lua/test_script_backtick_translator.lua")
+dofile("lua/test_script_rawenglish_translator.lua")
 ```

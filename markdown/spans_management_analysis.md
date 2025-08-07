@@ -23,7 +23,7 @@
 ### 2.2 优先级管理系统
 
 建立了基于来源的优先级系统：
-- `script_backtick_translator` - 优先级 1（最高）
+- `script_rawenglish_translator` - 优先级 1（最高）
 - `baidu_filter` - 优先级 2  
 - `punct_eng_chinese_filter` - 优先级 3
 - `unknown` - 优先级 99（最低）
@@ -43,7 +43,7 @@
 1. **lua/spans_manager.lua** - 新创建的核心管理模块
 2. **lua/baidu_filter.lua** - 集成 spans_manager
 3. **lua/punct_eng_chinese_filter.lua** - 集成 spans_manager  
-4. **lua/script_backtick_translator.lua** - 集成 spans_manager
+4. **lua/script_rawenglish_translator.lua** - 集成 spans_manager
 5. **lua/smart_cursor_processor.lua** - 使用 spans_manager 进行光标跳转
 
 ### 3.2 关键改进点
@@ -68,7 +68,7 @@
 ## 4. 新的数据流向
 
 ```
-输入 → script_backtick_translator → baidu_filter → punct_eng_chinese_filter → 候选词输出
+输入 → script_rawenglish_translator → baidu_filter → punct_eng_chinese_filter → 候选词输出
           ↓                              ↓                    ↓
      spans_manager.save_spans()    spans_manager.get_spans()  spans_manager.get_spans()
           ↓                              ↓                    ↓
@@ -204,7 +204,7 @@ local next_pos = spans_manager.get_next_cursor_position(context, current_pos)
 
 ### 2.1 涉及的脚本文件
 
-1. **lua/script_backtick_translator.lua** - 反引号翻译器
+1. **lua/script_rawenglish_translator.lua** - 反引号翻译器
 2. **lua/baidu_filter.lua** - 百度云输入过滤器
 3. **lua/punct_eng_chinese_filter.lua** - 标点符号转换过滤器
 4. **lua/smart_cursor_processor.lua** - 智能光标处理器
@@ -212,7 +212,7 @@ local next_pos = spans_manager.get_next_cursor_position(context, current_pos)
 ### 2.2 数据流向
 
 ```
-输入 → script_backtick_translator → baidu_filter → punct_eng_chinese_filter → 候选词输出
+输入 → script_rawenglish_translator → baidu_filter → punct_eng_chinese_filter → 候选词输出
                      ↓                    ↓                    ↓
               保存spans信息         检查并保存spans      检查并保存spans
                      ↓                    ↓                    ↓
@@ -340,7 +340,7 @@ return spans_manager
 #### 5.3.1 保存策略
 
 1. **优先级机制**
-   - script_backtick_translator 优先级最高
+   - script_rawenglish_translator 优先级最高
    - baidu_filter 次之
    - punct_eng_chinese_filter 最低
 

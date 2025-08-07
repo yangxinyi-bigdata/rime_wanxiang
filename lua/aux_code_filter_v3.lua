@@ -17,6 +17,31 @@ local logger = logger_module.create("aux_code_filter_v3", {
 local aux_code_filter = {}
 local last_segment_input = ""
 
+-- 模块级配置缓存
+aux_code_filter.single_fuzhu = false
+aux_code_filter.fuzhu_mode = ""
+aux_code_filter.shuangpin_zrm_txt = ""
+aux_code_filter.aux_hanzi_code = {}
+aux_code_filter.aux_code_hanzi = {}
+
+-- 配置更新函数
+function aux_code_filter.update_current_config(config)
+    logger.info("开始更新aux_code_filter_v3模块配置")
+    
+    aux_code_filter.single_fuzhu = config:get_bool("aux_code/single_fuzhu") or false
+    aux_code_filter.fuzhu_mode = config:get_string("aux_code/fuzhu_mode") or ""
+    aux_code_filter.shuangpin_zrm_txt = config:get_string("aux_code/shuangpin_zrm_txt") or ""
+    
+    logger.info("single_fuzhu: " .. tostring(aux_code_filter.single_fuzhu))
+    logger.info("fuzhu_mode: " .. aux_code_filter.fuzhu_mode)
+    logger.info("shuangpin_zrm_txt: " .. aux_code_filter.shuangpin_zrm_txt)
+    
+    -- 重新加载辅助码数据
+    aux_code_filter.aux_hanzi_code, aux_code_filter.aux_code_hanzi = aux_code_filter.readAuxTxt(aux_code_filter.shuangpin_zrm_txt)
+    
+    logger.info("aux_code_filter_v3模块配置更新完成")
+end
+
 function aux_code_filter.init(env)
 
     logger.clear()
@@ -26,12 +51,8 @@ function aux_code_filter.init(env)
     local engine = env.engine
     local config = engine.schema.config
 
-    env.single_fuzhu = config:get_bool("aux_code/single_fuzhu") or false
-    -- fuzhu_mode : "before"   # 辅助模式有三种: 1.single只当input中有三个字符的时候进行匹配 2.before,最后一个辅助码和最前边两个 input 字母进行匹配 3. after,最后一个辅助码和最后两个 input 字母进行匹配
-    env.fuzhu_mode = config:get_string("aux_code/fuzhu_mode") or ""
-    env.shuangpin_zrm_txt = config:get_string("aux_code/shuangpin_zrm_txt") or ""
-    logger.info("shuangpin_zrm_txt: " .. env.shuangpin_zrm_txt)
-    aux_code_filter.aux_hanzi_code, aux_code_filter.aux_code_hanzi = aux_code_filter.readAuxTxt(env.shuangpin_zrm_txt)
+    -- 配置更新由 cloud_input_processor 统一管理，无需在此处调用
+    logger.info("等待 cloud_input_processor 统一更新配置")
 
     ----------------------------
     -- 每一次选词上屏, 判断aux_code_filter.set_fuzhuma的值, 如果存在辅助码就把辅助码删除掉 --
@@ -203,8 +224,8 @@ function aux_code_filter.func(translation, env)
     -- 如果是剩余的segmente_input小于3,还进不进入呢？按说也应该不进入, 只是我需要在选词之后, 保持set_fuzhuma为真
     -- `haha`w 这个时候,也是反引号模式,应该直接进入下面这个分支, 但要区分 hahaw
     -- 关键是之前设置,如果选词之后只剩一个字母,那么应该删除这个字母,怎么办呢?选词之后,也是只剩一个字母
-    logger.info("backtick_prompt: " .. context:get_property("backtick_prompt"))
-    if not env.single_fuzhu or #input <= 2 or context:get_property("backtick_prompt") == "1" then
+    logger.info("rawenglish_prompt: " .. context:get_property("rawenglish_prompt"))
+    if not aux_code_filter.single_fuzhu or #input <= 2 or context:get_property("rawenglish_prompt") == "1" then
         logger.debug("当前输入#segmente_input长度小于等于2, set_fuzhuma设置为false")
         aux_code_filter.set_fuzhuma = false
         for cand in translation:iter() do
@@ -275,8 +296,8 @@ function aux_code_filter.func(translation, env)
         return
     end
 
-    local has_backtick = segmente_input:match("`") ~= nil
-    if has_backtick then
+    local has_rawenglish = segmente_input:match("`") ~= nil
+    if has_rawenglish then
         -- 将segmente_input中的反引号``包裹的片段删除
         segmente_input = segmente_input:gsub("`[^`]*`", "")
         logger.debug("删除反引号包裹片段后的segmente_input: " .. segmente_input)
@@ -595,8 +616,8 @@ function aux_code_filter.func(translation, env)
         -- end
 
         -- 20250730 修改不再单独处理#segmente_input == 3的情况,全部统一处理.
-        logger.info("env.fuzhu_mode: " .. env.fuzhu_mode)
-        if env.fuzhu_mode == "single" then
+        logger.info("aux_code_filter.fuzhu_mode: " .. aux_code_filter.fuzhu_mode)
+        if aux_code_filter.fuzhu_mode == "single" then
             logger.info("进入只匹配前三个分支, 直接返回true")
             return true
         end
@@ -606,7 +627,7 @@ function aux_code_filter.func(translation, env)
         aux_code_filter.set_fuzhuma = true
 
         -- all模式, 对候选词中的所有字都进行匹配,只要匹配上了就输出,问题是从第一个开始,还是最后一个开始
-        if env.fuzhu_mode == "all" then
+        if aux_code_filter.fuzhu_mode == "all" then
 
             logger.info("当前输入是奇数个, 开始辅助码匹配候选词中所有字模式模式")
             -- 开始对所有候选项进行遍历
@@ -744,7 +765,7 @@ function aux_code_filter.func(translation, env)
             end
 
             return true
-        elseif env.fuzhu_mode == "before" then
+        elseif aux_code_filter.fuzhu_mode == "before" then
             logger.info("当前输入是奇数个, 开始辅助码匹配第一个字模式模式")
             -- 开始对所有候选项进行遍历
             local count = 0
@@ -774,7 +795,7 @@ function aux_code_filter.func(translation, env)
             end
 
             return true
-        elseif env.fuzhu_mode == "after" then
+        elseif aux_code_filter.fuzhu_mode == "after" then
             logger.info("当前输入是奇数个, 开始辅助码匹配最后一个字模式模式")
             -- 开始对所有候选项进行遍历
             local count = 0

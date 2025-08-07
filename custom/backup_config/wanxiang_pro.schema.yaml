@@ -116,7 +116,7 @@ engine:
     - matcher                              #配合 recognizer 标识符合特定规则的段落，如网址、反查等，加上特定 tag
     - lua_segmentor@*ai_assistant_segmentor     #AI对话自定义分词器，分割 a: 和拼音部分
     - abc_segmentor                        #标识常规的文字段落，加上 abc 这个 tag
-    - lua_segmentor@*backtick_segment      #添加反引号分词器
+    - lua_segmentor@*rawenglish_segment      #添加反引号分词器
     - affix_segmentor@radical_lookup       #部件拆字自定义 tag
     - affix_segmentor@reverse_stroke       #笔画反查自定义 tag
     - affix_segmentor@add_user_dict        #自造词加词 tag
@@ -126,7 +126,7 @@ engine:
 
   translators:
     # - lua_translator@*debug_translator     #调试翻译器，打印输入、分词、环境等信息
-    - lua_translator@*backtick_translator # 反引号翻译器，对于带有反引号内的内容单独处理
+    - lua_translator@*rawenglish_translator # 反引号翻译器，对于带有反引号内的内容单独处理
     - lua_translator@*ai_assistant_translator   #AI对话前缀翻译器
     - predict_translator                   #预测候选的生成器
     - punct_translator                     #配合 punct_segmentor 转换标点符号
@@ -317,8 +317,8 @@ translator:
   spelling_hints: 50             # 将注释以词典字符串形式完全暴露，通过super_comment.lua完全接管，灵活配置。
   always_show_comments: true    # Rime 默认在 preedit 等于 comment 时取消显示 comment，这里强制一直显示，供super_comment.lua做判断用。
   comment_format: {comment: null} #将注释以词典字符串形式完全暴露，通过super_comment.lua完全接管，灵活配置。
-  backtick_delimiter_before: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
-  backtick_delimiter_after: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
+  rawenglish_delimiter_before: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
+  rawenglish_delimiter_after: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
   replace_punct_enabled: true  # 是否启用中文标点替换功能，true 为启用，false 为禁用
   preedit_format:     #影响到输入框的显示和“Shift+回车”上屏的字符，交给super_preedit处理
     # __patch:

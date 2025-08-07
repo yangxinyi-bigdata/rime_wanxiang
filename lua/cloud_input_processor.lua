@@ -1,8 +1,45 @@
 -- 引入日志工具模块
 local logger_module = require("logger")
+
+local logger = logger_module.create("cloud_input_processor", {
+    enabled = true,
+    unique_file_log = false,
+    log_level = "DEBUG"
+})
 -- 引入文本切分模块
 -- local text_splitter = require("text_splitter")
 local debug_utils = require("debug_utils")
+
+-- 其他需要更新配置的lua脚本
+local smart_cursor_processor = nil
+local ai_assistant_segmentor = nil
+local rawenglish_segment = nil
+local rawenglish_translator = nil
+local ai_assistant_translator = nil
+local aux_code_filter_v3 = nil
+local cloud_ai_filter_v2 = nil
+local punct_eng_chinese_filter = nil
+
+-- 安全加载模块，防止脚本不存在时出错
+local function safe_require(module_name)
+    local ok, module = pcall(require, module_name)
+    if ok then
+        logger.debug("成功加载模块: " .. module_name)
+        return module
+    else
+        logger.warning("加载模块失败: " .. module_name .. " - " .. tostring(module))
+        return nil
+    end
+end
+
+smart_cursor_processor = safe_require("smart_cursor_processor")
+ai_assistant_segmentor = safe_require("ai_assistant_segmentor")
+rawenglish_segment = safe_require("rawenglish_segment")
+rawenglish_translator = safe_require("rawenglish_translator")
+ai_assistant_translator = safe_require("ai_assistant_translator")
+aux_code_filter_v3 = safe_require("aux_code_filter_v3")
+cloud_ai_filter_v2 = safe_require("cloud_ai_filter_v2")
+punct_eng_chinese_filter = safe_require("punct_eng_chinese_filter")
 
 -- 引入TCP同步模块
 local tcp_socket = nil
@@ -13,60 +50,57 @@ if not tcp_ok then
     logger.error("加载 tcp_socket_sync 失败: " .. tostring(tcp_err))
 end
 
-local logger = logger_module.create("cloud_input_processor", {
-    enabled = true,
-    unique_file_log = false,
-    log_level = "DEBUG"
-})
-
 -- 返回值常量定义
 local kRejected = 0 -- 表示按键被拒绝
 local kAccepted = 1 -- 表示按键已被处理
 local kNoop = 2 -- 表示按键未被处理,继续传递给下一个处理器
 
--- 配置缓存机制
-local config_cache = {}
-local last_schema_id = nil
+local cloud_input_processor = {}
 
--- 读取配置的辅助函数
-local function load_ai_config(env)
-    local schema = env.engine.schema
-    local config = schema.config
-    local schema_id = schema.schema_id
+-- 模块级别的 schema 跟踪变量
+cloud_input_processor.last_schema_id = nil
 
-    -- 如果schema没有变化且已有缓存，直接使用缓存
-    if last_schema_id == schema_id and config_cache.ai_assistant_config then
-        logger.debug("使用缓存的AI助手配置 (schema: " .. schema_id .. ")")
-        return config_cache.ai_assistant_config
-    end
+-- 配置更新函数
+function cloud_input_processor.update_current_config(config)
+    logger.debug("重新加载AI助手配置")
 
-    logger.debug("重新加载AI助手配置 (schema: " .. schema_id .. ")")
+    -- 读取分隔符配置
+    cloud_input_processor.delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
+    logger.debug("当前分隔符: " .. cloud_input_processor.delimiter)
 
-    -- 读取AI助手配置
-    local ai_assistant_config = {}
-    ai_assistant_config.chat_triggers = {}
-    ai_assistant_config.chat_names = {}
-    ai_assistant_config.reply_messages_preedit = {}
-    ai_assistant_config.prefix_to_reply = {}
+    -- 初始化配置对象
+    cloud_input_processor.ai_assistant_config = {}
+    cloud_input_processor.ai_assistant_config.chat_triggers = {}
+    cloud_input_processor.ai_assistant_config.chat_names = {}
+    cloud_input_processor.ai_assistant_config.reply_messages_preedit = {}
+    cloud_input_processor.ai_assistant_config.prefix_to_reply = {}
 
     -- 读取 enabled 配置
-    local enabled = config:get_bool("ai_assistant/enabled")
-    ai_assistant_config.enabled = enabled or false
-    logger.debug("AI助手启用状态: " .. tostring(ai_assistant_config.enabled))
+    cloud_input_processor.ai_assistant_config.enabled = config:get_bool("ai_assistant/enabled")
+    logger.debug("AI助手启用状态: " .. tostring(cloud_input_processor.ai_assistant_config.enabled))
 
     -- 读取 behavior 配置
-    ai_assistant_config.behavior = {}
+    cloud_input_processor.ai_assistant_config.behavior = {}
 
-    ai_assistant_config.behavior.commit_question = config:get_bool("ai_assistant/behavior/commit_question") or false
-    ai_assistant_config.behavior.strip_chat_prefix = config:get_bool("ai_assistant/behavior/strip_chat_prefix") or false
-    ai_assistant_config.behavior.auto_commit = config:get_bool("ai_assistant/behavior/auto_commit") or false
-    ai_assistant_config.behavior.clipboard_mode = config:get_bool("ai_assistant/behavior/clipboard_mode") or false
-    ai_assistant_config.behavior.prompt_chat = config:get_string("ai_assistant/behavior/prompt_chat")
+    cloud_input_processor.ai_assistant_config.behavior.commit_question = config:get_bool(
+        "ai_assistant/behavior/commit_question") or false
+    cloud_input_processor.ai_assistant_config.behavior.strip_chat_prefix = config:get_bool(
+        "ai_assistant/behavior/strip_chat_prefix") or false
+    cloud_input_processor.ai_assistant_config.behavior.auto_commit =
+        config:get_bool("ai_assistant/behavior/auto_commit") or false
+    cloud_input_processor.ai_assistant_config.behavior.clipboard_mode = config:get_bool(
+        "ai_assistant/behavior/clipboard_mode") or false
+    cloud_input_processor.ai_assistant_config.behavior.prompt_chat = config:get_string(
+        "ai_assistant/behavior/prompt_chat")
 
-    logger.debug("行为配置 - commit_question: " .. tostring(ai_assistant_config.behavior.commit_question))
-    logger.debug("行为配置 - auto_commit: " .. tostring(ai_assistant_config.behavior.auto_commit))
-    logger.debug("行为配置 - clipboard_mode: " .. tostring(ai_assistant_config.behavior.clipboard_mode))
-    logger.debug("行为配置 - prompt_chat: " .. tostring(ai_assistant_config.behavior.prompt_chat))
+    logger.debug("行为配置 - commit_question: " ..
+                     tostring(cloud_input_processor.ai_assistant_config.behavior.commit_question))
+    logger.debug("行为配置 - auto_commit: " ..
+                     tostring(cloud_input_processor.ai_assistant_config.behavior.auto_commit))
+    logger.debug("行为配置 - clipboard_mode: " ..
+                     tostring(cloud_input_processor.ai_assistant_config.behavior.clipboard_mode))
+    logger.debug("行为配置 - prompt_chat: " ..
+                     tostring(cloud_input_processor.ai_assistant_config.behavior.prompt_chat))
 
     -- 动态读取 chat_triggers 配置
     local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
@@ -82,17 +116,17 @@ local function load_ai_config(env)
             local chat_name = config:get_string("ai_assistant/chat_names/" .. trigger_name)
 
             if trigger_value then
-                ai_assistant_config.chat_triggers[trigger_name] = trigger_value
+                cloud_input_processor.ai_assistant_config.chat_triggers[trigger_name] = trigger_value
                 logger.debug("云输入触发器 - " .. trigger_name .. ": " .. trigger_value)
             end
 
             if chat_name then
-                ai_assistant_config.chat_names[trigger_name] = chat_name
+                cloud_input_processor.ai_assistant_config.chat_names[trigger_name] = chat_name
                 logger.debug("聊天名称 - " .. trigger_name .. ": " .. chat_name)
             end
 
             if reply_message then
-                ai_assistant_config.reply_messages_preedit[trigger_name] = reply_message
+                cloud_input_processor.ai_assistant_config.reply_messages_preedit[trigger_name] = reply_message
                 logger.debug("云输入回复消息 - " .. trigger_name .. ": " .. reply_message)
             end
         end
@@ -101,61 +135,96 @@ local function load_ai_config(env)
     end
 
     -- 创建触发器前缀到回复消息的映射
-    for trigger, prefix in pairs(ai_assistant_config.chat_triggers) do
-        local reply_message = ai_assistant_config.reply_messages_preedit[trigger]
+    for trigger, prefix in pairs(cloud_input_processor.ai_assistant_config.chat_triggers) do
+        local reply_message = cloud_input_processor.ai_assistant_config.reply_messages_preedit[trigger]
         if reply_message then
-            ai_assistant_config.prefix_to_reply[prefix] = reply_message
+            cloud_input_processor.ai_assistant_config.prefix_to_reply[prefix] = reply_message
         end
     end
 
-    -- 缓存配置
-    config_cache.ai_assistant_config = ai_assistant_config
-    last_schema_id = schema_id
-
     -- 读取菜单配置
     local ok_menu, err_menu = pcall(function()
-        ai_assistant_config.page_size = config:get_int("menu/page_size")
-        ai_assistant_config.alternative_select_keys = config:get_string("menu/alternative_select_keys")
+        cloud_input_processor.ai_assistant_config.page_size = config:get_int("menu/page_size")
+        cloud_input_processor.ai_assistant_config.alternative_select_keys = config:get_string(
+            "menu/alternative_select_keys")
     end)
     if ok_menu then
-        logger.debug("page_size: " .. tostring(ai_assistant_config.page_size))
-        logger.debug("alternative_select_keys: " .. tostring(ai_assistant_config.alternative_select_keys))
+        logger.debug("page_size: " .. tostring(cloud_input_processor.ai_assistant_config.page_size))
+        logger.debug("alternative_select_keys: " ..
+                         tostring(cloud_input_processor.ai_assistant_config.alternative_select_keys))
 
         -- 从alternative_select_keys中截取前page_size个字符
-        if ai_assistant_config.alternative_select_keys and ai_assistant_config.page_size then
-            ai_assistant_config.alternative_select_keys = ai_assistant_config.alternative_select_keys:sub(1,
-                ai_assistant_config.page_size)
+        if cloud_input_processor.ai_assistant_config.alternative_select_keys and
+            cloud_input_processor.ai_assistant_config.page_size then
+            cloud_input_processor.ai_assistant_config.alternative_select_keys =
+                cloud_input_processor.ai_assistant_config.alternative_select_keys:sub(1,
+                    cloud_input_processor.ai_assistant_config.page_size)
             logger.debug("截取后的alternative_select_keys: " ..
-                             tostring(ai_assistant_config.alternative_select_keys))
+                             tostring(cloud_input_processor.ai_assistant_config.alternative_select_keys))
         end
     else
         logger.error("获取菜单配置失败: " .. tostring(err_menu))
         -- 设置默认值
-        ai_assistant_config.page_size = 5
-        ai_assistant_config.alternative_select_keys = "123456789"
+        cloud_input_processor.ai_assistant_config.page_size = 5
+        cloud_input_processor.ai_assistant_config.alternative_select_keys = "123456789"
         -- 截取默认值
-        ai_assistant_config.alternative_select_keys = ai_assistant_config.alternative_select_keys:sub(1,
-            ai_assistant_config.page_size)
-        logger.debug("使用默认菜单配置 - page_size: " .. ai_assistant_config.page_size ..
-                         ", alternative_select_keys: " .. ai_assistant_config.alternative_select_keys)
+        cloud_input_processor.ai_assistant_config.alternative_select_keys =
+            cloud_input_processor.ai_assistant_config.alternative_select_keys:sub(1,
+                cloud_input_processor.ai_assistant_config.page_size)
+        logger.debug("使用默认菜单配置 - page_size: " .. cloud_input_processor.ai_assistant_config.page_size ..
+                         ", alternative_select_keys: " ..
+                         cloud_input_processor.ai_assistant_config.alternative_select_keys)
     end
 
-    return ai_assistant_config
+    logger.debug("AI助手配置更新完成")
 end
 
-local cloud_input_processor = {}
-local delimiter = " " -- 默认分隔符
+-- 统一的配置更新函数
+function cloud_input_processor.update_all_modules_config(config)
+    logger.info("开始更新所有模块配置")
+    
+    -- 更新所有模块的配置，添加nil检查防止模块加载失败
+    cloud_input_processor.update_current_config(config)
+    
+    if rawenglish_translator and rawenglish_translator.update_current_config then
+        rawenglish_translator.update_current_config(config)
+    end
+    
+    if smart_cursor_processor and smart_cursor_processor.update_current_config then
+        smart_cursor_processor.update_current_config(config)
+    end
+    if ai_assistant_segmentor and ai_assistant_segmentor.update_current_config then
+        ai_assistant_segmentor.update_current_config(config)
+    end
+    if rawenglish_segment and rawenglish_segment.update_current_config then
+        rawenglish_segment.update_current_config(config)
+    end
+    if ai_assistant_translator and ai_assistant_translator.update_current_config then
+        ai_assistant_translator.update_current_config(config)
+    end
+    if aux_code_filter_v3 and aux_code_filter_v3.update_current_config then
+        aux_code_filter_v3.update_current_config(config)
+    end
+    if cloud_ai_filter_v2 and cloud_ai_filter_v2.update_current_config then
+        cloud_ai_filter_v2.update_current_config(config)
+    end
+    if punct_eng_chinese_filter and punct_eng_chinese_filter.update_current_config then
+        punct_eng_chinese_filter.update_current_config(config)
+    end
+
+    logger.info("所有模块配置更新完成")
+end
 
 -- 获取当前AI上下文对应的回复输入格式
 local function get_current_ai_reply_input(env, context)
-    if not env.ai_assistant_config or not env.ai_assistant_config.chat_triggers then
+    if not cloud_input_processor.ai_assistant_config or not cloud_input_processor.ai_assistant_config.chat_triggers then
         return "ai_reply:" -- 默认回复输入
     end
 
     -- 获取当前AI上下文标记
     local current_ai_context = context:get_property("current_ai_context")
-    if current_ai_context and env.ai_assistant_config.chat_triggers[current_ai_context] then
-        local trigger_prefix = env.ai_assistant_config.chat_triggers[current_ai_context]
+    if current_ai_context and cloud_input_processor.ai_assistant_config.chat_triggers[current_ai_context] then
+        local trigger_prefix = cloud_input_processor.ai_assistant_config.chat_triggers[current_ai_context]
         local reply_input = trigger_prefix:gsub(":$", "_reply:")
         logger.debug("使用AI上下文回复输入: " .. current_ai_context .. " -> " .. reply_input)
         return reply_input
@@ -163,8 +232,8 @@ local function get_current_ai_reply_input(env, context)
 
     -- 如果没有设置上下文，尝试从输入历史中推断
     local input_history = context:get_property("ai_input_history")
-    if input_history and env.ai_assistant_config.chat_triggers then
-        for trigger, prefix in pairs(env.ai_assistant_config.chat_triggers) do
+    if input_history and cloud_input_processor.ai_assistant_config.chat_triggers then
+        for trigger, prefix in pairs(cloud_input_processor.ai_assistant_config.chat_triggers) do
             if input_history:match("^" .. prefix:gsub("[%(%)%.%+%-%*%?%[%]%^%$%%]", "%%%1")) then
                 local reply_input = prefix:gsub(":$", "_reply:")
                 logger.debug("从输入历史推断回复输入: " .. prefix .. " -> " .. reply_input)
@@ -174,32 +243,6 @@ local function get_current_ai_reply_input(env, context)
     end
 
     return "ai_reply:" -- 默认回复输入
-end
-
--- 从script_text中提取中文的部分
--- 使用Lua模式匹配一次性提取前面的中文部分, 以及其中的英文部分
-local function extract_leading_chinese_and_backtick(text)
-    -- 最高效的方法：反向查找最后一个中文字符的位置
-    local last_pos = 0
-    local pos = 1
-
-    -- 使用string.find从前往后查找所有中文字符，记录最后一个位置
-    while true do
-        local start_pos, end_pos = text:find("[\228-\233][\128-\191][\128-\191]", pos)
-        if not start_pos then
-            break
-        end
-        last_pos = end_pos
-        pos = end_pos + 1
-    end
-
-    -- 如果找到中文字符，返回从开头到最后一个中文字符的部分
-    if last_pos > 0 then
-        return text:sub(1, last_pos)
-    end
-
-    -- 如果没有中文字符，返回空字符串
-    return ""
 end
 
 -- 计算候选词中汉字的数量
@@ -365,7 +408,8 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
         logger.debug("检测到空格键，按选词键1处理 (索引: " .. select_key_index .. ")")
     else
         -- 直接查找字符在选词键字符串中的位置
-        select_key_index = string.find(env.ai_assistant_config.alternative_select_keys, key_repr, 1, true)
+        select_key_index = string.find(cloud_input_processor.ai_assistant_config.alternative_select_keys, key_repr, 1,
+            true)
         if select_key_index then
             is_select_key = true
             logger.debug("检测到选词键: " .. key_repr .. " (索引: " .. select_key_index .. ")")
@@ -403,12 +447,12 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
 
                         -- 对上屏文本前边去除掉, 首先要知道最前边的那个是什么, 在chat_names中
                         logger.debug("chat_trigger: " .. chat_trigger)
-                        local chat_trigger_name = env.ai_assistant_config.chat_triggers[chat_trigger]
+                        local chat_trigger_name = cloud_input_processor.ai_assistant_config.chat_triggers[chat_trigger]
                         logger.debug("chat_trigger_name: " .. chat_trigger_name)
 
                         -- 使用新的函数构建最终的上屏文本，传入chat_trigger_name参数
-                        local going_commit_text = build_commit_text(script_text, candidate_text, delimiter,
-                            chat_trigger_name)
+                        local going_commit_text = build_commit_text(script_text, candidate_text,
+                            cloud_input_processor.delimiter, chat_trigger_name)
                         logger.info("going_commit_text: " .. going_commit_text)
 
                         -- 判断going_commit_text是否以chat_names开头，如果是则删除前缀
@@ -447,10 +491,10 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
                                 context:set_property("get_ai_stream", "true")
                             end
 
-                            if env.ai_assistant_config.behavior.commit_question then
+                            if cloud_input_processor.ai_assistant_config.behavior.commit_question then
 
                                 -- 再判断strip_chat_prefix为true或者false,如果为true,则清空并且重新上屏字符串
-                                if env.ai_assistant_config.behavior.strip_chat_prefix then
+                                if cloud_input_processor.ai_assistant_config.behavior.strip_chat_prefix then
 
                                     logger.debug("context:clear()")
                                     context:clear()
@@ -501,25 +545,6 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
     end
 end
 
-function cloud_input_processor.init(env)
-    -- 获取输入法引擎和上下文   
-    local config = env.engine.schema.config
-    -- 初始化时清空日志文件
-    -- logger.clear()
-    logger.debug("云输入处理器初始化完成")
-    delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
-    logger.debug("当前分隔符: " .. delimiter)
-
-    -- 使用配置加载函数
-    env.ai_assistant_config = load_ai_config(env)
-    logger.debug("AI助手配置加载完成")
-
-    --  fixed 设置一个变量
-    -- context:set_property只能设置字符串类型
-    env.engine.context:set_property("cloud_convert_flag", "0")
-    env.engine.context:set_property("backtick_prompt", "0")
-end
-
 local function set_cloud_convert_flag(context)
     -- 这部分代码时检测输入的字符长度，通过检测中间有几个分隔符实现
     -- 检查当前是否正在组词状态（即用户正在输入但还未确认）
@@ -530,7 +555,7 @@ local function set_cloud_convert_flag(context)
     -- 移除光标符号和后续的prompt内容
     local clean_text = preedit_text:gsub("‸.*$", "") -- 从光标符号开始删除到结尾
     logger.debug("当前预编辑文本: " .. clean_text)
-    local _, count = string.gsub(clean_text, delimiter, delimiter)
+    local _, count = string.gsub(clean_text, cloud_input_processor.delimiter, cloud_input_processor.delimiter)
     logger.debug("当前输入内容分隔符数量: " .. count)
     -- local has_punct = has_punctuation(input)
 
@@ -561,6 +586,46 @@ local function set_cloud_convert_flag(context)
     end
 end
 
+function cloud_input_processor.init(env)
+    -- 获取输入法引擎和上下文   
+    local config = env.engine.schema.config
+    local current_schema_id = env.engine.schema.schema_id
+    
+    -- 初始化时清空日志文件
+    logger.clear()
+
+    -- 检查是否需要更新配置（第一次初始化或 schema 发生变化）
+    local need_update = false
+    if cloud_input_processor.last_schema_id == nil then
+        logger.info("首次初始化，需要更新所有模块配置")
+        need_update = true
+    elseif cloud_input_processor.last_schema_id ~= current_schema_id then
+        logger.info("Schema 发生变化: " .. tostring(cloud_input_processor.last_schema_id) .. " -> " .. current_schema_id .. "，需要更新所有模块配置")
+        need_update = true
+    else
+        logger.info("Schema 未变化: " .. current_schema_id .. "，跳过配置更新")
+    end
+
+    if need_update then
+        -- 使用统一的配置更新函数更新所有模块配置
+        cloud_input_processor.update_all_modules_config(config)
+        -- 更新记录的 schema ID
+        cloud_input_processor.last_schema_id = current_schema_id
+        logger.debug("cloud_input_processor及所有模块配置加载完成")
+    else
+        -- 即使不需要全面更新，也要确保当前模块的基本配置是正确的
+        cloud_input_processor.update_current_config(config)
+        logger.debug("cloud_input_processor配置更新完成（其他模块跳过）")
+    end
+
+    --  fixed 设置一个变量
+    -- context:set_property只能设置字符串类型
+    env.engine.context:set_property("cloud_convert_flag", "0")
+    env.engine.context:set_property("rawenglish_prompt", "0")
+
+    logger.debug("云输入处理器初始化完成")
+end
+
 -- 按键处理器函数
 -- 负责监听按键事件,判断是否应该触发翻译器
 function cloud_input_processor.func(key, env)
@@ -576,10 +641,9 @@ function cloud_input_processor.func(key, env)
         return kAccepted
     end
 
-    -- 检查是否需要拦截Release+Shift_L按键
-    if key_repr == "Release+Shift_L" then
-        local should_intercept = context:get_property("should_intercept_shift_release")
-        if should_intercept == "1" then
+    if context:get_property("should_intercept_shift_release") == "1" then
+        -- 检查是否需要拦截Release+Shift_L按键
+        if key_repr == "Release+Shift_L" or key_repr == "Release+Shift_R" then
             logger.debug("拦截Release+Shift_L按键（由于之前处理了Shift+组合键）")
             -- 清除标志，避免影响后续操作
             context:set_property("should_intercept_shift_release", "0")
@@ -587,9 +651,21 @@ function cloud_input_processor.func(key, env)
         end
     end
 
-    if context:get_property("get_ai_stream") == "true" then
+    -- 测试: 尝试去调用各个模块的update_current_config函数
+    if key_repr == "Control+F10" then
+        -- 应该是当前收到服务端发送过来的命令的时候, config就已经完成修改了.
+        logger.info("Control+F10: 强制更新所有模块配置")
+        local config = env.engine.schema.config
 
-        if key_repr == "Control+F11" then
+        -- 使用统一的配置更新函数，强制更新所有模块
+        cloud_input_processor.update_all_modules_config(config)
+
+        logger.info("Control+F10: 所有模块配置更新完成")
+    end
+
+    -- 检查Control+F11按键的处理
+    if key_repr == "Control+F11" then
+        if context:get_property("get_ai_stream") == "true" then
             logger.debug("get_ai_stream==true, 触发重新刷新候选词: ")
             if context.input == "" then
                 local reply_input = get_current_ai_reply_input(env, context)
@@ -598,18 +674,11 @@ function cloud_input_processor.func(key, env)
             end
             context:refresh_non_confirmed_composition()
             return kAccepted
-        end
-
-    elseif context:get_property("get_cloud_stream") == "true" then
-
-        if key_repr == "Control+F11" then
+        elseif context:get_property("get_cloud_stream") == "true" then
             logger.debug("get_cloud_stream==true, 触发重新刷新云输入候选词: ")
             context:refresh_non_confirmed_composition()
             return kAccepted
-        end
-
-    else
-        if key_repr == "Control+F11" then
+        else
             logger.debug("get_ai_stream==false && get_cloud_stream==false, 依然拦截输入Control+F11: ")
             return kAccepted
         end
@@ -666,8 +735,8 @@ function cloud_input_processor.func(key, env)
     local first_segment = segmentation:get_at(0)
     local last_segment = segmentation:back()
     -- 英文模式豁免
-    logger.debug("property: backtick_prompt: " .. context:get_property("backtick_prompt"))
-    if first_segment:has_tag("ai_talk") and context:get_property("backtick_prompt") == "0" then
+    logger.debug("property: rawenglish_prompt: " .. context:get_property("rawenglish_prompt"))
+    if first_segment:has_tag("ai_talk") and context:get_property("rawenglish_prompt") == "0" then
         logger.debug("first_segment.tags: ai_talk")
         -- for element, _ in pairs(first_segment.tags) do
         --     logger.debug("first_segment.tags: " .. element)
@@ -731,10 +800,6 @@ function cloud_input_processor.func(key, env)
 
         local segmentation = context.composition:toSegmentation()
 
-        -- 读取配置中的常规输入字符内容
-        -- local config = engine.schema.config
-        -- local regular_input = config:get_string("speller/alphabet")
-
         -- 检查按键是否有效
         if not key then
             error("按键对象为空")
@@ -747,14 +812,14 @@ function cloud_input_processor.func(key, env)
         logger.debug("当前按键: " .. key_repr)
         logger.debug("当前input: " .. input)
 
-        logger.debug("context:get_property:backtick_prompt " .. context:get_property("backtick_prompt"))
+        logger.debug("context:get_property:rawenglish_prompt " .. context:get_property("rawenglish_prompt"))
 
         -- 首先打印seg的信息
         -- 使用debug_utils打印Segmentation信息
         -- debug_utils.print_segmentation_info(segmentation, logger)
-        logger.debug("当前云输入提示标志: " .. context:get_property("backtick_prompt"))
+        logger.debug("当前云输入提示标志: " .. context:get_property("rawenglish_prompt"))
 
-        if context:get_property("backtick_prompt") == "1" then
+        if context:get_property("rawenglish_prompt") == "1" then
             if key_repr:match("^Release%+") then
                 logger.debug("反引号状态下跳过按键事件: " .. key_repr)
                 return kAccepted
@@ -895,18 +960,18 @@ function cloud_input_processor.func(key, env)
         --     -- 删除按键之后,如果删除掉的是一个反引号,也应该马上触发
         --     segmentation_input = segmentation_input:sub(1, -2)
         -- end
-        -- local _, backtick_count = segmentation_input:gsub("`", "")
-        -- if backtick_count % 2 == 1 then
+        -- local _, rawenglish_count = segmentation_input:gsub("`", "")
+        -- if rawenglish_count % 2 == 1 then
         --     logger.debug("检测到奇数个反引号,存在未闭合情况: " .. segmentation_input ..
-        --                      " (反引号数量: " .. backtick_count .. ")")
+        --                      " (反引号数量: " .. rawenglish_count .. ")")
         --     -- 只在值真正需要改变时才设置
         --     -- 先获取当前选项的值，避免不必要的更新
-        --     logger.debug("当前云输入提示标志: " .. context:get_property("backtick_prompt"))
+        --     logger.debug("当前云输入提示标志: " .. context:get_property("rawenglish_prompt"))
 
-        --     if context:get_property("backtick_prompt") == "0" then
-        --         logger.debug("backtick_prompt提示标志为 0, 设置为 1")
-        --         context:set_property("backtick_prompt", "1")
-        --         logger.debug("backtick_prompt 已设置为 1")
+        --     if context:get_property("rawenglish_prompt") == "0" then
+        --         logger.debug("rawenglish_prompt提示标志为 0, 设置为 1")
+        --         context:set_property("rawenglish_prompt", "1")
+        --         logger.debug("rawenglish_prompt 已设置为 1")
         --     end
 
         --     if key_repr:match("^Release%+") then
@@ -1027,10 +1092,10 @@ function cloud_input_processor.func(key, env)
 
         -- else
         --     -- 如果不在组词状态或没有达到触发条件,则重置提示选项
-        --     logger.debug("当前不在反引号当中backtick提示已重置")
-        --     if context:get_property("backtick_prompt") == "1" then
-        --         context:set_property("backtick_prompt", "0")
-        --         logger.debug("backtick_prompt 已设置为 0")
+        --     logger.debug("当前不在反引号当中rawenglish提示已重置")
+        --     if context:get_property("rawenglish_prompt") == "1" then
+        --         context:set_property("rawenglish_prompt", "0")
+        --         logger.debug("rawenglish_prompt 已设置为 0")
         --     end
         -- end
 
