@@ -9,7 +9,7 @@ local spans_manager = require("spans_manager")
 
 -- 创建当前模块的日志记录器
 local logger = logger_module.create("backtick_translator", {
-    enabled = false, -- 启用日志以便测试
+    enabled = true, -- 启用日志以便测试
     unique_file_log = false, -- 启用日志以便测试
     log_level = "DEBUG"
 })
@@ -259,6 +259,8 @@ function backtick_translator.func(input, seg, env)
     local engine = env.engine
     local context = engine.context
     local context_input = context.input
+    local config = engine.schema.config
+    local english_mode_symbol = config:get_string("translator/english_mode_symbol")
 
     -- 自动检查并清除过期的spans信息
     spans_manager.auto_clear_check(context, context_input)
@@ -298,11 +300,41 @@ function backtick_translator.func(input, seg, env)
     end
 
     -- 检查输入是否包含反引号标签
-    if not seg:has_tag("backtick") then
-        logger.info("没有包含backtick标签，不处理")
+    if not seg:has_tag("backtick_combo") and not seg:has_tag("single_backtick") then
+        logger.info("没有包含backtick或single_backtick标签，不处理")
         return
     end
     logger.info("含有backtick标签, 进入反引号translator")
+
+    -- 处理single_backtick类型的片段
+    if seg:has_tag("single_backtick") then
+        logger.info("检测到single_backtick标签，进行特殊处理")
+
+        -- 检查输入是否以反引号开头和结尾
+        local inner_content, replaced_content
+        
+        if input:sub(-1) == "`" then
+            -- 完整的反引号片段，提取反引号内的内容
+            inner_content = input:sub(2, -2)
+            logger.info("完整反引号片段，内容: '" .. inner_content .. "'")
+        else
+            -- 未闭合的反引号片段，提取反引号后的内容
+            inner_content = input:sub(2)
+            logger.info("未闭合反引号片段，内容: '" .. inner_content .. "'")
+        end
+
+        -- 替换成配置的分隔符
+        replaced_content = backtick_delimiter_before .. inner_content .. backtick_delimiter_after
+        logger.info("替换后内容: '" .. replaced_content .. "'")
+
+        -- 生成候选词
+        local candidate = Candidate("single_backtick", seg.start, seg._end, replaced_content, "")
+        candidate.preedit = input
+        yield(candidate)
+
+        logger.info("已生成single_backtick候选词: '" .. replaced_content .. "'")
+        return
+    end
 
     -- 如果输入的是Enter回车键, context:set_option("cloud_convert", true)
     -- if context:get_option("cloud_convert") then
@@ -320,14 +352,14 @@ function backtick_translator.func(input, seg, env)
     -- 计算在input前边还有多少已经处理完的内容, 在script计算的start和end值中添加这个长度
     local segments = text_splitter.split_by_backtick_with_log(input, seg.start, seg._end, backtick_delimiter_before,
         backtick_delimiter_after, logger)
-    
+
     if not segments or #segments == 0 then
         logger.error("切分失败或无结果")
         return
     end
 
     -- 检查第一个片段是否为backtick类型，若是则直接commit_text并返回
-    if segments[1].type == "backtick" then
+    if segments[1].type == "backtick_combo" then
         -- 还要考虑新的可能性: 如果是只有一个反引号开头，如何判断
         -- 如果是单引号开头，然后后面跟着一些字母，或者其他内容，反引号暂时未闭合，如何处理？
         -- 如果是一个完整的反引号包裹的内容，如何处理？
@@ -481,7 +513,7 @@ function backtick_translator.func(input, seg, env)
 
             end
 
-        elseif segment.type == "backtick" then
+        elseif segment.type == "backtick_combo" then
             -- 反引号内容：固定一个候选项
             logger.info(string.format("处理反引号片段 %d: '%s'", i, segment.content))
             -- 对于反引号部分, 自己生成一个spans, backtick
@@ -610,7 +642,7 @@ function backtick_translator.func(input, seg, env)
                             long_span:add_vertex(one_cand.start + vertex)
                         end
 
-                    elseif count > 1 and one_cand.type == "backtick" then
+                    elseif count > 1 and one_cand.type == "backtick_combo" then
                         -- 这里是现在重点出错的地方
                         logger.info(string.format(
                             "one_cand属性: text='%s', preedit='%s', start=%d, _end=%d, length=%d, type=%s",

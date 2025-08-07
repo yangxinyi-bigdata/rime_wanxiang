@@ -361,7 +361,7 @@ function translator.func(translation, env)
                     -- 标点符号：直接添加
                     logger.info(string.format("处理标点片段 %d: '%s'", i, segment.content))
                     return segment.content
-                elseif segment.type == "backtick" then
+                elseif segment.type == "backtick_combo" then
                     -- 反引号内容：不处理，直接添加
                     logger.info(string.format("处理反引号片段 %d: '%s'", i, segment.content))
                     return segment.content

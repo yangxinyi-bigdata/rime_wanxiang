@@ -16,7 +16,7 @@ end
 local logger = logger_module.create("cloud_input_processor", {
     enabled = true,
     unique_file_log = false,
-    log_level = "INFO"
+    log_level = "DEBUG"
 })
 
 -- 返回值常量定义
@@ -251,7 +251,7 @@ local function build_commit_text(script_text, candidate_text, delimiter, chat_tr
     -- 检查并提取chat_trigger_name前缀
     local prefix = ""
     local actual_script_text = script_text
-    
+
     if chat_trigger_name and script_text:sub(1, #chat_trigger_name) == chat_trigger_name then
         prefix = chat_trigger_name
         actual_script_text = script_text:sub(#chat_trigger_name + 1)
@@ -265,53 +265,64 @@ local function build_commit_text(script_text, candidate_text, delimiter, chat_tr
 
     -- 使用更聪明的匹配方法：按段落匹配而不是逐字符匹配
     local temp_script_text = actual_script_text
-    
+
     -- 将候选词按空格分割成段落（保留空格信息）
     local candidate_parts = {}
     local current_part = ""
     local in_space_sequence = false
-    
+
     for pos, code in utf8.codes(candidate_text) do
         local char = utf8.char(code)
         if char == " " then
             if not in_space_sequence and current_part ~= "" then
-                table.insert(candidate_parts, {type = "text", content = current_part})
+                table.insert(candidate_parts, {
+                    type = "text",
+                    content = current_part
+                })
                 current_part = ""
             end
             current_part = current_part .. char
             in_space_sequence = true
         else
             if in_space_sequence and current_part ~= "" then
-                table.insert(candidate_parts, {type = "space", content = current_part})
+                table.insert(candidate_parts, {
+                    type = "space",
+                    content = current_part
+                })
                 current_part = ""
             end
             current_part = current_part .. char
             in_space_sequence = false
         end
     end
-    
+
     -- 添加最后一个部分
     if current_part ~= "" then
         local part_type = in_space_sequence and "space" or "text"
-        table.insert(candidate_parts, {type = part_type, content = current_part})
+        table.insert(candidate_parts, {
+            type = part_type,
+            content = current_part
+        })
     end
-    
+
     -- 从后往前处理每个部分
     for i = #candidate_parts, 1, -1 do
         local part = candidate_parts[i]
         logger.info("处理候选词片段: '" .. part.content .. "' (类型: " .. part.type .. ")")
-        
+
         if part.type == "text" then
             -- 文本片段：统计中文字符数量，移除对应的音节
             local chinese_count = count_chinese_characters(part.content)
             if chinese_count > 0 then
                 temp_script_text = remove_syllables_from_end(temp_script_text, chinese_count, delimiter)
-                logger.info("文本片段包含" .. chinese_count .. "个中文字符，移除" .. chinese_count .. "个音节，剩余: '" .. temp_script_text .. "'")
+                logger.info("文本片段包含" .. chinese_count .. "个中文字符，移除" .. chinese_count ..
+                                "个音节，剩余: '" .. temp_script_text .. "'")
             else
                 -- 纯英文文本，移除对应长度的部分
                 local text_len = utf8.len(part.content)
                 temp_script_text = remove_syllables_from_end(temp_script_text, 1, delimiter) -- 假设英文单词对应一个音节
-                logger.info("英文片段 '" .. part.content .. "'，移除1个音节，剩余: '" .. temp_script_text .. "'")
+                logger.info(
+                    "英文片段 '" .. part.content .. "'，移除1个音节，剩余: '" .. temp_script_text .. "'")
             end
         else
             -- 空格片段：从script_text末尾移除对应长度的空格
@@ -324,7 +335,7 @@ local function build_commit_text(script_text, candidate_text, delimiter, chat_tr
             logger.info("移除" .. space_count .. "个空格字符，剩余: '" .. temp_script_text .. "'")
         end
     end
-    
+
     local processed_script_text = temp_script_text
     logger.info("最终处理后的script_text: '" .. processed_script_text .. "'")
 
@@ -396,7 +407,8 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
                         logger.debug("chat_trigger_name: " .. chat_trigger_name)
 
                         -- 使用新的函数构建最终的上屏文本，传入chat_trigger_name参数
-                        local going_commit_text = build_commit_text(script_text, candidate_text, delimiter, chat_trigger_name)
+                        local going_commit_text = build_commit_text(script_text, candidate_text, delimiter,
+                            chat_trigger_name)
                         logger.info("going_commit_text: " .. going_commit_text)
 
                         -- 判断going_commit_text是否以chat_names开头，如果是则删除前缀
@@ -436,7 +448,7 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
                             end
 
                             if env.ai_assistant_config.behavior.commit_question then
-                                
+
                                 -- 再判断strip_chat_prefix为true或者false,如果为true,则清空并且重新上屏字符串
                                 if env.ai_assistant_config.behavior.strip_chat_prefix then
 
@@ -562,6 +574,17 @@ function cloud_input_processor.func(key, env)
     if key_repr == "Release+Control_L" then
         logger.debug("拦截所有Release+Control_L按键")
         return kAccepted
+    end
+
+    -- 检查是否需要拦截Release+Shift_L按键
+    if key_repr == "Release+Shift_L" then
+        local should_intercept = context:get_property("should_intercept_shift_release")
+        if should_intercept == "1" then
+            logger.debug("拦截Release+Shift_L按键（由于之前处理了Shift+组合键）")
+            -- 清除标志，避免影响后续操作
+            context:set_property("should_intercept_shift_release", "0")
+            return kAccepted
+        end
     end
 
     if context:get_property("get_ai_stream") == "true" then
@@ -729,59 +752,9 @@ function cloud_input_processor.func(key, env)
         -- 首先打印seg的信息
         -- 使用debug_utils打印Segmentation信息
         -- debug_utils.print_segmentation_info(segmentation, logger)
+        logger.debug("当前云输入提示标志: " .. context:get_property("backtick_prompt"))
 
-        -- 最后输入的这个按键还没有来得及进入input中,所以不包含最后一个按键
-        -- 这里应该做什么来着？如果直接上屏就会导致没有内容了,直接结束输入.
-        -- 首先查看segment,和候选项
-        -- 对input切片出当前剩余的部分 `haha`woke
-        local current_start = segmentation:get_current_start_position()
-        local current_end = segmentation:get_current_end_position()
-        local segmentation_input = input:sub(current_start + 1, current_end)
-        logger.info("segmentation_input: " .. segmentation_input)
-        -- 这是什么, 剩余没有顶屏的字符, 如果长度大于等于3个字符, 且第一个字符是`, 倒数第二个字符是反引号,则自动确认. 
-        -- 现在看来这段自动顶屏就可以了啊, 如果后面计算出来abc的片段了, 就可以自定顶屏, 但如果是最后一段呢? 就没办法了
-        -- 当输入的是 at:`ok`n　 `ok`n 无法删除
-        if #segmentation_input >= 3 and segmentation_input:sub(1, 1) == "`" and segmentation_input:sub(-2, -2) == "`" then
-            if context:confirm_current_selection() then
-                logger.info("确认当前选择成功")
-            else
-                logger.error("确认当前选择失败")
-            end
-        end
-
-        -- 这里segmentation.input获取到的应该是上一轮结束之后, 当前的segmentation.input
-        -- 
-        -- local segmentation_input = segmentation.input
-        -- logger.debug("segmentation_input: " .. segmentation_input)
-        -- 检查反引号的数量是否为奇数(说明有未闭合的反引号)
-
-        -- 如果当前输入的就是反引号,会有一个延迟,单独判断一下.
-        -- 如果输入的是反引号,那么segmente_input是前边的内容, 
-        -- 这就有两种情况, 一种是 wo` 一种是wo`ok`
-        -- 如果是前边的情况, segmente_input为 input, 后面的情况 segmente_input为 wo`ok
-
-        if key_repr == "grave" then
-            -- segmente_input 后面追加一个反引号字符
-            segmentation_input = segmentation_input .. "`"
-            logger.debug("检测到反引号输入，segmente_input 更新为: " .. segmentation_input)
-        elseif key_repr == "BackSpace" then
-            -- 删除按键之后,如果删除掉的是一个反引号,也应该马上触发
-            segmentation_input = segmentation_input:sub(1, -2)
-        end
-        local _, backtick_count = segmentation_input:gsub("`", "")
-        if backtick_count % 2 == 1 then
-            logger.debug("检测到奇数个反引号,存在未闭合情况: " .. segmentation_input ..
-                             " (反引号数量: " .. backtick_count .. ")")
-            -- 只在值真正需要改变时才设置
-            -- 先获取当前选项的值，避免不必要的更新
-            logger.debug("当前云输入提示标志: " .. context:get_property("backtick_prompt"))
-
-            if context:get_property("backtick_prompt") == "0" then
-                logger.debug("backtick_prompt提示标志为 0, 设置为 1")
-                context:set_property("backtick_prompt", "1")
-                logger.debug("backtick_prompt 已设置为 1")
-            end
-
+        if context:get_property("backtick_prompt") == "1" then
             if key_repr:match("^Release%+") then
                 logger.debug("反引号状态下跳过按键事件: " .. key_repr)
                 return kAccepted
@@ -889,6 +862,12 @@ function cloud_input_processor.func(key, env)
             if handle_keys[key_repr] then
                 logger.debug("处于反引号状态，将按键转为普通字符: " .. key_repr)
 
+                -- 如果是Shift+XXX按键，设置属性用于拦截后续的Release+Shift_L
+                if key_repr:match("^Shift%+") then
+                    context:set_property("should_intercept_shift_release", "1")
+                    logger.debug("检测到Shift+组合键，设置拦截Shift释放标志")
+                end
+
                 -- 将按键对应的字符添加到输入中
                 local char_to_add = handle_keys[key_repr]
                 -- 如果添加英文字母没有影响,但是
@@ -897,15 +876,163 @@ function cloud_input_processor.func(key, env)
                 -- 返回 kAccepted 表示我们已经处理了这个按键
                 return kAccepted
             end
-
-        else
-            -- 如果不在组词状态或没有达到触发条件,则重置提示选项
-            logger.debug("当前不在反引号当中backtick提示已重置")
-            if context:get_property("backtick_prompt") == "1" then
-                context:set_property("backtick_prompt", "0")
-                logger.debug("backtick_prompt 已设置为 0")
-            end
         end
+
+        -- -- local segmentation_input = segmentation.input
+        -- -- logger.debug("segmentation_input: " .. segmentation_input)
+        -- -- 检查反引号的数量是否为奇数(说明有未闭合的反引号)
+
+        -- -- 如果当前输入的就是反引号,会有一个延迟,单独判断一下.
+        -- -- 如果输入的是反引号,那么segmente_input是前边的内容, 
+        -- -- 这就有两种情况, 一种是 wo` 一种是wo`ok`
+        -- -- 如果是前边的情况, segmente_input为 input, 后面的情况 segmente_input为 wo`ok
+
+        -- if key_repr == "grave" then
+        --     -- segmente_input 后面追加一个反引号字符
+        --     segmentation_input = segmentation_input .. "`"
+        --     logger.debug("检测到反引号输入，segmente_input 更新为: " .. segmentation_input)
+        -- elseif key_repr == "BackSpace" then
+        --     -- 删除按键之后,如果删除掉的是一个反引号,也应该马上触发
+        --     segmentation_input = segmentation_input:sub(1, -2)
+        -- end
+        -- local _, backtick_count = segmentation_input:gsub("`", "")
+        -- if backtick_count % 2 == 1 then
+        --     logger.debug("检测到奇数个反引号,存在未闭合情况: " .. segmentation_input ..
+        --                      " (反引号数量: " .. backtick_count .. ")")
+        --     -- 只在值真正需要改变时才设置
+        --     -- 先获取当前选项的值，避免不必要的更新
+        --     logger.debug("当前云输入提示标志: " .. context:get_property("backtick_prompt"))
+
+        --     if context:get_property("backtick_prompt") == "0" then
+        --         logger.debug("backtick_prompt提示标志为 0, 设置为 1")
+        --         context:set_property("backtick_prompt", "1")
+        --         logger.debug("backtick_prompt 已设置为 1")
+        --     end
+
+        --     if key_repr:match("^Release%+") then
+        --         logger.debug("反引号状态下跳过按键事件: " .. key_repr)
+        --         return kAccepted
+        --     end
+
+        --     -- 定义需要转换为普通字符的按键
+        --     local handle_keys = {
+        --         ["space"] = " ", -- 空格转为空格字符
+        --         -- 数字键
+        --         ["1"] = "1",
+        --         ["2"] = "2",
+        --         ["3"] = "3",
+        --         ["4"] = "4",
+        --         ["5"] = "5",
+        --         ["6"] = "6",
+        --         ["7"] = "7",
+        --         ["8"] = "8",
+        --         ["9"] = "9",
+        --         ["0"] = "0",
+        --         -- 数字键的Shift版本（符号）
+        --         ["Shift+1"] = "!", -- !
+        --         ["Shift+2"] = "@", -- @
+        --         ["Shift+3"] = "#", -- #
+        --         ["Shift+4"] = "$", -- $
+        --         ["Shift+5"] = "%", -- %
+        --         ["Shift+6"] = "^", -- ^
+        --         ["Shift+7"] = "&", -- &
+        --         ["Shift+8"] = "*", -- *
+        --         ["Shift+9"] = "(", -- (
+        --         ["Shift+0"] = ")", -- )
+
+        --         -- 标点符号（不需要Shift）
+        --         ["period"] = ".", -- 句号
+        --         ["comma"] = ",", -- 逗号
+        --         ["semicolon"] = ";", -- 分号
+        --         ["apostrophe"] = "'", -- 单引号/撇号
+        --         ["bracketleft"] = "[", -- 左方括号
+        --         ["bracketright"] = "]", -- 右方括号
+        --         ["hyphen"] = "-", -- 连字符
+        --         ["equal"] = "=", -- 等号
+        --         ["slash"] = "/", -- 斜杠
+        --         ["backslash"] = "\\", -- 反斜杠
+        --         ["grave"] = "`", -- 反引号
+
+        --         -- 标点符号的Shift版本
+        --         ["Shift+semicolon"] = ":", -- :
+        --         ["Shift+apostrophe"] = "\"", -- "
+        --         ["Shift+bracketleft"] = "{", -- {
+        --         ["Shift+bracketright"] = "}", -- }
+        --         ["Shift+hyphen"] = "_", -- _
+        --         ["Shift+equal"] = "+", -- +
+        --         ["Shift+slash"] = "?", -- ?
+        --         ["Shift+backslash"] = "|", -- |
+        --         ["Shift+grave"] = "~", -- ~
+
+        --         -- 直接映射的符号键
+        --         ["minus"] = "-", -- 冒号
+        --         ["colon"] = ":", -- 冒号
+        --         ["question"] = "?", -- 问号
+        --         ["exclam"] = "!", -- 感叹号
+        --         ["quotedbl"] = "\"", -- 双引号
+        --         ["parenleft"] = "(", -- 左圆括号
+        --         ["parenright"] = ")", -- 右圆括号
+        --         ["braceleft"] = "{", -- 左花括号
+        --         ["braceright"] = "}", -- 右花括号
+        --         ["underscore"] = "_", -- 下划线
+        --         ["plus"] = "+", -- 加号
+        --         ["asterisk"] = "*", -- 星号
+        --         ["at"] = "@", -- @ 符号
+        --         ["numbersign"] = "#", -- # 号
+        --         ["dollar"] = "$", -- 美元符号
+        --         ["percent"] = "%", -- 百分号
+        --         ["ampersand"] = "&", -- & 符号
+        --         ["less"] = "<", -- 小于号
+        --         ["greater"] = ">", -- 大于号
+        --         ["asciitilde"] = "~", -- 波浪号
+        --         ["asciicircum"] = "^", -- 插入符号
+        --         ["bar"] = "|", -- 竖线
+
+        --         -- 为这些符号键也添加Shift版本（以防万一）
+        --         ["Shift+colon"] = ":",
+        --         ["Shift+question"] = "?",
+        --         ["Shift+exclam"] = "!",
+        --         ["Shift+quotedbl"] = "\"",
+        --         ["Shift+parenleft"] = "(",
+        --         ["Shift+parenright"] = ")",
+        --         ["Shift+braceleft"] = "{",
+        --         ["Shift+braceright"] = "}",
+        --         ["Shift+underscore"] = "_",
+        --         ["Shift+plus"] = "+",
+        --         ["Shift+asterisk"] = "*",
+        --         ["Shift+at"] = "@",
+        --         ["Shift+numbersign"] = "#",
+        --         ["Shift+dollar"] = "$",
+        --         ["Shift+percent"] = "%",
+        --         ["Shift+ampersand"] = "&",
+        --         ["Shift+less"] = "<",
+        --         ["Shift+greater"] = ">",
+        --         ["Shift+asciitilde"] = "~",
+        --         ["Shift+asciicircum"] = "^",
+        --         ["Shift+bar"] = "|"
+
+        --     }
+        --     logger.debug("key_repr: " .. key_repr)
+        --     if handle_keys[key_repr] then
+        --         logger.debug("处于反引号状态，将按键转为普通字符: " .. key_repr)
+
+        --         -- 将按键对应的字符添加到输入中
+        --         local char_to_add = handle_keys[key_repr]
+        --         -- 如果添加英文字母没有影响,但是
+        --         context:push_input(char_to_add)
+
+        --         -- 返回 kAccepted 表示我们已经处理了这个按键
+        --         return kAccepted
+        --     end
+
+        -- else
+        --     -- 如果不在组词状态或没有达到触发条件,则重置提示选项
+        --     logger.debug("当前不在反引号当中backtick提示已重置")
+        --     if context:get_property("backtick_prompt") == "1" then
+        --         context:set_property("backtick_prompt", "0")
+        --         logger.debug("backtick_prompt 已设置为 0")
+        --     end
+        -- end
 
         logger.debug("=== 结束分析lua/cloud_input_processor.lua ===")
         logger.debug("")

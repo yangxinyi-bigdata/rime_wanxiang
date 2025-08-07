@@ -193,7 +193,7 @@ function punct_eng_chinese_filter.func(translation, env)
                     -- 这里的标点符号的候选词是不是应该在abc创建的时候是有spans信息的?
                 end
 
-                -- if not segment:has_tag("backtick") then
+                -- if not segment:has_tag("backtick_combo") then
                 --     logger.info("没有包含backtick标签,按照原来的处理即可")
                 --     new_text = text_splitter.replace_punct(cand_text)
                 -- else

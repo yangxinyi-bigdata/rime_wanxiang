@@ -265,7 +265,7 @@ function text_splitter.replace_punct_skip_backtick(text, logger)
                     -- 找到配对的反引号
                     local backtick_content = string.sub(result, index - 1, end_index) -- 包含两个反引号
                     table.insert(segments, {
-                        type = "backtick",
+                        type = "backtick_combo",
                         content = backtick_content
                     })
                     index = end_index + 1
@@ -274,7 +274,7 @@ function text_splitter.replace_punct_skip_backtick(text, logger)
                     -- 没有配对的反引号，剩余部分都是反引号内容
                     local backtick_content = string.sub(result, index - 1) -- 包含开始的反引号
                     table.insert(segments, {
-                        type = "backtick",
+                        type = "backtick_combo",
                         content = backtick_content
                     })
                     break
@@ -497,7 +497,7 @@ function text_splitter.split_and_convert_input_with_delimiter(input, backtick_de
             local remaining_content = input:sub(i + 1)
             local processed_content = backtick_delimiter_before .. remaining_content .. backtick_delimiter_after
             table.insert(segments, {
-                type = "backtick",
+                type = "backtick_combo",
                 content = processed_content,
                 original = "`" .. remaining_content,
                 start = i - 1, -- 转换为0基索引，从反引号开始
@@ -529,7 +529,7 @@ function text_splitter.split_and_convert_input_with_delimiter(input, backtick_de
                 local processed_content = backtick_delimiter_before .. backtick_content .. backtick_delimiter_after
                 local backtick_start = i - #backtick_content - 2 -- 转换为0基索引，包含开始反引号
                 table.insert(segments, {
-                    type = "backtick",
+                    type = "backtick_combo",
                     content = processed_content,
                     original = "`" .. backtick_content .. "`",
                     start = backtick_start,
@@ -576,7 +576,7 @@ function text_splitter.split_and_convert_input_with_delimiter(input, backtick_de
         local processed_content = backtick_delimiter_before .. backtick_content .. backtick_delimiter_after
         local backtick_start = #input - #backtick_content - 1 -- 转换为0基索引，包含反引号
         table.insert(segments, {
-            type = "backtick",
+            type = "backtick_combo",
             content = processed_content,
             original = "`" .. backtick_content,
             start = backtick_start,
@@ -648,7 +648,7 @@ function text_splitter.split_by_backtick(input, seg_start, seg_end, delimiter_be
             local processed_content = delimiter_before .. remaining_content .. delimiter_after
             -- 添加原始反引号内容字段
             table.insert(segments, {
-                type = "backtick",
+                type = "backtick_combo",
                 content = processed_content,
                 original = "`" .. remaining_content,
                 start = seg_start + i - 1, -- 添加seg_start偏移，从反引号开始
@@ -681,7 +681,7 @@ function text_splitter.split_by_backtick(input, seg_start, seg_end, delimiter_be
                 -- 添加原始反引号内容字段
                 local backtick_start = seg_start + i - #backtick_content - 2 -- 添加seg_start偏移，包含开始反引号
                 table.insert(segments, {
-                    type = "backtick",
+                    type = "backtick_combo",
                     content = processed_content,
                     original = "`" .. backtick_content .. "`",
                     start = backtick_start,
@@ -708,7 +708,7 @@ function text_splitter.split_by_backtick(input, seg_start, seg_end, delimiter_be
         -- 添加原始反引号内容字段
         local backtick_start = seg_start + #input - #backtick_content - 1 -- 添加seg_start偏移，包含反引号
         table.insert(segments, {
-            type = "backtick",
+            type = "backtick_combo",
             content = processed_content,
             original = "`" .. backtick_content,
             start = backtick_start,
