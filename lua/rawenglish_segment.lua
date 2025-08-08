@@ -44,13 +44,16 @@ function segmentor.func(segmentation, env)
     logger.info("输入文本: '" .. input .. "'")
     logger.info("输入整个input长度: " .. #input)
 
+    logger.debug("刚进入时的segmentation:")
+    debug_utils.print_segmentation_info(segmentation, logger)
+
     local current_start = segmentation:get_current_start_position()
     local current_end = segmentation:get_current_end_position()
-    local current_start_input = input:sub(current_start + 1, current_end)
+    local current_start_input = input:sub(current_start + 1)
     logger.info("current_start_input: " .. current_start_input)
 
     -- 检测以反引号片段开头的情况
-    if current_start_input:sub(1, 1) == english_mode_symbol then
+    if #current_start_input > 1 and current_start_input:sub(1, 1) == english_mode_symbol then
         -- 查找第一个反引号片段的结束位置
         local rawenglish_end = current_start_input:find(english_mode_symbol, 2)
         local rawenglish_length, rawenglish_content
@@ -64,6 +67,30 @@ function segmentor.func(segmentation, env)
                 logger.debug("rawenglish_prompt提示标志为 1 , 设置为 0")
                 context:set_property("rawenglish_prompt", "0")
             end
+
+            logger.info("  反引号片段: '" .. rawenglish_content .. "' (长度: " .. rawenglish_length .. ")")
+
+            -- 添加反引号片段的segment
+            local rawenglish_segment = Segment(current_start, current_start + rawenglish_length)
+            rawenglish_segment.tags = Set {"single_rawenglish"}
+
+            -- segmentation:forward()
+            if segmentation:add_segment(rawenglish_segment) then
+                logger.info("成功添加反引号片段segment (start: " .. current_start .. ", end: " ..
+                                (current_start + rawenglish_length) .. ")")
+
+                local current_end = segmentation:get_current_end_position()
+                if current_end == #segmentation.input then
+                    -- 分词完成了
+                    return false
+                else
+                    -- 继续分词, 下面还有代码继续分词
+                    segmentation:forward()
+                end
+
+            else
+                logger.error("无法添加反引号片段segment")
+            end
         else
             -- 没有找到配对的结束反引号，将整个输入作为反引号片段
             rawenglish_length = #current_start_input
@@ -73,48 +100,36 @@ function segmentor.func(segmentation, env)
                 logger.debug("rawenglish_prompt提示标志为 0, 设置为 1")
                 context:set_property("rawenglish_prompt", "1")
             end
-        end
 
-        logger.info("  反引号片段: '" .. rawenglish_content .. "' (长度: " .. rawenglish_length .. ")")
+            logger.info("  反引号片段: '" .. rawenglish_content .. "' (长度: " .. rawenglish_length .. ")")
 
-        -- 删除当前的segment
-        local last_segment = segmentation:back()
-        logger.debug("刚进入时的segmentation:")
-        debug_utils.print_segmentation_info(segmentation, logger)
-        segmentation:pop_back()
+            -- 添加反引号片段的segment
+            local rawenglish_segment = Segment(current_start, current_start + rawenglish_length)
+            rawenglish_segment.tags = Set {"single_rawenglish"}
 
-        -- 添加反引号片段的segment
-        local rawenglish_segment = Segment(current_start, current_start + rawenglish_length)
-        rawenglish_segment.tags = Set {"single_rawenglish"}
+            -- segmentation:forward()
+            if segmentation:add_segment(rawenglish_segment) then
+                logger.info("成功添加反引号片段segment (start: " .. current_start .. ", end: " ..
+                                (current_start + rawenglish_length) .. ")")
+                segmentation:forward()
+                return false -- 完成分词, 因为整段都分词完成了
 
-        segmentation:forward()
-        if segmentation:add_segment(rawenglish_segment) then
-            logger.info("成功添加反引号片段segment (start: " .. current_start .. ", end: " ..
-                            (current_start + rawenglish_length) .. ")")
-
-            -- 完成分割后直接返回，不继续后续处理
-            local left_segment = Segment(current_start + rawenglish_length, current_end)
-            left_segment.tags = Set {"abc"}
-            segmentation:forward()
-            if segmentation:add_segment(left_segment) then
-                logger.info("成功将剩余片段添加为abc segment (start: " .. current_start + rawenglish_length ..
-                                ", end: " .. (current_end) .. ")")
-
-                debug_utils.print_segmentation_info(segmentation, logger)
             else
-                logger.error("无法将剩余片段添加为abc")
+                logger.error("无法添加反引号片段segment")
             end
 
-            return false
-        else
-            logger.error("无法添加反引号片段segment")
         end
+
     end
 
-    -- 使用debug_utils打印Segmentation信息
-    -- debug_utils.print_segmentation_info(segmentation, logger)
+    logger.debug("处理完第一段之后的segmentation:")
+    debug_utils.print_segmentation_info(segmentation, logger)
 
-    -- 判断内容正处于英文输入模式当中: 也就是处于一个未闭合的反引号当中.
+    local current_start = segmentation:get_current_start_position()
+    local current_end = segmentation:get_current_end_position()
+    local current_start_input = input:sub(current_start + 1)
+    logger.info("current_start_input: " .. current_start_input)
+
     local _, rawenglish_count = current_start_input:gsub(english_mode_symbol, "")
     if rawenglish_count % 2 == 1 then
         logger.debug("检测到奇数个反引号,存在未闭合情况: " .. current_start_input ..
@@ -128,6 +143,8 @@ function segmentor.func(segmentation, env)
             logger.debug("rawenglish_prompt 已设置为 1")
         end
 
+        -- 将最后整段都标记成Set {"rawenglish_combo", "abc"}
+
     else
         logger.debug(
             "检测到偶数个反引号: " .. current_start_input .. " (反引号数量: " .. rawenglish_count .. ")")
@@ -139,39 +156,17 @@ function segmentor.func(segmentation, env)
         end
     end
 
-    -- 将整个片段一直到末尾都标记成rawenglish类型, 第一段反引号片段必然已经处理完了, 所以这里只能是abc开始的.
-    local last_segment = segmentation:back()
-    -- 非选词的分支,和原来一样
-    local last_segment_input = input:sub(last_segment.start + 1, last_segment._end)
-    -- end_position = #segmentation.input + 1
-    local end_position = #segmentation.input
-    logger.info("last_segment_input: " .. last_segment_input)
-    logger.info("last_segment.start: " .. last_segment.start .. " last_segment._end: " .. last_segment._end ..
-                    " end_position : " .. end_position)
-
-    -- 检查是否包含反引号, nihk`haha`woqu 这类的内容
-    if last_segment_input:find(english_mode_symbol) then
-        segmentation:pop_back()
-
-        local new_segment = Segment(last_segment.start, last_segment._end)
+    if current_start_input:find(english_mode_symbol) then
+        logger.debug("当前段存在反引号")
+        local new_segment = Segment(current_start, #segmentation.input)
         new_segment.tags = Set {"rawenglish_combo", "abc"}
-        segmentation:forward()
         if segmentation:add_segment(new_segment) then
-            logger.info("成功将最后一个segment延长到末尾, 新的segment长度: " .. new_segment._end -
-                            new_segment.start)
+            logger.info("成功将最后一个segment延长到末尾")
+            return false
         else
             logger.error("无法将最后一个segment延长到末尾")
-            new_segment = Segment(last_segment.start, end_position)
-            new_segment.tags = Set {"rawenglish_combo", "abc"}
-            if segmentation:add_segment(new_segment) then
-                logger.info("使用segment._end添加成功, 新的segment长度: " .. new_segment._end -
-                                new_segment.start)
-            else
-                logger.error("使用segment._end也无法成功添加segment")
-            end
-
+            return true
         end
-        -- debug_utils.print_segmentation_info(segmentation, logger)
     end
 
     logger.info("")

@@ -447,7 +447,6 @@ local function build_commit_text(script_text, candidate_text, delimiter, chat_tr
     logger.info("原始script_text: '" .. actual_script_text .. "'")
     logger.info("候选词文本: '" .. candidate_text .. "'")
 
-
     --[[ 应该对actual_script_text进行遍历 ]]
 
     -- 工作变量
@@ -510,7 +509,8 @@ local function build_commit_text(script_text, candidate_text, delimiter, chat_tr
                     local last_delimiter_pos = temp_script_text:find(delimiter .. "[^" .. delimiter .. "]*$")
                     if last_delimiter_pos then
                         temp_script_text = temp_script_text:sub(1, last_delimiter_pos)
-                        logger.debug("移除最后一个音节（无分隔符），剩余script_text: '" .. temp_script_text .. "'")
+                        logger.debug("移除最后一个音节（无分隔符），剩余script_text: '" ..
+                                         temp_script_text .. "'")
                     else
                         -- 如果找不到分隔符，说明只有一个音节，清空
                         temp_script_text = ""
@@ -526,10 +526,13 @@ local function build_commit_text(script_text, candidate_text, delimiter, chat_tr
                         logger.debug("移除最后一个音节，剩余script_text: '" .. temp_script_text .. "'")
                     else
                         -- 如果找不到分隔符，查找最后一个rawenglish_delimiter_after符号并截取到该位置（保留符号）
-                        local pos = temp_script_text:find(cloud_input_processor.english_mode_symbol .. "[^" .. cloud_input_processor.english_mode_symbol .. "]*$")
+                        local pos = temp_script_text:find(cloud_input_processor.english_mode_symbol .. "[^" ..
+                                                              cloud_input_processor.english_mode_symbol .. "]*$")
                         if pos then
-                            temp_script_text = temp_script_text:sub(1, pos + #cloud_input_processor.english_mode_symbol - 1)
-                            logger.debug("截取到最后一个英文分隔符位置，剩余script_text: '" .. temp_script_text .. "'")
+                            temp_script_text = temp_script_text:sub(1,
+                                pos + #cloud_input_processor.english_mode_symbol - 1)
+                            logger.debug("截取到最后一个英文分隔符位置，剩余script_text: '" ..
+                                             temp_script_text .. "'")
                         else
                             temp_script_text = ""
                             logger.debug("找不到分隔符和英文分隔符，清空script_text")
@@ -611,7 +614,7 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
 
                         local script_text = context:get_script_text()
                         logger.info("script_text: " .. script_text)
-                        
+
                         -- 对上屏文本前边去除掉, 首先要知道最前边的那个是什么, 在chat_names中
                         logger.debug("chat_trigger: " .. chat_trigger)
                         local chat_trigger_name = cloud_input_processor.ai_assistant_config.chat_triggers[chat_trigger]
@@ -631,7 +634,7 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
                         if chat_name and going_commit_text:sub(1, #chat_name) == chat_name then
                             final_commit_text = going_commit_text:sub(#chat_name + 1)
                             logger.debug("删除chat_trigger_name前缀 final_commit_text: " .. chat_trigger_name ..
-                                            " -> " .. final_commit_text)
+                                             " -> " .. final_commit_text)
                         else
                             logger.debug("未找到前缀，直接上屏final_commit_text: " .. final_commit_text)
                         end
@@ -676,7 +679,7 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
                                 else
                                     -- 正常上屏操作, 不去除前缀的话,就会正常的向后推动,变成一个普通的上屏操作
                                     logger.debug("未设置strip_chat_prefix, 不需要删除前缀，直接上屏: " ..
-                                                    going_commit_text)
+                                                     going_commit_text)
                                     logger.debug("context:clear()")
                                     context:clear()
 
@@ -687,6 +690,168 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
                             else
                                 -- 发送聊天消息，包含对话类型信息
                                 tcp_socket.send_chat_message(going_commit_text, chat_trigger, false)
+                                -- 拦截按键, 清空当前context中的内容. 应该根据配置清空控制是否清空,或者正常上屏. 如果上屏则应该发送回车.
+                                logger.debug("context:clear()")
+                                context:clear()
+                                return kAccepted
+                            end
+                        end)
+
+                        if ok then
+                            -- 执行成功，返回pcall内部函数的返回值
+                            return result
+                        else
+                            -- 执行失败，记录错误但不拦截按键
+                            logger.error("AI对话请求处理出错: " .. tostring(result))
+                            return kNoop
+                        end
+                    end
+
+                else
+                    logger.warn("无法获取候选词对象")
+                end
+            else
+                logger.debug("菜单为空或选词索引超出范围: " .. select_key_index .. " > " ..
+                                 (menu:candidate_count() or 0))
+            end
+        else
+            logger.debug("没有有效的segment或menu")
+        end
+    end
+end
+
+-- 获取所有segment选择的候选词
+local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, segmentation)
+    local engine = env.engine
+    local context = engine.context
+    -- 检查当前按键是否为选词键或空格键
+    local is_select_key = false
+    local select_key_index = 0
+    -- 如果是ai_talk标签的segment, 则需要判断是不是将要上屏, 如果要上屏,则进行拦截后处理
+    local first_segment = segmentation:get_at(0)
+    local last_segment = segmentation:back()
+
+    if key_repr == "space" then
+        -- 空格键按照选词键1处理
+        is_select_key = true
+        select_key_index = 1
+        logger.debug("检测到空格键，按选词键1处理 (索引: " .. select_key_index .. ")")
+    else
+        -- 直接查找字符在选词键字符串中的位置
+        select_key_index = string.find(cloud_input_processor.ai_assistant_config.alternative_select_keys, key_repr, 1,
+            true)
+        if select_key_index then
+            is_select_key = true
+            logger.debug("检测到选词键: " .. key_repr .. " (索引: " .. select_key_index .. ")")
+        end
+    end
+
+    if is_select_key then
+
+        local menu = last_segment.menu
+        if last_segment and menu then
+            -- 检查menu是否为空以及选词索引是否在有效范围内
+            if not menu:empty() and select_key_index <= menu:candidate_count() then
+                -- 获取即将上屏的候选词
+                local candidate = last_segment:get_candidate_at(select_key_index - 1) -- 0-based索引
+                if candidate then
+
+                    -- 检查选词后是否会完成完整输入（上屏）
+                    -- 通过检查context状态和segment状态来判断
+
+                    -- 判断是否为最后一个未确认的segment，且选择后会导致上屏
+                    local is_last_candidate = (candidate._end == #context.input)
+                    if is_last_candidate then
+                        logger.debug("选词将完成上屏操作，拦截按键并发送AI消息")
+                        local candidate_text = candidate.text
+                        logger.info("候选词文本: " .. candidate_text)
+
+                        -- debug_utils.print_segmentation_info(segmentation, logger)
+                        -- 对所有的segment进行遍历, 获取每一段的get_selected_candidate
+
+                        -- 拼接除最后一个segment外的所有候选词文本
+                        local prefix_text_with_first = "" -- 包含第一段segment的结果
+                        local prefix_text_without_first = "" -- 不包含第一段segment的结果
+
+                        for i = 0, segmentation.size - 2 do -- 排除最后一个segment
+                            local seg = segmentation:get_at(i)
+                            if seg then
+                                local cand = seg:get_selected_candidate()
+                                if cand then
+                                    -- 包含第一段的结果
+                                    prefix_text_with_first = prefix_text_with_first .. cand.text
+
+                                    -- 不包含第一段的结果（跳过索引0）
+                                    if i > 0 then
+                                        prefix_text_without_first = prefix_text_without_first .. cand.text
+                                    end
+
+                                    logger.info("segment[" .. i .. "] cand.text: " .. cand.text)
+                                else
+                                    logger.info("segment[" .. i .. "] 没有选中的候选词")
+                                end
+                            end
+                        end
+
+                        -- 记录拼接结果
+                        logger.info("拼接的前缀文本: " .. prefix_text_without_first)
+                        logger.info("拼接的前缀文本: " .. prefix_text_without_first)
+                        local all_selected_candidate_with_first = prefix_text_with_first .. candidate_text
+                        local all_selected_candidate_without_first = prefix_text_without_first .. candidate_text
+
+                        -- 记录两个结果
+                        logger.info("包含第一段的全部候选词文本: " .. all_selected_candidate_with_first)
+                        logger.info("不包含第一段的全部候选词文本: " .. all_selected_candidate_without_first)
+
+                        -- 发送聊天消息到AI服务，使用keepon_chat_trigger作为对话类型
+
+                        local ok, result = pcall(function()
+
+                            -- 读取最新消息（丢弃积压的旧消息，保留最新的有用消息）
+                            local flushed_bytes = tcp_socket.flush_ai_socket_buffer()
+                            if flushed_bytes and flushed_bytes > 0 then
+                                logger.debug("清理了积压的AI消息: " .. flushed_bytes .. " 字节")
+                            else
+                                logger.debug("无积压的AI消息需要处理")
+                            end
+
+                            -- 清理上次的候选词
+                            local current_content = context:get_property("ai_replay_stream")
+                            if current_content ~= "" and current_content ~= "等待AI回复..." then
+                                context:set_property("ai_replay_stream", "等待AI回复...")
+                            end
+
+                            -- 如果当前不是start状态则设置为start状态
+                            local get_ai_stream = context:get_property("get_ai_stream")
+                            if get_ai_stream ~= "start" then
+                                logger.debug("设置get_ai_stream属性开关start")
+                                context:set_property("get_ai_stream", "start")
+                            end
+
+                            if cloud_input_processor.ai_assistant_config.behavior.commit_question then
+                                tcp_socket.send_chat_message(all_selected_candidate_without_first, chat_trigger) -- 正常输入换行
+                                -- 再判断strip_chat_prefix为true或者false,如果为true,则清空并且重新上屏字符串
+                                if cloud_input_processor.ai_assistant_config.behavior.strip_chat_prefix then
+
+                                    logger.debug("context:clear()")
+                                    context:clear()
+
+                                    engine:commit_text(all_selected_candidate_without_first)
+                                    return kAccepted
+                                else
+                                    -- 正常上屏操作, 不去除前缀的话,就会正常的向后推动,变成一个普通的上屏操作
+                                    logger.debug("未设置strip_chat_prefix, 不需要删除前缀，直接上屏: " ..
+                                                     all_selected_candidate_with_first)
+                                    logger.debug("context:clear()")
+                                    context:clear()
+
+                                    engine:commit_text(all_selected_candidate_with_first)
+                                    return kAccepted
+                                end
+
+                            else
+                                -- 发送聊天消息，包含对话类型信息
+                                tcp_socket.send_chat_message(all_selected_candidate_without_first, chat_trigger, false)
                                 -- 拦截按键, 清空当前context中的内容. 应该根据配置清空控制是否清空,或者正常上屏. 如果上屏则应该发送回车.
                                 logger.debug("context:clear()")
                                 context:clear()
@@ -770,7 +935,7 @@ function cloud_input_processor.init(env)
         need_update = true
     elseif cloud_input_processor.last_schema_id ~= current_schema_id then
         logger.debug("Schema 发生变化: " .. tostring(cloud_input_processor.last_schema_id) .. " -> " ..
-                        current_schema_id .. "，需要更新所有模块配置")
+                         current_schema_id .. "，需要更新所有模块配置")
         need_update = true
     else
         logger.debug("Schema 未变化: " .. current_schema_id .. "，跳过配置更新")
@@ -914,6 +1079,21 @@ function cloud_input_processor.func(key, env)
     -- 如果是ai_talk标签的segment, 则需要判断是不是将要上屏, 如果要上屏,则进行拦截后处理
     local first_segment = segmentation:get_at(0)
     local last_segment = segmentation:back()
+
+    debug_utils.print_segmentation_info(segmentation, logger)
+    -- 对所有的segment进行遍历, 获取每一段的get_selected_candidate
+
+    for i = 0, segmentation.size - 1 do
+        local seg = segmentation:get_at(i)
+        if seg then
+            local cand = seg:get_selected_candidate()
+            if cand then
+                logger.info("segment[" .. i .. "] cand.text: " .. cand.text)
+            else
+                logger.info("segment[" .. i .. "] 没有选中的候选词")
+            end
+        end
+    end
     -- 英文模式豁免
     logger.debug("property: rawenglish_prompt: " .. context:get_property("rawenglish_prompt"))
     if first_segment:has_tag("ai_talk") and context:get_property("rawenglish_prompt") == "0" then
@@ -930,13 +1110,19 @@ function cloud_input_processor.func(key, env)
             break
         end
 
-        debug_utils.print_segmentation_info(segmentation, logger)
-        -- 处理AI会话是否要进行传输等操作
-        local result = handle_ai_chat_selection(key_repr, tag_chat_trigger, env, last_segment)
-        logger.debug("handle_ai_chat_selection result: " .. tostring(result))
+        -- 这个方式不太好,放弃这个方法，换一个更好的方法。处理AI会话是否要进行传输等操作
+        local result = all_segmentation_selected_candidate(key_repr, tag_chat_trigger, env, segmentation)
+        logger.debug("all_segmentation_selected_candidate result: " .. tostring(result))
         if result then
             return result
         end
+
+        -- -- 这个方式不太好,放弃这个方法，换一个更好的方法。处理AI会话是否要进行传输等操作
+        -- local result = handle_ai_chat_selection(key_repr, tag_chat_trigger, env, last_segment)
+        -- logger.debug("handle_ai_chat_selection result: " .. tostring(result))
+        -- if result then
+        --     return result
+        -- end
 
     end
 

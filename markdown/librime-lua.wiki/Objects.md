@@ -335,20 +335,20 @@ A: 不可以。`name_space` 在组件创建时确定，运行时只读。
 
 属性：
 
-属性名 | 类型 | 解释
---- | --- | --- 
-schema | Schema | 当前输入方案
-context | Context | 输入上下文
-active_engine | Engine | 当前激活的引擎
+| 属性名           | 类型      | 解释      |
+| ------------- | ------- | ------- |
+| schema        | Schema  | 当前输入方案  |
+| context       | Context | 输入上下文   |
+| active_engine | Engine  | 当前激活的引擎 |
 
 方法：
 
-方法名 | 参数 | 返回值 | 解释
---- | --- | --- | ---
-process_key(key) | key: KeyEvent | ProcessResult | 处理按键事件
-compose | | | 合成输入
-commit_text(text) | text: string | | 上屏 text 字符串
-apply_schema(schema) | schema: Schema | | 应用输入方案
+| 方法名                  | 参数             | 返回值           | 解释          |
+| -------------------- | -------------- | ------------- | ----------- |
+| process_key(key)     | key: KeyEvent  | ProcessResult | 处理按键事件      |
+| compose              |                |               | 合成输入        |
+| commit_text(text)    | text: string   |               | 上屏 text 字符串 |
+| apply_schema(schema) | schema: Schema |               | 应用输入方案      |
 
 ## Context
 
@@ -360,19 +360,19 @@ apply_schema(schema) | schema: Schema | | 应用输入方案
 
 属性：
 
-属性名 | 类型 | 解释
---- | --- | --- 
-composition | Composition | 当前的组合编辑对象 
-input | string | 正在输入的编码字符串 *W
-caret_pos | number | 脱字符`‸`位置（以raw input中的ASCII字符数量标记）*W
-commit_notifier | Notifier | 上屏通知器
-select_notifier | Notifier | 选择通知器
-update_notifier | Notifier | 更新通知器,**输入内容变化时**,**添加输入字符**,删除,**清空**,**光标位置变化**,**候选词选择状态变化时**,**组合状态重新计算时**,**重新打开之前的选择时**,<br />触发频率`update_notifier` 是最高频触发的通知器：<br /><br />1. **光标移动时触发** - 左右移动、点击等<br />2. **候选词切换时触发** 上下选择候选词<br /> 3. **每次按键几乎都触发** - 包括字母、数字、方向键等<br /> 4. **状态变化时触发** - 输入法内部状态更新 
-delete_notifier | Notifier | 删除候选词通知器, 发送**"请求删除候选词时"**,删除用户自定义的错误词汇,清理不需要的候选词,个性化词汇管理,删除操作的日志记录 
-option_update_notifier | OptionUpdateNotifier | 选项改变通知，使用 connect 方法接收通知
-property_update_notifier | PropertyUpdateNotifier | 属性更新通知器
-unhandled_key_notifier | KeyEventNotifier | 未处理按键通知器 
-commit_history | CommitHistory | 上屏历史记录 
+| 属性名                      | 类型                     | 解释                                                                                                                                                                                                                                                                             |
+| ------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| composition              | Composition            | 当前的组合编辑对象                                                                                                                                                                                                                                                                      |
+| input                    | string                 | 正在输入的编码字符串 *W                                                                                                                                                                                                                                                                  |
+| caret_pos                | number                 | 脱字符`‸`位置（以raw input中的ASCII字符数量标记）*W                                                                                                                                                                                                                                            |
+| commit_notifier          | Notifier               | 上屏通知器                                                                                                                                                                                                                                                                          |
+| select_notifier          | Notifier               | 选择通知器                                                                                                                                                                                                                                                                          |
+| update_notifier          | Notifier               | 更新通知器,**输入内容变化时**,**添加输入字符**,删除,**清空**,**光标位置变化**,**候选词选择状态变化时**,**组合状态重新计算时**,**重新打开之前的选择时**,<br />触发频率`update_notifier` 是最高频触发的通知器：<br /><br />1. **光标移动时触发** - 左右移动、点击等<br />2. **候选词切换时触发** 上下选择候选词<br /> 3. **每次按键几乎都触发** - 包括字母、数字、方向键等<br /> 4. **状态变化时触发** - 输入法内部状态更新 |
+| delete_notifier          | Notifier               | 删除候选词通知器, 发送**"请求删除候选词时"**,删除用户自定义的错误词汇,清理不需要的候选词,个性化词汇管理,删除操作的日志记录                                                                                                                                                                                                            |
+| option_update_notifier   | OptionUpdateNotifier   | 选项改变通知，使用 connect 方法接收通知                                                                                                                                                                                                                                                       |
+| property_update_notifier | PropertyUpdateNotifier | 属性更新通知器                                                                                                                                                                                                                                                                        |
+| unhandled_key_notifier   | KeyEventNotifier       | 未处理按键通知器                                                                                                                                                                                                                                                                       |
+| commit_history           | CommitHistory          | 上屏历史记录                                                                                                                                                                                                                                                                         |
 
 方法：
 
@@ -646,30 +646,30 @@ end
 
 属性：
 
-属性名 | 类型 | 解释
---- | --- | ---
-status | string | 片段状态（可读写）：<br> 1. `kVoid` - （默认）空状态 <br> 2. `kGuess` - 猜测状态 <br> 3. `kSelected` - 已选中状态（大于此状态才会被视为选中） <br> 4. `kConfirmed` - 已确认状态
-start | number | 片段在输入字符串中的开始位置（可读写）
-_start | number | 片段在输入字符串中的开始位置，同start（可读写）
-_end | number | 片段在输入字符串中的结束位置，end是Lua关键字所以用_end（可读写）
-length | number | 片段长度（_end - start）（可读写）
-tags | Set | 标签集合，支持集合运算（可读写）
-menu | Menu | 候选词菜单对象（可读写） 
-selected_index | number | 当前选中的候选词索引，从0开始（可读写）
-prompt | string | 输入编码以右的提示字符串（可读写） <br> ![image](https://user-images.githubusercontent.com/18041500/190980054-7e944f5f-a381-4c73-ad6a-254a00c09e44.png)
+| 属性名            | 类型     | 解释                                                                                                                                     |
+| -------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| status         | string | 片段状态（可读写）：<br> 1. `kVoid` - （默认）空状态 <br> 2. `kGuess` - 猜测状态 <br> 3. `kSelected` - 已选中状态（大于此状态才会被视为选中） <br> 4. `kConfirmed` - 已确认状态     |
+| start          | number | 片段在输入字符串中的开始位置（可读写）                                                                                                                    |
+| _start         | number | 片段在输入字符串中的开始位置，同start（可读写）                                                                                                             |
+| _end           | number | 片段在输入字符串中的结束位置，end是Lua关键字所以用_end（可读写）                                                                                                  |
+| length         | number | 片段长度（_end - start）（可读写）                                                                                                                |
+| tags           | Set    | 标签集合，支持集合运算（可读写）                                                                                                                       |
+| menu           | Menu   | 候选词菜单对象（可读写）                                                                                                                           |
+| selected_index | number | 当前选中的候选词索引，从0开始（可读写）                                                                                                                   |
+| prompt         | string | 输入编码以右的提示字符串（可读写） <br> ![image](https://user-images.githubusercontent.com/18041500/190980054-7e944f5f-a381-4c73-ad6a-254a00c09e44.png) |
 
 方法：
 
-方法名 | 参数 | 返回值 | 解释
---- | --- | --- | ---
-clear | | | 清空片段的候选词菜单
-close | | | 关闭片段，停止进一步的翻译
-reopen | | | 重新打开片段，恢复翻译处理
-has_tag(tag) | tag: string | boolean | 检查片段是否包含指定标签
-get_candidate_at(index) | index: number | Candidate | 获取指定索引处的候选词（序号从0开始）
-get_selected_candidate | | Candidate | 获取当前选中的候选词
-active_text(input) | input: string | string | 根据片段位置从输入字符串中提取对应的文本
-spans | | Spans | 获取片段的跨度信息，包含选中候选词的跨度
+| 方法名                     | 参数            | 返回值       | 解释                   |
+| ----------------------- | ------------- | --------- | -------------------- |
+| clear                   |               |           | 清空片段的候选词菜单           |
+| close                   |               |           | 关闭片段，停止进一步的翻译        |
+| reopen                  |               |           | 重新打开片段，恢复翻译处理        |
+| has_tag(tag)            | tag: string   | boolean   | 检查片段是否包含指定标签         |
+| get_candidate_at(index) | index: number | Candidate | 获取指定索引处的候选词（序号从0开始）  |
+| get_selected_candidate  |               | Candidate | 获取当前选中的候选词           |
+| active_text(input)      | input: string | string    | 根据片段位置从输入字符串中提取对应的文本 |
+| spans                   |               | Spans     | 获取片段的跨度信息，包含选中候选词的跨度 |
 
 **使用示例**:
 

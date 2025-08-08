@@ -174,6 +174,12 @@ function smart_cursor_processor.init(env)
         else
             logger.debug("sync_module为nil，跳过状态更新")
         end
+
+        logger.debug("context.input测试")
+        local engine = env.engine
+        -- engine:commit_text("测试")
+        logger.debug("context.input测试")
+        
     end)
 
     env.update_notifier = context.update_notifier:connect(function(context)

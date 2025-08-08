@@ -27,15 +27,30 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "librime-lua.wiki/Objects.md",
+                "file": "librime-lua.wiki/API.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Objects"
+              "title": "API"
+            }
+          },
+          {
+            "id": "3eebbe179a5b8121",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "librime-lua.wiki/API.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "API"
             }
           }
-        ]
+        ],
+        "currentTab": 2
       }
     ],
     "direction": "vertical"
@@ -156,13 +171,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "专题研究-在rime中和大模型进行交互.md",
+                "file": "librime-lua.wiki/API.md",
                 "followCursor": false,
                 "showSearch": true,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "专题研究-在rime中和大模型进行交互 的大纲"
+              "title": "API 的大纲"
             }
           }
         ],
@@ -182,9 +197,10 @@
       "command-palette:打开命令面板": false
     }
   },
-  "active": "7a8353859d7f5a74",
+  "active": "3eebbe179a5b8121",
   "lastOpenFiles": [
     "librime-lua.wiki/Objects.md",
+    "librime-lua.wiki/API.md",
     "专题研究-在rime中和大模型进行交互.md",
     "AI段落输入法宣传相关.md",
     "CleanShot 2025-08-07 at 17.22.24@2x.png",
@@ -195,7 +211,6 @@
     "NiceGUI/NiceGUI 文档总览.md",
     "NiceGUI/Text Elements.md",
     "NiceGUI",
-    "librime-lua.wiki/API.md",
     "Rime英文模式重构.md",
     "lua/baidu_filter.lua.md",
     "lua/aux_code_filter_v3.lua.md",

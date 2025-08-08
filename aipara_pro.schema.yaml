@@ -107,8 +107,8 @@ engine:
     - ascii_segmentor                      #标识英文段落〔譬如在英文模式下〕字母直接上屛
     - matcher                              #配合 recognizer 标识符合特定规则的段落，如网址、反查等，加上特定 tag
     - lua_segmentor@*ai_assistant_segmentor     #AI对话自定义分词器，分割 a: 和拼音部分
-    - abc_segmentor                        #标识常规的文字段落，加上 abc 这个 tag
     - lua_segmentor@*rawenglish_segment      #添加反引号分词器
+    - abc_segmentor                        #标识常规的文字段落，加上 abc 这个 tag
     - affix_segmentor@add_user_dict        #自造词加词 tag
     - punct_segmentor                      #标识符号段落〔键入标点符号用〕加上 punct 这个 tag
     # - lua_segmentor@*debug_segmentor2      #添加调试分词器
