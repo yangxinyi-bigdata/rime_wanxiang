@@ -43,7 +43,7 @@ end
 -- 模块级配置缓存
 local smart_cursor_processor = {}
 smart_cursor_processor.move_next_punct = nil
-smart_cursor_processor.move_prev_punct = nil  
+smart_cursor_processor.move_prev_punct = nil
 smart_cursor_processor.search_move_cursor = nil
 smart_cursor_processor.shuru_schema = nil
 smart_cursor_processor.chat_triggers = {}
@@ -201,6 +201,11 @@ function smart_cursor_processor.init(env)
             if context:get_property("intercept_select_key") == "1" then
                 context:set_property("intercept_select_key", "0")
             end
+
+            -- -- 清空ai流式传输状态
+            -- if context:get_property("get_ai_stream") ~= "idle" then
+            --     context:set_property("get_ai_stream", "idle")
+            -- end
 
         end
 
@@ -510,8 +515,7 @@ function smart_cursor_processor.func(key, env)
 
     local key_repr = key:repr()
     logger.info("key_repr: " .. key_repr)
-    -- local script_text = context:get_script_text()
-    -- logger.info("script_text: " .. script_text)
+
 
     local success, result = pcall(function()
 

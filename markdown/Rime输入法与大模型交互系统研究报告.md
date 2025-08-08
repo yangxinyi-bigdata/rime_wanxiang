@@ -186,7 +186,7 @@ ai_triggers:
   # 触发器行为配置
   behavior:
     show_input: true          # 是否显示用户输入
-    auto_commit: false        # 是否自动上屏
+    auto_commit_reply: false        # 是否自动上屏
     clipboard_mode: true      # 是否使用剪贴板模式
     
   # 模式特定配置
@@ -580,7 +580,7 @@ class HotkeyManager:
     "config": {
       "mode": "stream|block",
       "show_input": true,
-      "auto_commit": false
+      "auto_commit_reply": false
     }
   }
 }
@@ -1190,7 +1190,7 @@ show_user_input: false
 # 输出：今天是晴天，温度适宜...
 
 # 场景3：自动提交模式
-auto_commit: true
+auto_commit_reply: true
 # 交互：AI回复自动上屏，无需用户选择
 
 # 场景4：剪贴板模式
@@ -1468,7 +1468,7 @@ user_preferences:
     
   # 交互偏好
   interaction:
-    auto_commit: false
+    auto_commit_reply: false
     clipboard_mode: true
     confirm_before_send: false
     save_history: true

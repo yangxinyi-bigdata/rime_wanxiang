@@ -497,12 +497,12 @@ commit_history | CommitHistory | 上屏历史记录
 
 属性：
 
-属性名 | 类型 | 解释
---- | --- | ---
-text | string | 预编辑文本
-caret_pos | number | 光标位置
-sel_start | number | 选择区域开始位置
-sel_end | number | 选择区域结束位置
+| 属性名       | 类型     | 解释       |
+| --------- | ------ | -------- |
+| text      | string | 预编辑文本    |
+| caret_pos | number | 光标位置     |
+| sel_start | number | 选择区域开始位置 |
+| sel_end   | number | 选择区域结束位置 |
 
 方法：
 

@@ -86,7 +86,6 @@ local quote_map = {
 -- 执行测试
 test_extract_leading_chinese()
 
-
 local function replace_quotes(text)
 
     local result = text
@@ -137,5 +136,55 @@ local function replace_punct(text)
     return result
 end
 
-
 print(replace_punct("你好\"我\""))
+
+local s = "ni hk wo de ge"
+local pos = s:match(".*() ")
+print(pos)
+
+local temp_script_text = s:sub(1, pos)
+print("移除一个音节，剩余script_text: '" .. temp_script_text .. "'")
+
+-- 测试字符串切片
+local test_string = " ok wo mf vi dk le uf me‸    ▶ [⇧+回车 AI转换]"
+local start_pos = 13
+local end_pos = 24
+
+print("原始字符串: '" .. test_string .. "'")
+print("字符串长度: " .. #test_string)
+print("从位置 " .. start_pos .. " 到 " .. end_pos .. " 的切片:")
+
+-- 使用最简单的字符串切片
+local sliced_text = string.sub(test_string, start_pos, end_pos)
+print("切片结果: '" .. sliced_text .. "'")
+
+-- [2025-08-08 16:16:23] [INFO] [smart_cursor_processor:521] get_preedit.text:  ok 我们只dk le uf me‸    ▶ [⇧+回车 AI转换]  
+-- [2025-08-08 16:16:23] [INFO] [smart_cursor_processor:522] caret_pos: 24
+-- [2025-08-08 16:16:23] [INFO] [smart_cursor_processor:523] preedit.sel_start: 13
+-- [2025-08-08 16:16:23] [INFO] [smart_cursor_processor:524] preedit.sel_end: 24
+
+-- [2025-08-08 16:41:55] [INFO] [smart_cursor_processor:521] get_preedit.text: AI翻译: ok wo mf yi dy ngg‸    ▶ [⇧+回车 AI转换]  
+-- [2025-08-08 16:41:55] [INFO] [smart_cursor_processor:522] caret_pos: 28
+-- [2025-08-08 16:41:55] [INFO] [smart_cursor_processor:523] preedit.sel_start: 13
+-- [2025-08-08 16:41:55] [INFO] [smart_cursor_processor:524] preedit.sel_end: 27
+
+local test_string = "AI翻译: ok wo mf yi dy ngg‸    ▶ [⇧+回车 AI转换]"
+local sliced_text = string.sub(test_string, 1, 27)
+print(sliced_text)
+
+local test_string = " ok 我们只dk le uf me‸    ▶ [⇧+回车 AI转换]"
+local sliced_text = string.sub(test_string, 1, 24)
+print(sliced_text)
+
+-- 首先处理preedit_text，去除最后一个"‸"符号及其后面的内容
+local preedit_text = " ok 我们只dk le uf me‸    ▶ [⇧+回车 AI转换]"
+local cleaned_preedit_text = preedit_text
+-- 使用简单的find查找‸符号位置，然后截取到该位置之前
+local cursor_pos = preedit_text:find("‸")
+if cursor_pos then
+    cleaned_preedit_text = preedit_text:sub(1, cursor_pos - 1)
+    print("去除光标符号及后续内容，原文本: '" .. preedit_text .. "', 处理后: '" ..
+                     cleaned_preedit_text .. "'")
+else
+    print("没找到")
+end

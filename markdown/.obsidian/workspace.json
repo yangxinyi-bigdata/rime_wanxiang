@@ -158,7 +158,7 @@
               "state": {
                 "file": "专题研究-在rime中和大模型进行交互.md",
                 "followCursor": false,
-                "showSearch": false,
+                "showSearch": true,
                 "searchQuery": ""
               },
               "icon": "lucide-list",

@@ -22,7 +22,7 @@ local punct_eng_chinese_filter = {}
 punct_eng_chinese_filter.delimiter = ""
 punct_eng_chinese_filter.ai_reply_tags = {}
 punct_eng_chinese_filter.ai_chat_triggers = {}
-punct_eng_chinese_filter.cloud_convert_symbol = "shift+Return"
+punct_eng_chinese_filter.cloud_convert_symbol = ""
 
 -- 配置更新函数
 function punct_eng_chinese_filter.update_current_config(config)
@@ -35,7 +35,7 @@ function punct_eng_chinese_filter.update_current_config(config)
     logger.info("更新分隔符: " .. punct_eng_chinese_filter.delimiter)
     
     -- 读取云转换触发符号配置
-    punct_eng_chinese_filter.cloud_convert_symbol = config:get_string("translator/cloud_convert_symbol") or "shift+Return"
+    punct_eng_chinese_filter.cloud_convert_symbol = config:get_string("translator/cloud_convert_symbol")
     logger.info("云转换触发符号: " .. punct_eng_chinese_filter.cloud_convert_symbol)
     
     -- 重新初始化AI标签
@@ -92,7 +92,13 @@ function punct_eng_chinese_filter.func(translation, env)
             -- logger.info("当前cloud_convert_prompt状态: ".. tostring(context:get_option("cloud_convert_prompt")))
 
             -- 定义两种提示文本
-            local cloud_prompt_text = "    ▶ [" .. punct_eng_chinese_filter.cloud_convert_symbol .. " AI转换]  "
+            local cloud_symbol_display = punct_eng_chinese_filter.cloud_convert_symbol
+            if punct_eng_chinese_filter.cloud_convert_symbol == "Shift+Return" then
+                cloud_symbol_display = "⇧+回车"
+            elseif punct_eng_chinese_filter.cloud_convert_symbol == "Return" then
+                cloud_symbol_display = "回车"
+            end
+            local cloud_prompt_text = "    ▶ [" .. cloud_symbol_display .. " AI转换]  "
             local rawenglish_prompt_text = "    ▶ [英文模式]  "
             local search_move_prompt = "    ▶ [搜索模式]  "
             local search_move_prompt_char = "    ▶ [搜索模式:%s]  "

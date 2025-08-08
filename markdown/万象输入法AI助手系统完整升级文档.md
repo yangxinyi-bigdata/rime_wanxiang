@@ -42,7 +42,7 @@ ai_assistant:
   enabled: true
   behavior:
     commit_input: true         # 是否将用户提问上屏
-    auto_commit: false        # 是否自动上屏
+    auto_commit_reply: false        # 是否自动上屏
     clipboard_mode: true      # 是否使用剪贴板模式
   
   # 触发器配置：定义所有AI助手的前缀

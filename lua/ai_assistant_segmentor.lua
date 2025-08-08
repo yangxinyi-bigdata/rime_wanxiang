@@ -15,45 +15,44 @@ local logger = logger_module.create("ai_assistant_segmentor", {
 logger.clear()
 
 -- 模块级配置缓存
-local segmentor = {}
-segmentor.enabled = false
-segmentor.behavior = {}
-segmentor.chat_triggers = {}
-segmentor.reply_messages_preedits = {}
-segmentor.reply_tags = {}
-segmentor.chat_names = {}
-segmentor.clean_prefix_to_trigger = {}
-segmentor.reply_input_to_trigger = {}
+local ai_assistant_segmentor = {}
+ai_assistant_segmentor.enabled = false
+ai_assistant_segmentor.behavior = {}
+ai_assistant_segmentor.chat_triggers = {}
+ai_assistant_segmentor.reply_messages_preedits = {}
+ai_assistant_segmentor.reply_tags = {}
+ai_assistant_segmentor.chat_names = {}
+ai_assistant_segmentor.clean_prefix_to_trigger = {}
 
 -- 读取配置的辅助函数，从config中读取并缓存到模块级变量
 -- 读取配置的辅助函数，从config中读取并缓存到模块级变量
-function segmentor.update_current_config(config)
+function ai_assistant_segmentor.update_current_config(config)
     logger.info("开始更新ai_assistant_segmentor模块配置")
 
     -- 读取 enabled 配置
     local enabled = config:get_bool("ai_assistant/enabled")
-    segmentor.enabled = enabled or false
-    logger.info("AI助手启用状态: " .. tostring(segmentor.enabled))
+    ai_assistant_segmentor.enabled = enabled or false
+    logger.info("AI助手启用状态: " .. tostring(ai_assistant_segmentor.enabled))
 
     -- 读取 behavior 配置
-    segmentor.behavior = {}
-    segmentor.behavior.commit_question = config:get_bool("ai_assistant/behavior/commit_question") or false
-    segmentor.behavior.auto_commit = config:get_bool("ai_assistant/behavior/auto_commit") or false
-    segmentor.behavior.clipboard_mode = config:get_bool("ai_assistant/behavior/clipboard_mode") or false
-    segmentor.behavior.prompt_chat = config:get_string("ai_assistant/behavior/prompt_chat")
+    ai_assistant_segmentor.behavior = {}
+    ai_assistant_segmentor.behavior.commit_question = config:get_bool("ai_assistant/behavior/commit_question") or false
+    ai_assistant_segmentor.behavior.auto_commit_reply = config:get_bool("ai_assistant/behavior/auto_commit_reply") or
+                                                            false
+    ai_assistant_segmentor.behavior.clipboard_mode = config:get_bool("ai_assistant/behavior/clipboard_mode") or false
+    ai_assistant_segmentor.behavior.prompt_chat = config:get_string("ai_assistant/behavior/prompt_chat")
 
-    logger.info("行为配置 - commit_question: " .. tostring(segmentor.behavior.commit_question))
-    logger.info("行为配置 - auto_commit: " .. tostring(segmentor.behavior.auto_commit))
-    logger.info("行为配置 - clipboard_mode: " .. tostring(segmentor.behavior.clipboard_mode))
-    logger.info("行为配置 - prompt_chat: " .. tostring(segmentor.behavior.prompt_chat))
+    logger.info("行为配置 - commit_question: " .. tostring(ai_assistant_segmentor.behavior.commit_question))
+    logger.info("行为配置 - auto_commit_reply: " .. tostring(ai_assistant_segmentor.behavior.auto_commit_reply))
+    logger.info("行为配置 - clipboard_mode: " .. tostring(ai_assistant_segmentor.behavior.clipboard_mode))
+    logger.info("行为配置 - prompt_chat: " .. tostring(ai_assistant_segmentor.behavior.prompt_chat))
 
     -- 重新初始化所有配置表
-    segmentor.chat_triggers = {}
-    segmentor.reply_messages_preedits = {}
-    segmentor.reply_tags = {}
-    segmentor.chat_names = {}
-    segmentor.clean_prefix_to_trigger = {}
-    segmentor.reply_input_to_trigger = {}
+    ai_assistant_segmentor.chat_triggers = {}
+    ai_assistant_segmentor.reply_messages_preedits = {}
+    ai_assistant_segmentor.reply_tags = {}
+    ai_assistant_segmentor.chat_names = {}
+    ai_assistant_segmentor.clean_prefix_to_trigger = {}
 
     -- 获取 chat_triggers 配置项
     local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
@@ -69,12 +68,12 @@ function segmentor.update_current_config(config)
             local chat_name = config:get_string("ai_assistant/chat_names/" .. trigger_name)
 
             if trigger_value then
-                segmentor.chat_triggers[trigger_name] = trigger_value
+                ai_assistant_segmentor.chat_triggers[trigger_name] = trigger_value
                 logger.info("聊天触发器 - " .. trigger_name .. ": " .. trigger_value)
 
                 -- 预处理：去掉冒号并保存映射
                 local clean_prefix = trigger_value:gsub(":$", "")
-                segmentor.clean_prefix_to_trigger[clean_prefix] = {
+                ai_assistant_segmentor.clean_prefix_to_trigger[clean_prefix] = {
                     trigger_name = trigger_name,
                     trigger_prefix = trigger_value,
                     chat_name = chat_name
@@ -83,36 +82,25 @@ function segmentor.update_current_config(config)
             end
 
             if reply_messages_preedit then
-                segmentor.reply_messages_preedits[trigger_name] = reply_messages_preedit
+                ai_assistant_segmentor.reply_messages_preedits[trigger_name] = reply_messages_preedit
                 logger.info("回复消息 - " .. trigger_name .. ": " .. reply_messages_preedit)
+
             end
 
             if chat_name then
-                segmentor.chat_names[trigger_name] = chat_name
+                ai_assistant_segmentor.chat_names[trigger_name] = chat_name
                 logger.info("聊天名称 - " .. trigger_name .. ": " .. chat_name)
             end
 
-            -- 动态生成回复标签（触发器名称 + "_reply"）
-            local reply_tag = trigger_name .. "_reply"
-            segmentor.reply_tags[trigger_name] = reply_tag
-            logger.info("动态生成回复标签 - " .. trigger_name .. ": " .. reply_tag)
         end
     else
         logger.warn("未找到 chat_triggers 配置")
     end
 
-    -- 创建回复消息到触发器的反向映射（使用触发器前缀加 _reply: 后缀）
-    for trigger, prefix in pairs(segmentor.chat_triggers) do
-        -- 生成回复输入格式：去掉原前缀的冒号，加上 _reply:
-        local reply_input = prefix:gsub(":$", "_reply:")
-        segmentor.reply_input_to_trigger[reply_input] = trigger
-        logger.info("设置AI回复输入映射: " .. reply_input .. " -> " .. trigger)
-    end
-
     logger.info("ai_assistant_segmentor模块配置更新完成")
 end
 
-function segmentor.init(env)
+function ai_assistant_segmentor.init(env)
     logger.info("AI对话分词器初始化完成")
 
     -- 配置更新由 cloud_input_processor 统一管理，无需在此处调用
@@ -120,12 +108,12 @@ function segmentor.init(env)
     logger.info("等待 cloud_input_processor 统一更新配置")
 end
 
-function segmentor.func(segmentation, env)
+function ai_assistant_segmentor.func(segmentation, env)
     local context = env.engine.context
     local input = context.input
 
     -- 检查AI助手是否启用
-    if not segmentor.enabled then
+    if not ai_assistant_segmentor.enabled then
         return true -- AI助手未启用，不处理
     end
 
@@ -138,21 +126,16 @@ function segmentor.func(segmentation, env)
     end
 
     -- 检查是否是AI回复消息（使用新的回复输入格式）
-    if segmentor.reply_input_to_trigger then
-        for reply_input, trigger_name in pairs(segmentor.reply_input_to_trigger) do
-            if segmentation_input == reply_input then
-                logger.debug("检测到AI回复输入: " .. reply_input .. " (触发器: " .. trigger_name .. ")")
-                debug_utils.print_segmentation_info(segmentation, logger)
-
-                local ai_reply_segment = Segment(0, #input)
-                local reply_tag = trigger_name .. "_reply" -- 动态生成回复标签
-                ai_reply_segment.tags = Set {reply_tag, "ai_reply"}
-
-                segmentation:reset_length(0)
-                segmentation:add_segment(ai_reply_segment)
-                logger.info("创建AI回复段落，标签: " .. reply_tag)
-                return false -- 处理完成
-            end
+    logger.debug("检测到AI回复输入: " .. segmentation_input)
+    for trigger_name, reply_prefix in pairs(ai_assistant_segmentor.reply_messages_preedits) do
+        if trigger_name .. "_reply:" == segmentation_input then
+            logger.debug("检测到AI回复输入: " .. segmentation_input .. " (触发器: " .. trigger_name .. ")")
+            local ai_reply_segment = Segment(0, #input)
+            ai_reply_segment.tags = Set {trigger_name .. "_reply", "ai_reply"}
+            segmentation:reset_length(0)
+            segmentation:add_segment(ai_reply_segment)
+            logger.info("创建AI回复段落，标签: " .. trigger_name .. "_reply")
+            return false -- 处理完成
         end
     end
 
@@ -160,14 +143,14 @@ function segmentor.func(segmentation, env)
     local matched_trigger = nil
     local matched_prefix = nil
 
-    if segmentor.chat_triggers then
+    if ai_assistant_segmentor.chat_triggers then
 
         -- 
         -- local confirmed_pos_input = segmentation.input:sub(confirmed_pos + 1)
         -- logger.info("confirmed_pos_input: " .. confirmed_pos_input)
 
         -- 检查是否是提示触发符号, 例如"a"
-        local prompt_chat = segmentor.behavior.prompt_chat
+        local prompt_chat = ai_assistant_segmentor.behavior.prompt_chat
         if segmentation_input == prompt_chat then
             logger.debug("segmentation_input == prompt: " .. segmentation_input)
             -- 收集所有以 prompt_chat 字母开头的触发器
@@ -238,7 +221,7 @@ function segmentor.func(segmentation, env)
         --     end
         -- end
 
-        for trigger_name, trigger_prefix in pairs(segmentor.chat_triggers) do
+        for trigger_name, trigger_prefix in pairs(ai_assistant_segmentor.chat_triggers) do
             -- debug_utils.print_segmentation_info(segmentation, logger)
             -- 处理纯触发器（没有后续字符）
             if segmentation_input == trigger_prefix then
@@ -302,9 +285,9 @@ function segmentor.func(segmentation, env)
     return true -- 不能false啊,应该继续让后面的分词器继续处理呢!
 end
 
-function segmentor.fini(env)
+function ai_assistant_segmentor.fini(env)
     logger.info("AI对话分词器结束运行")
 
 end
 
-return segmentor
+return ai_assistant_segmentor

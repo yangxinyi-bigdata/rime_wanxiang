@@ -233,6 +233,8 @@ function aux_code_filter.func(translation, env)
         return
     end
 
+    -- 候选词类型如果是自定义的那几种,应该直接跳过
+
     --[[ 这里有几种可能性: 1. sum:nihkwodema, 全部未确认, 应该切除前边算tags为"ai_talk"部分
     2. sum:nihkwodema, 确认到ni, 什么都不用做.
     3. sum: 应该切除前边算tags为"ai_talk"部分

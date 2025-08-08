@@ -4,7 +4,7 @@ local logger_module = require("logger")
 local logger = logger_module.create("cloud_input_processor", {
     enabled = true,
     unique_file_log = false,
-    log_level = "DEBUG"
+    log_level = "INFO"
 })
 
 -- 初始化时清空日志文件
@@ -13,7 +13,6 @@ logger.clear()
 -- 引入文本切分模块
 -- local text_splitter = require("text_splitter")
 local debug_utils = require("debug_utils")
-
 
 -- 其他需要更新配置的lua脚本
 local smart_cursor_processor = nil
@@ -74,16 +73,27 @@ function cloud_input_processor.update_current_config(config)
     -- 读取分隔符配置
     cloud_input_processor.delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
     logger.debug("当前分隔符: " .. cloud_input_processor.delimiter)
-    
+
     -- 读取云转换触发符号配置
     cloud_input_processor.cloud_convert_symbol = config:get_string("translator/cloud_convert_symbol") or "Return"
     logger.debug("云转换触发符号: " .. cloud_input_processor.cloud_convert_symbol)
+
+    -- 读取英文模式符号配置
+    cloud_input_processor.english_mode_symbol = config:get_string("translator/english_mode_symbol") or "`"
+    logger.debug("英文模式符号: " .. cloud_input_processor.english_mode_symbol)
+
+    -- 读取原始英文分隔符配置
+    cloud_input_processor.rawenglish_delimiter_after = config:get_string("translator/rawenglish_delimiter_after") or "`"
+    cloud_input_processor.rawenglish_delimiter_before = config:get_string("translator/rawenglish_delimiter_before") or
+                                                            "`"
+    logger.debug("原始英文后分隔符: " .. cloud_input_processor.rawenglish_delimiter_after)
+    logger.debug("原始英文前分隔符: " .. cloud_input_processor.rawenglish_delimiter_before)
 
     -- 初始化配置对象
     cloud_input_processor.ai_assistant_config = {}
     cloud_input_processor.ai_assistant_config.chat_triggers = {}
     cloud_input_processor.ai_assistant_config.chat_names = {}
-    cloud_input_processor.ai_assistant_config.reply_messages_preedit = {}
+    cloud_input_processor.ai_assistant_config.reply_messages_preedits = {}
     cloud_input_processor.ai_assistant_config.prefix_to_reply = {}
 
     -- 读取 enabled 配置
@@ -97,8 +107,8 @@ function cloud_input_processor.update_current_config(config)
         "ai_assistant/behavior/commit_question") or false
     cloud_input_processor.ai_assistant_config.behavior.strip_chat_prefix = config:get_bool(
         "ai_assistant/behavior/strip_chat_prefix") or false
-    cloud_input_processor.ai_assistant_config.behavior.auto_commit =
-        config:get_bool("ai_assistant/behavior/auto_commit") or false
+    cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply = config:get_bool(
+        "ai_assistant/behavior/auto_commit_reply") or false
     cloud_input_processor.ai_assistant_config.behavior.clipboard_mode = config:get_bool(
         "ai_assistant/behavior/clipboard_mode") or false
     cloud_input_processor.ai_assistant_config.behavior.prompt_chat = config:get_string(
@@ -106,8 +116,8 @@ function cloud_input_processor.update_current_config(config)
 
     logger.debug("行为配置 - commit_question: " ..
                      tostring(cloud_input_processor.ai_assistant_config.behavior.commit_question))
-    logger.debug("行为配置 - auto_commit: " ..
-                     tostring(cloud_input_processor.ai_assistant_config.behavior.auto_commit))
+    logger.debug("行为配置 - auto_commit_reply: " ..
+                     tostring(cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply))
     logger.debug("行为配置 - clipboard_mode: " ..
                      tostring(cloud_input_processor.ai_assistant_config.behavior.clipboard_mode))
     logger.debug("行为配置 - prompt_chat: " ..
@@ -123,7 +133,7 @@ function cloud_input_processor.update_current_config(config)
         -- 遍历配置中的所有触发器
         for _, trigger_name in ipairs(trigger_keys) do
             local trigger_value = config:get_string("ai_assistant/chat_triggers/" .. trigger_name)
-            local reply_message = config:get_string("ai_assistant/reply_messages_preedit/" .. trigger_name)
+            local reply_message = config:get_string("ai_assistant/reply_messages_preedits/" .. trigger_name)
             local chat_name = config:get_string("ai_assistant/chat_names/" .. trigger_name)
 
             if trigger_value then
@@ -137,7 +147,7 @@ function cloud_input_processor.update_current_config(config)
             end
 
             if reply_message then
-                cloud_input_processor.ai_assistant_config.reply_messages_preedit[trigger_name] = reply_message
+                cloud_input_processor.ai_assistant_config.reply_messages_preedits[trigger_name] = reply_message
                 logger.debug("云输入回复消息 - " .. trigger_name .. ": " .. reply_message)
             end
         end
@@ -147,7 +157,7 @@ function cloud_input_processor.update_current_config(config)
 
     -- 创建触发器前缀到回复消息的映射
     for trigger, prefix in pairs(cloud_input_processor.ai_assistant_config.chat_triggers) do
-        local reply_message = cloud_input_processor.ai_assistant_config.reply_messages_preedit[trigger]
+        local reply_message = cloud_input_processor.ai_assistant_config.reply_messages_preedits[trigger]
         if reply_message then
             cloud_input_processor.ai_assistant_config.prefix_to_reply[prefix] = reply_message
         end
@@ -192,15 +202,15 @@ end
 
 -- 统一的配置更新函数
 function cloud_input_processor.update_all_modules_config(config)
-    logger.info("开始更新所有模块配置")
-    
+    logger.debug("开始更新所有模块配置")
+
     -- 更新所有模块的配置，添加nil检查防止模块加载失败
     cloud_input_processor.update_current_config(config)
-    
+
     if rawenglish_translator and rawenglish_translator.update_current_config then
         rawenglish_translator.update_current_config(config)
     end
-    
+
     if smart_cursor_processor and smart_cursor_processor.update_current_config then
         smart_cursor_processor.update_current_config(config)
     end
@@ -226,37 +236,7 @@ function cloud_input_processor.update_all_modules_config(config)
         text_splitter.update_current_config(config)
     end
 
-    logger.info("所有模块配置更新完成")
-end
-
--- 获取当前AI上下文对应的回复输入格式
-local function get_current_ai_reply_input(env, context)
-    if not cloud_input_processor.ai_assistant_config or not cloud_input_processor.ai_assistant_config.chat_triggers then
-        return "ai_reply:" -- 默认回复输入
-    end
-
-    -- 获取当前AI上下文标记
-    local current_ai_context = context:get_property("current_ai_context")
-    if current_ai_context and cloud_input_processor.ai_assistant_config.chat_triggers[current_ai_context] then
-        local trigger_prefix = cloud_input_processor.ai_assistant_config.chat_triggers[current_ai_context]
-        local reply_input = trigger_prefix:gsub(":$", "_reply:")
-        logger.debug("使用AI上下文回复输入: " .. current_ai_context .. " -> " .. reply_input)
-        return reply_input
-    end
-
-    -- 如果没有设置上下文，尝试从输入历史中推断
-    local input_history = context:get_property("ai_input_history")
-    if input_history and cloud_input_processor.ai_assistant_config.chat_triggers then
-        for trigger, prefix in pairs(cloud_input_processor.ai_assistant_config.chat_triggers) do
-            if input_history:match("^" .. prefix:gsub("[%(%)%.%+%-%*%?%[%]%^%$%%]", "%%%1")) then
-                local reply_input = prefix:gsub(":$", "_reply:")
-                logger.debug("从输入历史推断回复输入: " .. prefix .. " -> " .. reply_input)
-                return reply_input
-            end
-        end
-    end
-
-    return "ai_reply:" -- 默认回复输入
+    logger.debug("所有模块配置更新完成")
 end
 
 -- 计算候选词中汉字的数量
@@ -303,8 +283,157 @@ local function remove_syllables_from_end(script_text, syllable_count, delimiter)
     return table.concat(result_parts, delimiter)
 end
 
+-- 构建最终的上屏文本使用preedit版本
+local function build_commit_text_preedit(preedit_text, candidate_text, delimiter, chat_name)
+
+    -- 首先处理preedit_text，去除最后一个"‸"符号及其后面的内容
+    local cleaned_preedit_text = preedit_text
+    -- 使用简单的find查找‸符号位置，然后截取到该位置之前
+    local cursor_pos = preedit_text:find("‸")
+    if cursor_pos then
+        cleaned_preedit_text = preedit_text:sub(1, cursor_pos - 1)
+        logger.debug("去除光标符号及后续内容，原文本: '" .. preedit_text .. "', 处理后: '" ..
+                         cleaned_preedit_text .. "'")
+    end
+
+    -- 检查并提取chat_trigger_name前缀
+    local prefix = ""
+    local actual_preedit_text = cleaned_preedit_text
+
+    if chat_name and cleaned_preedit_text:sub(1, #chat_name) == chat_name then
+        prefix = chat_name
+        actual_preedit_text = cleaned_preedit_text:sub(#chat_name + 1)
+        logger.debug("提取出前缀: '" .. chat_name .. "', 剩余preedit_text: '" .. actual_preedit_text .. "'")
+    end
+
+    logger.debug("原始preedit_text: '" .. actual_preedit_text .. "'")
+    logger.debug("候选词文本: '" .. candidate_text .. "'")
+
+    --[[ 匹配方式: 从candidate_text最后一个字符开始, 不行啊, 空格如何作为进入英文模式的判断的话, 如果英文当中也有空格将会导致出错.
+    对preedit_text进行遍历, 如果遇到一个
+    
+    ]]
+
+    -- 工作变量
+    local temp_preedit_text = actual_preedit_text
+    local in_english_mode = false -- 是否在英文模式中
+
+    -- 将候选词转换为字符数组，方便从后往前遍历
+    local candidate_chars = {}
+    for pos, code in utf8.codes(candidate_text) do
+        table.insert(candidate_chars, utf8.char(code))
+    end
+
+    -- 从后往前遍历候选词中的每个字符
+    for i = #candidate_chars, 1, -1 do
+        local char = candidate_chars[i]
+        logger.debug("处理字符: '" .. char .. "' (位置: " .. i .. ")")
+
+        -- 检查是否是英文分隔符
+        if char == cloud_input_processor.rawenglish_delimiter_after then
+            -- 遇到后分隔符，进入英文模式
+            in_english_mode = true
+            logger.debug("遇到英文后分隔符，进入英文模式")
+            -- 移除preedit_text末尾的一个字符（对应这个分隔符）
+            if #temp_preedit_text > 0 then
+                temp_preedit_text = temp_preedit_text:sub(1, -2)
+                logger.debug("移除分隔符，剩余preedit_text: '" .. temp_preedit_text .. "'")
+            end
+            goto continue
+        elseif char == cloud_input_processor.rawenglish_delimiter_before then
+            -- 遇到前分隔符，退出英文模式
+            in_english_mode = false
+            logger.debug("遇到英文前分隔符，退出英文模式")
+            -- 移除preedit_text末尾的一个字符（对应这个分隔符）
+            if #temp_preedit_text > 0 then
+                temp_preedit_text = temp_preedit_text:sub(1, -2)
+                logger.debug("移除分隔符，剩余preedit_text: '" .. temp_preedit_text .. "'")
+            end
+            goto continue
+        end
+
+        if in_english_mode then
+            -- 英文模式：一个字符对应preedit_text中的一个字符
+            if #temp_preedit_text > 0 then
+                temp_preedit_text = temp_preedit_text:sub(1, -2)
+                logger.debug("英文模式：移除一个字符，剩余preedit_text: '" .. temp_preedit_text .. "'")
+            end
+        else
+            -- 中文模式：判断字符类型
+            local char_code = utf8.codepoint(char)
+            local is_chinese = (char_code >= 0x4E00 and char_code <= 0x9FFF) or
+                                   (char_code >= 0x3400 and char_code <= 0x4DBF)
+            local is_punctuation =
+                string.match(char, "[%p%s]") or (char_code >= 0x3000 and char_code <= 0x303F) or -- CJK符号和标点
+                    (char_code >= 0xFF00 and char_code <= 0xFFEF) -- 全角ASCII
+
+            if is_chinese or is_punctuation then
+                -- 中文字符或标点符号：移除一个音节
+                if i == #candidate_chars then
+                    -- 最后一个字符：移除最后一个音节（不包含分隔符）
+                    local last_delimiter_pos = temp_preedit_text:find(delimiter .. "[^" .. delimiter .. "]*$")
+                    if last_delimiter_pos then
+                        temp_preedit_text = temp_preedit_text:sub(1, last_delimiter_pos)
+                        logger.debug("移除最后一个音节（无分隔符），剩余preedit_text: '" ..
+                                         temp_preedit_text .. "'")
+                    else
+                        -- 如果找不到分隔符，说明只有一个音节，清空
+                        temp_preedit_text = ""
+                        logger.debug("只有一个音节，清空preedit_text")
+                    end
+                else
+                    -- 非最后字符：移除一个音节, 不包含分隔符
+                    -- 'ys ld dr hw jx uk ni zi ji , vs jm tm jw hr hh fu '
+                    local temp_preedit_text_strip = temp_preedit_text:gsub("%s+$", "") -- 先去掉末尾空白
+                    local last_delimiter_pos = temp_preedit_text_strip:match(".*()%s") -- 找到“最后一个空格”的位置
+                    if last_delimiter_pos then
+                        temp_preedit_text = temp_preedit_text:sub(1, last_delimiter_pos)
+                        logger.debug("移除最后一个音节，剩余preedit_text: '" .. temp_preedit_text .. "'")
+                    else
+                        -- 如果找不到分隔符，查找最后一个rawenglish_delimiter_after符号并截取到该位置（保留符号）
+                        local pos = temp_preedit_text:find(cloud_input_processor.english_mode_symbol .. "[^" ..
+                                                               cloud_input_processor.english_mode_symbol .. "]*$")
+                        if pos then
+                            temp_preedit_text = temp_preedit_text:sub(1, pos +
+                                #cloud_input_processor.english_mode_symbol - 1)
+                            logger.debug("截取到最后一个英文分隔符位置，剩余preedit_text: '" ..
+                                             temp_preedit_text .. "'")
+                        else
+                            temp_preedit_text = ""
+                            logger.debug("找不到分隔符和英文分隔符，清空preedit_text")
+                        end
+                    end
+                end
+            else
+                -- 其他字符（如英文字母、数字等）：移除preedit_text末尾一个字符
+                if #temp_preedit_text > 0 then
+                    temp_preedit_text = temp_preedit_text:sub(1, -2)
+                    logger.debug("移除一个字符，剩余preedit_text: '" .. temp_preedit_text .. "'")
+                end
+            end
+        end
+
+        ::continue::
+    end
+
+    local processed_preedit_text = temp_preedit_text
+    logger.debug("最终处理后的preedit_text: '" .. processed_preedit_text .. "'")
+
+    -- 组合最终文本
+    local final_text
+    if processed_preedit_text == "" then
+        final_text = prefix .. candidate_text
+    else
+        final_text = prefix .. processed_preedit_text .. candidate_text
+    end
+
+    logger.debug("最终上屏文本: '" .. final_text .. "'")
+    return final_text
+end
+
 -- 构建最终的上屏文本
 local function build_commit_text(script_text, candidate_text, delimiter, chat_trigger_name)
+
     -- 检查并提取chat_trigger_name前缀
     local prefix = ""
     local actual_script_text = script_text
@@ -315,82 +444,108 @@ local function build_commit_text(script_text, candidate_text, delimiter, chat_tr
         logger.info("提取出前缀: '" .. prefix .. "', 剩余script_text: '" .. actual_script_text .. "'")
     end
 
-    -- 将反引号替换成空格，确保分词的完整性
-    actual_script_text = actual_script_text:gsub("`", " ")
-    logger.info("candidate_text: " .. candidate_text)
-    logger.info("替换反引号后的script_text: '" .. actual_script_text .. "'")
+    logger.info("原始script_text: '" .. actual_script_text .. "'")
+    logger.info("候选词文本: '" .. candidate_text .. "'")
 
-    -- 使用更聪明的匹配方法：按段落匹配而不是逐字符匹配
+
+    --[[ 应该对actual_script_text进行遍历 ]]
+
+    -- 工作变量
     local temp_script_text = actual_script_text
+    local in_english_mode = false -- 是否在英文模式中
 
-    -- 将候选词按空格分割成段落（保留空格信息）
-    local candidate_parts = {}
-    local current_part = ""
-    local in_space_sequence = false
-
+    -- 将候选词转换为字符数组，方便从后往前遍历
+    local candidate_chars = {}
     for pos, code in utf8.codes(candidate_text) do
-        local char = utf8.char(code)
-        if char == " " then
-            if not in_space_sequence and current_part ~= "" then
-                table.insert(candidate_parts, {
-                    type = "text",
-                    content = current_part
-                })
-                current_part = ""
+        table.insert(candidate_chars, utf8.char(code))
+    end
+
+    -- 从后往前遍历候选词中的每个字符
+    for i = #candidate_chars, 1, -1 do
+        local char = candidate_chars[i]
+        logger.debug("处理字符: '" .. char .. "' (位置: " .. i .. ")")
+
+        -- 检查是否是英文分隔符
+        if char == cloud_input_processor.rawenglish_delimiter_after then
+            -- 遇到后分隔符，进入英文模式
+            in_english_mode = true
+            logger.debug("遇到英文后分隔符，进入英文模式")
+            -- 移除script_text末尾的一个字符（对应这个分隔符）
+            if #temp_script_text > 0 then
+                temp_script_text = temp_script_text:sub(1, -2)
+                logger.debug("移除分隔符，剩余script_text: '" .. temp_script_text .. "'")
             end
-            current_part = current_part .. char
-            in_space_sequence = true
-        else
-            if in_space_sequence and current_part ~= "" then
-                table.insert(candidate_parts, {
-                    type = "space",
-                    content = current_part
-                })
-                current_part = ""
+            goto continue
+        elseif char == cloud_input_processor.rawenglish_delimiter_before then
+            -- 遇到前分隔符，退出英文模式
+            in_english_mode = false
+            logger.debug("遇到英文前分隔符，退出英文模式")
+            -- 移除script_text末尾的一个字符（对应这个分隔符）
+            if #temp_script_text > 0 then
+                temp_script_text = temp_script_text:sub(1, -2)
+                logger.debug("移除分隔符，剩余script_text: '" .. temp_script_text .. "'")
             end
-            current_part = current_part .. char
-            in_space_sequence = false
+            goto continue
         end
-    end
 
-    -- 添加最后一个部分
-    if current_part ~= "" then
-        local part_type = in_space_sequence and "space" or "text"
-        table.insert(candidate_parts, {
-            type = part_type,
-            content = current_part
-        })
-    end
-
-    -- 从后往前处理每个部分
-    for i = #candidate_parts, 1, -1 do
-        local part = candidate_parts[i]
-        logger.info("处理候选词片段: '" .. part.content .. "' (类型: " .. part.type .. ")")
-
-        if part.type == "text" then
-            -- 文本片段：统计中文字符数量，移除对应的音节
-            local chinese_count = count_chinese_characters(part.content)
-            if chinese_count > 0 then
-                temp_script_text = remove_syllables_from_end(temp_script_text, chinese_count, delimiter)
-                logger.info("文本片段包含" .. chinese_count .. "个中文字符，移除" .. chinese_count ..
-                                "个音节，剩余: '" .. temp_script_text .. "'")
-            else
-                -- 纯英文文本，移除对应长度的部分
-                local text_len = utf8.len(part.content)
-                temp_script_text = remove_syllables_from_end(temp_script_text, 1, delimiter) -- 假设英文单词对应一个音节
-                logger.info(
-                    "英文片段 '" .. part.content .. "'，移除1个音节，剩余: '" .. temp_script_text .. "'")
+        if in_english_mode then
+            -- 英文模式：一个字符对应script_text中的一个字符
+            if #temp_script_text > 0 then
+                temp_script_text = temp_script_text:sub(1, -2)
+                logger.debug("英文模式：移除一个字符，剩余script_text: '" .. temp_script_text .. "'")
             end
         else
-            -- 空格片段：从script_text末尾移除对应长度的空格
-            local space_count = utf8.len(part.content)
-            for j = 1, space_count do
-                if temp_script_text:sub(-1) == " " then
+            -- 中文模式：判断字符类型
+            local char_code = utf8.codepoint(char)
+            local is_chinese = (char_code >= 0x4E00 and char_code <= 0x9FFF) or
+                                   (char_code >= 0x3400 and char_code <= 0x4DBF)
+            local is_punctuation =
+                string.match(char, "[%p%s]") or (char_code >= 0x3000 and char_code <= 0x303F) or -- CJK符号和标点
+                    (char_code >= 0xFF00 and char_code <= 0xFFEF) -- 全角ASCII
+
+            if is_chinese or is_punctuation then
+                -- 中文字符或标点符号：移除一个音节
+                if i == #candidate_chars then
+                    -- 最后一个字符：移除最后一个音节（不包含分隔符）
+                    local last_delimiter_pos = temp_script_text:find(delimiter .. "[^" .. delimiter .. "]*$")
+                    if last_delimiter_pos then
+                        temp_script_text = temp_script_text:sub(1, last_delimiter_pos)
+                        logger.debug("移除最后一个音节（无分隔符），剩余script_text: '" .. temp_script_text .. "'")
+                    else
+                        -- 如果找不到分隔符，说明只有一个音节，清空
+                        temp_script_text = ""
+                        logger.debug("只有一个音节，清空script_text")
+                    end
+                else
+                    -- 非最后字符：移除一个音节, 不包含分隔符
+                    -- 'ys ld dr hw jx uk ni zi ji , vs jm tm jw hr hh fu '
+                    local temp_script_text_strip = temp_script_text:gsub("%s+$", "") -- 先去掉末尾空白
+                    local last_delimiter_pos = temp_script_text_strip:match(".*()%s") -- 找到“最后一个空格”的位置
+                    if last_delimiter_pos then
+                        temp_script_text = temp_script_text:sub(1, last_delimiter_pos)
+                        logger.debug("移除最后一个音节，剩余script_text: '" .. temp_script_text .. "'")
+                    else
+                        -- 如果找不到分隔符，查找最后一个rawenglish_delimiter_after符号并截取到该位置（保留符号）
+                        local pos = temp_script_text:find(cloud_input_processor.english_mode_symbol .. "[^" .. cloud_input_processor.english_mode_symbol .. "]*$")
+                        if pos then
+                            temp_script_text = temp_script_text:sub(1, pos + #cloud_input_processor.english_mode_symbol - 1)
+                            logger.debug("截取到最后一个英文分隔符位置，剩余script_text: '" .. temp_script_text .. "'")
+                        else
+                            temp_script_text = ""
+                            logger.debug("找不到分隔符和英文分隔符，清空script_text")
+                        end
+                    end
+                end
+            else
+                -- 其他字符（如英文字母、数字等）：移除script_text末尾一个字符
+                if #temp_script_text > 0 then
                     temp_script_text = temp_script_text:sub(1, -2)
+                    logger.debug("移除一个字符，剩余script_text: '" .. temp_script_text .. "'")
                 end
             end
-            logger.info("移除" .. space_count .. "个空格字符，剩余: '" .. temp_script_text .. "'")
         end
+
+        ::continue::
     end
 
     local processed_script_text = temp_script_text
@@ -448,35 +603,37 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
                     if is_last_candidate then
                         logger.debug("选词将完成上屏操作，拦截按键并发送AI消息")
                         local candidate_text = candidate.text
-                        logger.debug("候选词文本: " .. candidate_text)
+                        logger.info("候选词文本: " .. candidate_text)
 
-                        -- 如果是ac:nihk 那么匹配不到中文, 也就是script_text_chinese为空, going_commit_text只有候选词
-                        -- 如果前面有一个纯英文片段, 而且中文是一次性选择到的,script_text: at: this is why wo ui zv hk de, 
-                        -- 最后选的候选词,如果有五个字,则应该从script_text中切除最后五个音节
-                        -- 候选词对应的明显不是全部的, 那么前边一定还有内容, 如果script_text_chinese为空, 则需要判断前面是不是有内容, 怎么判断呢? 
-                        -- this is why nihk okhaha vejqui 对于这种 恐怕也是一定会被遗漏的, 所以这个函数获取就是有缺陷.
-                        -- 必须考虑英文部分,怎么考虑呢? 看看, 遍历所有片段, 看看是什么类型的
+                        local preedit = context:get_preedit()
+                        local preedit_text = preedit.text
+                        logger.info("preedit_text: " .. preedit_text)
+
                         local script_text = context:get_script_text()
                         logger.info("script_text: " .. script_text)
-
+                        
                         -- 对上屏文本前边去除掉, 首先要知道最前边的那个是什么, 在chat_names中
                         logger.debug("chat_trigger: " .. chat_trigger)
                         local chat_trigger_name = cloud_input_processor.ai_assistant_config.chat_triggers[chat_trigger]
                         logger.debug("chat_trigger_name: " .. chat_trigger_name)
 
+                        logger.debug("chat_trigger: " .. chat_trigger)
+                        local chat_name = cloud_input_processor.ai_assistant_config.chat_names[chat_trigger]
+                        logger.debug("chat_name: " .. chat_name)
+
                         -- 使用新的函数构建最终的上屏文本，传入chat_trigger_name参数
                         local going_commit_text = build_commit_text(script_text, candidate_text,
                             cloud_input_processor.delimiter, chat_trigger_name)
-                        logger.info("going_commit_text: " .. going_commit_text)
+                        logger.debug("going_commit_text: " .. going_commit_text)
 
                         -- 判断going_commit_text是否以chat_names开头，如果是则删除前缀
                         local final_commit_text = going_commit_text
-                        if chat_trigger_name and going_commit_text:sub(1, #chat_trigger_name) == chat_trigger_name then
-                            final_commit_text = going_commit_text:sub(#chat_trigger_name + 1)
-                            logger.info("删除chat_trigger_name前缀 final_commit_text: " .. chat_trigger_name ..
+                        if chat_name and going_commit_text:sub(1, #chat_name) == chat_name then
+                            final_commit_text = going_commit_text:sub(#chat_name + 1)
+                            logger.debug("删除chat_trigger_name前缀 final_commit_text: " .. chat_trigger_name ..
                                             " -> " .. final_commit_text)
                         else
-                            logger.info("未找到前缀，直接上屏final_commit_text: " .. final_commit_text)
+                            logger.debug("未找到前缀，直接上屏final_commit_text: " .. final_commit_text)
                         end
 
                         -- 发送聊天消息到AI服务，使用keepon_chat_trigger作为对话类型
@@ -499,10 +656,11 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
                                 context:set_property("ai_replay_stream", "等待AI回复...")
                             end
 
+                            -- 如果当前不是start状态则设置为start状态
                             local get_ai_stream = context:get_property("get_ai_stream")
-                            if get_ai_stream ~= "true" then
-                                logger.debug("设置get_ai_stream属性开关true")
-                                context:set_property("get_ai_stream", "true")
+                            if get_ai_stream ~= "start" then
+                                logger.debug("设置get_ai_stream属性开关start")
+                                context:set_property("get_ai_stream", "start")
                             end
 
                             if cloud_input_processor.ai_assistant_config.behavior.commit_question then
@@ -517,7 +675,7 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
                                     return kAccepted
                                 else
                                     -- 正常上屏操作, 不去除前缀的话,就会正常的向后推动,变成一个普通的上屏操作
-                                    logger.info("未设置strip_chat_prefix, 不需要删除前缀，直接上屏: " ..
+                                    logger.debug("未设置strip_chat_prefix, 不需要删除前缀，直接上屏: " ..
                                                     going_commit_text)
                                     logger.debug("context:clear()")
                                     context:clear()
@@ -530,7 +688,7 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
                                 -- 发送聊天消息，包含对话类型信息
                                 tcp_socket.send_chat_message(going_commit_text, chat_trigger, false)
                                 -- 拦截按键, 清空当前context中的内容. 应该根据配置清空控制是否清空,或者正常上屏. 如果上屏则应该发送回车.
-                                logger.info("context:clear()")
+                                logger.debug("context:clear()")
                                 context:clear()
                                 return kAccepted
                             end
@@ -604,18 +762,18 @@ function cloud_input_processor.init(env)
     -- 获取输入法引擎和上下文   
     local config = env.engine.schema.config
     local current_schema_id = env.engine.schema.schema_id
-    
 
     -- 检查是否需要更新配置（第一次初始化或 schema 发生变化）
     local need_update = false
     if cloud_input_processor.last_schema_id == nil then
-        logger.info("首次初始化，需要更新所有模块配置")
+        logger.debug("首次初始化，需要更新所有模块配置")
         need_update = true
     elseif cloud_input_processor.last_schema_id ~= current_schema_id then
-        logger.info("Schema 发生变化: " .. tostring(cloud_input_processor.last_schema_id) .. " -> " .. current_schema_id .. "，需要更新所有模块配置")
+        logger.debug("Schema 发生变化: " .. tostring(cloud_input_processor.last_schema_id) .. " -> " ..
+                        current_schema_id .. "，需要更新所有模块配置")
         need_update = true
     else
-        logger.info("Schema 未变化: " .. current_schema_id .. "，跳过配置更新")
+        logger.debug("Schema 未变化: " .. current_schema_id .. "，跳过配置更新")
     end
 
     if need_update then
@@ -646,7 +804,7 @@ function cloud_input_processor.func(key, env)
     local segmentation = context.composition:toSegmentation()
     local input = context.input
     local key_repr = key:repr()
-    -- logger.info("测试虚拟按键: " .. key_repr)
+    -- logger.debug("测试虚拟按键: " .. key_repr)
 
     if key_repr == "Release+Control_L" then
         logger.debug("拦截所有Release+Control_L按键")
@@ -666,32 +824,42 @@ function cloud_input_processor.func(key, env)
     -- 测试: 尝试去调用各个模块的update_current_config函数
     if key_repr == "Control+F10" then
         -- 应该是当前收到服务端发送过来的命令的时候, config就已经完成修改了.
-        logger.info("Control+F10: 强制更新所有模块配置")
+        logger.debug("Control+F10: 强制更新所有模块配置")
         local config = env.engine.schema.config
 
         -- 使用统一的配置更新函数，强制更新所有模块
         cloud_input_processor.update_all_modules_config(config)
 
-        logger.info("Control+F10: 所有模块配置更新完成")
+        logger.debug("Control+F10: 所有模块配置更新完成")
     end
 
     -- 检查Control+F11按键的处理
     if key_repr == "Control+F11" then
-        if context:get_property("get_ai_stream") == "true" then
-            logger.debug("get_ai_stream==true, 触发重新刷新候选词: ")
+        if context:get_property("get_ai_stream") == "start" then
+            logger.debug("get_ai_stream==start, 触发重新刷新候选词: ")
             if context.input == "" then
-                local reply_input = get_current_ai_reply_input(env, context)
-                context.input = reply_input
-                logger.debug("设置AI回复输入: " .. reply_input)
+                local current_ai_context = context:get_property("current_ai_context")
+                context.input = current_ai_context .. "_reply:"
+                logger.debug("设置AI回复输入: " .. current_ai_context)
             end
             context:refresh_non_confirmed_composition()
             return kAccepted
+        elseif context:get_property("get_ai_stream") == "stop" then
+            if cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply then
+                logger.debug("get_ai_stream==stop, 自动上屏: ")
+                if context:confirm_current_selection() then
+                    logger.debug("确认当前AI回复候选词")
+                else
+                    logger.debug("失败在确认当前AI回复候选词")
+                end
+            end
+
         elseif context:get_property("get_cloud_stream") == "true" then
             logger.debug("get_cloud_stream==true, 触发重新刷新云输入候选词: ")
             context:refresh_non_confirmed_composition()
             return kAccepted
         else
-            logger.debug("get_ai_stream==false && get_cloud_stream==false, 依然拦截输入Control+F11: ")
+            logger.debug("get_ai_stream==idle && get_cloud_stream==false, 依然拦截输入Control+F11: ")
             return kAccepted
         end
     end
@@ -955,162 +1123,6 @@ function cloud_input_processor.func(key, env)
             end
         end
 
-        -- -- local segmentation_input = segmentation.input
-        -- -- logger.debug("segmentation_input: " .. segmentation_input)
-        -- -- 检查反引号的数量是否为奇数(说明有未闭合的反引号)
-
-        -- -- 如果当前输入的就是反引号,会有一个延迟,单独判断一下.
-        -- -- 如果输入的是反引号,那么segmente_input是前边的内容, 
-        -- -- 这就有两种情况, 一种是 wo` 一种是wo`ok`
-        -- -- 如果是前边的情况, segmente_input为 input, 后面的情况 segmente_input为 wo`ok
-
-        -- if key_repr == "grave" then
-        --     -- segmente_input 后面追加一个反引号字符
-        --     segmentation_input = segmentation_input .. "`"
-        --     logger.debug("检测到反引号输入，segmente_input 更新为: " .. segmentation_input)
-        -- elseif key_repr == "BackSpace" then
-        --     -- 删除按键之后,如果删除掉的是一个反引号,也应该马上触发
-        --     segmentation_input = segmentation_input:sub(1, -2)
-        -- end
-        -- local _, rawenglish_count = segmentation_input:gsub("`", "")
-        -- if rawenglish_count % 2 == 1 then
-        --     logger.debug("检测到奇数个反引号,存在未闭合情况: " .. segmentation_input ..
-        --                      " (反引号数量: " .. rawenglish_count .. ")")
-        --     -- 只在值真正需要改变时才设置
-        --     -- 先获取当前选项的值，避免不必要的更新
-        --     logger.debug("当前云输入提示标志: " .. context:get_property("rawenglish_prompt"))
-
-        --     if context:get_property("rawenglish_prompt") == "0" then
-        --         logger.debug("rawenglish_prompt提示标志为 0, 设置为 1")
-        --         context:set_property("rawenglish_prompt", "1")
-        --         logger.debug("rawenglish_prompt 已设置为 1")
-        --     end
-
-        --     if key_repr:match("^Release%+") then
-        --         logger.debug("反引号状态下跳过按键事件: " .. key_repr)
-        --         return kAccepted
-        --     end
-
-        --     -- 定义需要转换为普通字符的按键
-        --     local handle_keys = {
-        --         ["space"] = " ", -- 空格转为空格字符
-        --         -- 数字键
-        --         ["1"] = "1",
-        --         ["2"] = "2",
-        --         ["3"] = "3",
-        --         ["4"] = "4",
-        --         ["5"] = "5",
-        --         ["6"] = "6",
-        --         ["7"] = "7",
-        --         ["8"] = "8",
-        --         ["9"] = "9",
-        --         ["0"] = "0",
-        --         -- 数字键的Shift版本（符号）
-        --         ["Shift+1"] = "!", -- !
-        --         ["Shift+2"] = "@", -- @
-        --         ["Shift+3"] = "#", -- #
-        --         ["Shift+4"] = "$", -- $
-        --         ["Shift+5"] = "%", -- %
-        --         ["Shift+6"] = "^", -- ^
-        --         ["Shift+7"] = "&", -- &
-        --         ["Shift+8"] = "*", -- *
-        --         ["Shift+9"] = "(", -- (
-        --         ["Shift+0"] = ")", -- )
-
-        --         -- 标点符号（不需要Shift）
-        --         ["period"] = ".", -- 句号
-        --         ["comma"] = ",", -- 逗号
-        --         ["semicolon"] = ";", -- 分号
-        --         ["apostrophe"] = "'", -- 单引号/撇号
-        --         ["bracketleft"] = "[", -- 左方括号
-        --         ["bracketright"] = "]", -- 右方括号
-        --         ["hyphen"] = "-", -- 连字符
-        --         ["equal"] = "=", -- 等号
-        --         ["slash"] = "/", -- 斜杠
-        --         ["backslash"] = "\\", -- 反斜杠
-        --         ["grave"] = "`", -- 反引号
-
-        --         -- 标点符号的Shift版本
-        --         ["Shift+semicolon"] = ":", -- :
-        --         ["Shift+apostrophe"] = "\"", -- "
-        --         ["Shift+bracketleft"] = "{", -- {
-        --         ["Shift+bracketright"] = "}", -- }
-        --         ["Shift+hyphen"] = "_", -- _
-        --         ["Shift+equal"] = "+", -- +
-        --         ["Shift+slash"] = "?", -- ?
-        --         ["Shift+backslash"] = "|", -- |
-        --         ["Shift+grave"] = "~", -- ~
-
-        --         -- 直接映射的符号键
-        --         ["minus"] = "-", -- 冒号
-        --         ["colon"] = ":", -- 冒号
-        --         ["question"] = "?", -- 问号
-        --         ["exclam"] = "!", -- 感叹号
-        --         ["quotedbl"] = "\"", -- 双引号
-        --         ["parenleft"] = "(", -- 左圆括号
-        --         ["parenright"] = ")", -- 右圆括号
-        --         ["braceleft"] = "{", -- 左花括号
-        --         ["braceright"] = "}", -- 右花括号
-        --         ["underscore"] = "_", -- 下划线
-        --         ["plus"] = "+", -- 加号
-        --         ["asterisk"] = "*", -- 星号
-        --         ["at"] = "@", -- @ 符号
-        --         ["numbersign"] = "#", -- # 号
-        --         ["dollar"] = "$", -- 美元符号
-        --         ["percent"] = "%", -- 百分号
-        --         ["ampersand"] = "&", -- & 符号
-        --         ["less"] = "<", -- 小于号
-        --         ["greater"] = ">", -- 大于号
-        --         ["asciitilde"] = "~", -- 波浪号
-        --         ["asciicircum"] = "^", -- 插入符号
-        --         ["bar"] = "|", -- 竖线
-
-        --         -- 为这些符号键也添加Shift版本（以防万一）
-        --         ["Shift+colon"] = ":",
-        --         ["Shift+question"] = "?",
-        --         ["Shift+exclam"] = "!",
-        --         ["Shift+quotedbl"] = "\"",
-        --         ["Shift+parenleft"] = "(",
-        --         ["Shift+parenright"] = ")",
-        --         ["Shift+braceleft"] = "{",
-        --         ["Shift+braceright"] = "}",
-        --         ["Shift+underscore"] = "_",
-        --         ["Shift+plus"] = "+",
-        --         ["Shift+asterisk"] = "*",
-        --         ["Shift+at"] = "@",
-        --         ["Shift+numbersign"] = "#",
-        --         ["Shift+dollar"] = "$",
-        --         ["Shift+percent"] = "%",
-        --         ["Shift+ampersand"] = "&",
-        --         ["Shift+less"] = "<",
-        --         ["Shift+greater"] = ">",
-        --         ["Shift+asciitilde"] = "~",
-        --         ["Shift+asciicircum"] = "^",
-        --         ["Shift+bar"] = "|"
-
-        --     }
-        --     logger.debug("key_repr: " .. key_repr)
-        --     if handle_keys[key_repr] then
-        --         logger.debug("处于反引号状态，将按键转为普通字符: " .. key_repr)
-
-        --         -- 将按键对应的字符添加到输入中
-        --         local char_to_add = handle_keys[key_repr]
-        --         -- 如果添加英文字母没有影响,但是
-        --         context:push_input(char_to_add)
-
-        --         -- 返回 kAccepted 表示我们已经处理了这个按键
-        --         return kAccepted
-        --     end
-
-        -- else
-        --     -- 如果不在组词状态或没有达到触发条件,则重置提示选项
-        --     logger.debug("当前不在反引号当中rawenglish提示已重置")
-        --     if context:get_property("rawenglish_prompt") == "1" then
-        --         context:set_property("rawenglish_prompt", "0")
-        --         logger.debug("rawenglish_prompt 已设置为 0")
-        --     end
-        -- end
-
         logger.debug("=== 结束分析lua/cloud_input_processor.lua ===")
         logger.debug("")
 
@@ -1118,10 +1130,11 @@ function cloud_input_processor.func(key, env)
         set_cloud_convert_flag(context)
 
         -- 检查当前按键是否为预设的触发键
-        if key:repr() == cloud_input_processor.cloud_convert_symbol and context:get_property("cloud_convert_flag") == "1" then
+        if key:repr() == cloud_input_processor.cloud_convert_symbol and context:get_property("cloud_convert_flag") ==
+            "1" then
             logger.debug("触发云输入处理cloud_convert, 添加option")
             context:set_option("cloud_convert", true)
-            
+
             -- 设置拦截标志，用于拦截后续的按键释放事件
             context:set_property("should_intercept_key_release", "1")
             logger.debug("设置拦截按键释放标志")

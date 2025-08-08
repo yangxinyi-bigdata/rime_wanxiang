@@ -14,15 +14,15 @@ local logger = logger_module.create("rawenglish_segment", {
 logger.clear()
 
 local segmentor = {}
-segmentor.english_mode_symbol = "`"  -- 默认值
+segmentor.english_mode_symbol = "`" -- 默认值
 
 -- 配置更新函数
 function segmentor.update_current_config(config)
     logger.info("开始更新rawenglish_segment模块配置")
-    
+
     segmentor.english_mode_symbol = config:get_string("translator/english_mode_symbol") or "`"
     logger.info("英文模式符号: " .. tostring(segmentor.english_mode_symbol))
-    
+
     logger.info("rawenglish_segment模块配置更新完成")
 end
 
@@ -30,7 +30,7 @@ function segmentor.init(env)
     -- 配置更新由 cloud_input_processor 统一管理，无需在此处调用
     local config = env.engine.schema.config
     logger.info("等待 cloud_input_processor 统一更新配置")
-    
+
     logger.info("rawenglish_segment初始化完成")
     logger.info("=" .. string.rep("=", 60))
 end
@@ -44,7 +44,6 @@ function segmentor.func(segmentation, env)
     logger.info("输入文本: '" .. input .. "'")
     logger.info("输入整个input长度: " .. #input)
 
-
     local current_start = segmentation:get_current_start_position()
     local current_end = segmentation:get_current_end_position()
     local current_start_input = input:sub(current_start + 1, current_end)
@@ -55,17 +54,25 @@ function segmentor.func(segmentation, env)
         -- 查找第一个反引号片段的结束位置
         local rawenglish_end = current_start_input:find(english_mode_symbol, 2)
         local rawenglish_length, rawenglish_content
-        
+
         if rawenglish_end then
             -- 找到配对的结束反引号
             rawenglish_length = rawenglish_end
             rawenglish_content = current_start_input:sub(1, rawenglish_length)
             logger.info("检测到完整的反引号片段:")
+            if context:get_property("rawenglish_prompt") == "1" then
+                logger.debug("rawenglish_prompt提示标志为 1 , 设置为 0")
+                context:set_property("rawenglish_prompt", "0")
+            end
         else
             -- 没有找到配对的结束反引号，将整个输入作为反引号片段
             rawenglish_length = #current_start_input
             rawenglish_content = current_start_input
             logger.info("检测到未闭合的反引号片段:")
+            if context:get_property("rawenglish_prompt") == "0" then
+                logger.debug("rawenglish_prompt提示标志为 0, 设置为 1")
+                context:set_property("rawenglish_prompt", "1")
+            end
         end
 
         logger.info("  反引号片段: '" .. rawenglish_content .. "' (长度: " .. rawenglish_length .. ")")
@@ -90,8 +97,8 @@ function segmentor.func(segmentation, env)
             left_segment.tags = Set {"abc"}
             segmentation:forward()
             if segmentation:add_segment(left_segment) then
-                logger.info("成功将剩余片段添加为abc segment (start: " .. current_start + rawenglish_length .. ", end: " ..
-                            (current_end) .. ")")
+                logger.info("成功将剩余片段添加为abc segment (start: " .. current_start + rawenglish_length ..
+                                ", end: " .. (current_end) .. ")")
 
                 debug_utils.print_segmentation_info(segmentation, logger)
             else
@@ -122,8 +129,8 @@ function segmentor.func(segmentation, env)
         end
 
     else
-        logger.debug("检测到偶数个反引号: " .. current_start_input ..
-                         " (反引号数量: " .. rawenglish_count .. ")")
+        logger.debug(
+            "检测到偶数个反引号: " .. current_start_input .. " (反引号数量: " .. rawenglish_count .. ")")
         -- 如果不在组词状态或没有达到触发条件,则重置提示选项
         logger.debug("当前不在反引号当中rawenglish提示已重置")
         if context:get_property("rawenglish_prompt") == "1" then

@@ -24,7 +24,7 @@ add_user_dict:
   user_dict: zc
 ai_assistant:
   behavior:
-    auto_commit: false
+    auto_commit_reply: false
     clipboard_mode: true
     commit_question: true
     prompt_chat: a
