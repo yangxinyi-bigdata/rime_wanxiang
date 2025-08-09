@@ -196,18 +196,21 @@ function ai_assistant_translator.func(input, segment, env)
     local preedit_pre = nil
     local is_prefix_display = false
 
-    -- 检查所有配置的AI触发器标签
+    -- 检查所有配置的AI触发器标签（无需遍历 chat_triggers，依赖 segment 的标签与上下文）
     if ai_assistant_translator.chat_triggers then
-
-        for trigger_name, trigger_prefix in pairs(ai_assistant_translator.chat_triggers) do
-            if segment:has_tag(trigger_name) then
+        -- 仅当该分词段带有 ai_talk 标签时才认为是触发器前缀段
+        if segment:has_tag("ai_talk") then
+            local context = env.engine.context
+            local trigger_name = context and context:get_property("current_ai_context") or nil
+            -- 确认该 trigger 存在于配置表中
+            if trigger_name and ai_assistant_translator.chat_triggers[trigger_name] then
                 matched_reply_tag = trigger_name
                 matched_trigger = trigger_name
                 is_prefix_display = true -- 这是前缀显示
+                local trigger_prefix = ai_assistant_translator.chat_triggers[trigger_name]
                 -- 从配置中获取聊天名称，如果没有则使用触发器前缀
                 reply_message = ai_assistant_translator.chat_names[trigger_name] or (trigger_prefix .. " AI助手")
                 logger.info("检测到AI触发器标签: " .. trigger_name .. " (前缀显示)")
-                break
             end
         end
     end

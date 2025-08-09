@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "专题研究-在rime中和大模型进行交互.md",
+                "file": "02. 专题研究-在rime中和大模型进行交互.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "专题研究-在rime中和大模型进行交互"
+              "title": "02. 专题研究-在rime中和大模型进行交互"
             }
           },
           {
@@ -41,16 +41,15 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "librime-lua.wiki/API.md",
+                "file": "librime-lua.wiki/Objects.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "API"
+              "title": "Objects"
             }
           }
-        ],
-        "currentTab": 2
+        ]
       }
     ],
     "direction": "vertical"
@@ -171,13 +170,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "librime-lua.wiki/API.md",
+                "file": "02. 专题研究-在rime中和大模型进行交互.md",
                 "followCursor": false,
                 "showSearch": true,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "API 的大纲"
+              "title": "02. 专题研究-在rime中和大模型进行交互 的大纲"
             }
           }
         ],
@@ -197,17 +196,19 @@
       "command-palette:打开命令面板": false
     }
   },
-  "active": "3eebbe179a5b8121",
+  "active": "7a8353859d7f5a74",
   "lastOpenFiles": [
+    "万象输入法AI助手系统完整升级文档.md",
+    "02. 专题研究-在rime中和大模型进行交互.md",
+    "01. AI段落输入法宣传相关.md",
+    "动态配置读取优化说明.md",
+    "大模型收集.md",
     "librime-lua.wiki/Objects.md",
     "librime-lua.wiki/API.md",
-    "专题研究-在rime中和大模型进行交互.md",
-    "AI段落输入法宣传相关.md",
     "CleanShot 2025-08-07 at 17.22.24@2x.png",
     "CleanShot 2025-08-07 at 15.13.38@2x.png",
     "专题研究：多个模式之间的互相影响怎么办？.md",
     "NiceGUI文档.md",
-    "大模型收集.md",
     "NiceGUI/NiceGUI 文档总览.md",
     "NiceGUI/Text Elements.md",
     "NiceGUI",
@@ -227,7 +228,6 @@
     "AI连续对话测试.md",
     "AI对话核心提示.md",
     "lua/backtick_translator.lua.md",
-    "lua/cloud_input_processor.lua.md",
     "lua",
     "CleanShot 2025-07-29 at 22.22.36@2x.png",
     "Templates"

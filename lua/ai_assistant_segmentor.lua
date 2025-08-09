@@ -23,6 +23,10 @@ ai_assistant_segmentor.reply_messages_preedits = {}
 ai_assistant_segmentor.reply_tags = {}
 ai_assistant_segmentor.chat_names = {}
 ai_assistant_segmentor.clean_prefix_to_trigger = {}
+-- 新增：回复输入快速查表（如 "<trigger>_reply:" -> "<trigger>"）
+ai_assistant_segmentor.reply_inputs_to_trigger = {}
+-- 新增：chat_triggers 的反向查表（如 "a:" -> "gpt"）
+ai_assistant_segmentor.chat_triggers_reverse = {}
 
 -- 读取配置的辅助函数，从config中读取并缓存到模块级变量
 -- 读取配置的辅助函数，从config中读取并缓存到模块级变量
@@ -53,6 +57,10 @@ function ai_assistant_segmentor.update_current_config(config)
     ai_assistant_segmentor.reply_tags = {}
     ai_assistant_segmentor.chat_names = {}
     ai_assistant_segmentor.clean_prefix_to_trigger = {}
+    -- 新增：重置回复输入查表
+    ai_assistant_segmentor.reply_inputs_to_trigger = {}
+    -- 新增：重置触发器反向查表
+    ai_assistant_segmentor.chat_triggers_reverse = {}
 
     -- 获取 chat_triggers 配置项
     local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
@@ -71,6 +79,10 @@ function ai_assistant_segmentor.update_current_config(config)
                 ai_assistant_segmentor.chat_triggers[trigger_name] = trigger_value
                 logger.info("聊天触发器 - " .. trigger_name .. ": " .. trigger_value)
 
+                -- 新增：建立反向映射，便于 O(1) 查找
+                ai_assistant_segmentor.chat_triggers_reverse[trigger_value] = trigger_name
+                logger.debug("触发器反向映射 - " .. trigger_value .. " -> " .. trigger_name)
+
                 -- 预处理：去掉冒号并保存映射
                 local clean_prefix = trigger_value:gsub(":$", "")
                 ai_assistant_segmentor.clean_prefix_to_trigger[clean_prefix] = {
@@ -84,7 +96,10 @@ function ai_assistant_segmentor.update_current_config(config)
             if reply_messages_preedit then
                 ai_assistant_segmentor.reply_messages_preedits[trigger_name] = reply_messages_preedit
                 logger.info("回复消息 - " .. trigger_name .. ": " .. reply_messages_preedit)
-
+                -- 同步构建：将 key 增加 "_reply:" 后作为输入快速查找表
+                local reply_input_key = trigger_name .. "_reply:"
+                ai_assistant_segmentor.reply_inputs_to_trigger[reply_input_key] = trigger_name
+                logger.info("回复输入映射 - " .. reply_input_key .. " -> " .. trigger_name)
             end
 
             if chat_name then
@@ -117,28 +132,34 @@ function ai_assistant_segmentor.func(segmentation, env)
         return true -- AI助手未启用，不处理
     end
 
-    local confirmed_pos = segmentation:get_confirmed_position()
     local segmentation_input = segmentation.input
-    -- 清空前面的分词,从这里开始进行分词
-    segmentation:reset_length(0)
+    local confirmed_pos = segmentation:get_confirmed_position()
+    local current_start = segmentation:get_current_start_position()
+    local current_end = segmentation:get_current_end_position()
 
-    if confirmed_pos ~= 0 then
+    logger.info("segmentation_input: " .. segmentation_input)
+    local current_start_input = segmentation_input:sub(current_start + 1)
+    logger.info("current_start_input: " .. current_start_input)
+
+    -- 清空前面的分词,从这里开始进行分词
+
+    if confirmed_pos ~= 0 or current_start ~= 0 then
         -- 如果不是从头开始是分段处理,而是已经进行过一切选词了,则不再进本脚本的分词处理
         return true
     end
 
     -- 检查是否是AI回复消息（使用新的回复输入格式）
     logger.debug("检测AI回复输入: " .. segmentation_input)
-    for trigger_name, reply_prefix in pairs(ai_assistant_segmentor.reply_messages_preedits) do
-        if trigger_name .. "_reply:" == segmentation_input then
-            logger.debug("检测到AI回复输入: " .. segmentation_input .. " (触发器: " .. trigger_name .. ")")
-            local ai_reply_segment = Segment(0, #input)
-            ai_reply_segment.tags = Set {trigger_name .. "_reply", "ai_reply"}
-            segmentation:reset_length(0)
-            segmentation:add_segment(ai_reply_segment)
-            logger.info("创建AI回复段落，标签: " .. trigger_name .. "_reply")
-            return false -- 处理完成
-        end
+    -- O(1) 直接查表，不再遍历
+    local reply_trigger = ai_assistant_segmentor.reply_inputs_to_trigger[segmentation_input]
+    if reply_trigger then
+        logger.debug("检测到AI回复输入: " .. segmentation_input .. " (触发器: " .. reply_trigger .. ")")
+        local ai_reply_segment = Segment(0, #input)
+        ai_reply_segment.tags = Set {reply_trigger .. "_reply", "ai_reply"}
+        segmentation:pop_back()
+        segmentation:add_segment(ai_reply_segment)
+        logger.info("创建AI回复段落，标签: " .. reply_trigger .. "_reply")
+        return false -- 处理完成, 其他所有分词器不再处理
     end
 
     -- 检查是否是提示触发符号, 例如"a"
@@ -147,136 +168,58 @@ function ai_assistant_segmentor.func(segmentation, env)
         logger.debug("segmentation_input == prompt: " .. segmentation_input)
         -- 收集所有以 prompt_chat 字母开头的触发器
         -- 创建提示段落
-        local prompt_segment = Segment(0, #segmentation_input)
+        local prompt_segment = Segment(0, #prompt_chat)
         prompt_segment.tags = Set {"ai_prompt", "abc"}
 
         segmentation:reset_length(0)
+        -- segmentation:pop_back()
         segmentation:add_segment(prompt_segment)
 
-        return true
+        return false
     end
-    -- if input == prompt_chat then
-    --     logger.debug("input == prompt: " .. input)
-    --     -- 收集所有以 prompt_chat 字母开头的触发器
-    --     local prompt_triggers = {}
-    --     for trigger_name, trigger_prefix in pairs(env.ai_assistant_config.chat_triggers) do
-    --         if trigger_prefix:sub(1, 1) == prompt_chat then
-    --             -- 检查触发器前缀是否以 prompt_chat 开头
-    --             local chat_name = env.ai_assistant_config.chat_names[trigger_name]
-    --             logger.debug("chat_name: " .. chat_name)
-    --             -- 移除触发器前缀末尾的冒号
-    --             -- local clean_prefix = trigger_prefix:gsub(":$", "")
-    --             -- logger.debug("clean_prefix: " .. clean_prefix)
-    --             local chat_name_clear = chat_name:gsub(":$", "")
-    --             table.insert(prompt_triggers, trigger_prefix .. chat_name_clear)
-    --         end
-    --     end
-
-    --     if #prompt_triggers > 0 then
-    --         logger.debug("#prompt_triggers > 0")
-    --         -- 排序并合并成提示字符串
-    --         table.sort(prompt_triggers)
-    --         local prompt_text = table.concat(prompt_triggers, " ")
-    --         logger.debug("prompt_text: " .. prompt_text)
-
-    --         -- 创建提示段落
-    --         local prompt_segment = Segment(0, #input)
-    --         prompt_segment.tags = Set {"ai_prompt", "abc"}
-    --         prompt_segment.prompt = " " .. prompt_text
-
-    --         segmentation:reset_length(0)
-    --         segmentation:add_segment(prompt_segment)
-    --         logger.info("创建AI提示段落: " .. prompt_text)
-
-    --         return true
-    --     end
-
-    --     -- 检查是否是单个触发器前缀（去掉冒号），例如"ar"对应"ar:"
-    -- elseif env.ai_assistant_config.clean_prefix_to_trigger[input] then
-    --     local trigger_info = env.ai_assistant_config.clean_prefix_to_trigger[input]
-    --     logger.debug("匹配到单个触发器前缀: " .. input .. " -> " .. trigger_info.trigger_prefix)
-
-    --     if trigger_info.chat_name then
-    --         local chat_name_clear = trigger_info.chat_name:gsub(":$", "")
-    --         local single_prompt_text = trigger_info.trigger_prefix .. chat_name_clear
-
-    --         -- 创建单个触发器提示段落
-    --         local single_prompt_segment = Segment(0, #input)
-    --         single_prompt_segment.tags = Set {"abc"}
-    --         single_prompt_segment.prompt = " " .. single_prompt_text
-
-    --         segmentation:reset_length(0)
-    --         segmentation:add_segment(single_prompt_segment)
-    --         logger.info("创建单个触发器AI提示段落: " .. single_prompt_text)
-
-    --         return true
-    --     end
-    -- end
 
     -- 检查是否匹配任何AI触发器
     local matched_trigger = nil
     local matched_prefix = nil
 
-    -- logger.info("循环外部")
-    -- debug_utils.print_segmentation_info(segmentation, logger)
-    for trigger_name, trigger_prefix in pairs(ai_assistant_segmentor.chat_triggers) do
-        -- debug_utils.print_segmentation_info(segmentation, logger)
-        -- 处理纯触发器（没有后续字符）
-        -- if segmentation_input:match("^" .. trigger_prefix:gsub("[%(%)%.%+%-%*%?%[%]%^%$%%]", "%%%1") .. ".") then
-        if segmentation_input:match("^" .. trigger_prefix:gsub("[%(%)%.%+%-%*%?%[%]%^%$%%]", "%%%1")) then
-            local ai_segment = Segment(0, #trigger_prefix)
-            ai_segment.tags = Set {trigger_name, "ai_talk"} -- 使用触发器名称作为标签
-            logger.debug(trigger_name .. " 触发器匹配, 添加标签: " .. trigger_name)
+    -- 使用反向查表，O(1) 判定是否为纯触发器输入
+    local trigger_name = ai_assistant_segmentor.chat_triggers_reverse[segmentation_input]
+    if trigger_name then
+        local trigger_prefix = ai_assistant_segmentor.chat_triggers[trigger_name]
+        local ai_segment = Segment(0, #trigger_prefix)
+        ai_segment.tags = Set {trigger_name, "ai_talk"}
+        logger.debug(trigger_name .. " 触发器匹配, 添加标签: " .. trigger_name)
 
-            -- 设置当前AI上下文
-            context:set_property("current_ai_context", trigger_name)
-            logger.info("设置AI上下文: " .. trigger_name)
+        -- 设置当前AI上下文
+        context:set_property("current_ai_context", trigger_name)
+        logger.info("设置AI上下文: " .. trigger_name)
 
-            -- segmentation:reset_length(0)
-            segmentation:add_segment(ai_segment)
-            segmentation:forward()
-
-            logger.info("循环内部")
-            debug_utils.print_segmentation_info(segmentation, logger)
-            return true
-        -- 处理带内容的触发器,所以这里不应该是直接使用input,而是应该去掉已经确认的部分,而且是光标左侧的部分,也就是实际生效中的input段
-        -- elseif segmentation_input:match("^" .. trigger_prefix:gsub("[%(%)%.%+%-%*%?%[%]%^%$%%]", "%%%1") .. ".") then
-        --     matched_trigger = trigger_name
-        --     matched_prefix = trigger_prefix
-        --     break
+        if segmentation.size > 0 then
+            segmentation:pop_back()
         end
+        
+        segmentation:add_segment(ai_segment)
+        
+
+        logger.info("循环内部")
+        debug_utils.print_segmentation_info(segmentation, logger)
+        
     end
 
-    -- 如果没有匹配到任何触发器，不处理
-    if not matched_trigger then
-        return true
+    -- 判断第一段是不是"ai_talk", 如果只有一段"ai_talk", 则应该向前推进
+    local success, error_msg = pcall(function()
+        local first_segment = segmentation:get_at(0)
+        if segmentation.size == 1 and first_segment and first_segment:has_tag("ai_talk") then
+            segmentation:forward()
+            logger.debug("AI话题段落已向前推进")
+        end
+    end)
+    
+    if not success then
+        logger.error("处理AI话题段落时发生错误: " .. tostring(error_msg))
     end
-
-
-    -- 分割输入
-    local prefix_len = #matched_prefix
-    local pinyin_part = segmentation_input:sub(prefix_len + 1) -- 去掉触发器前缀的部分
-
-    -- 清空原有的分割结果
-    segmentation:reset_length(0)
-    logger.info("清空原有分割结果")
-
-    -- 创建 AI 前缀段落
-    local ai_segment = Segment(0, prefix_len)
-    ai_segment.tags = Set {matched_trigger, "ai_talk"} -- 使用触发器名称作为标签
-    segmentation:add_segment(ai_segment)
-    logger.info("创建AI前缀段落: " .. matched_prefix .. " (0-" .. prefix_len .. ") 触发器类型: " ..
-                    matched_trigger)
-
-    -- 如果有拼音部分，创建拼音段落
-    if #pinyin_part > 0 then
-        segmentation:forward()
-        local pinyin_segment = Segment(prefix_len, #segmentation_input)
-        pinyin_segment.tags = Set {"abc"} -- 使用 abc 标签，让 script_translator 处理
-        segmentation:add_segment(pinyin_segment)
-        logger.info("创建拼音段落: " .. pinyin_part .. " (" .. prefix_len .. "-" .. #input .. ")")
-    end
-
+    
+    debug_utils.print_segmentation_info(segmentation, logger)
     return true -- 不能false啊,应该继续让后面的分词器继续处理呢!
 end
 

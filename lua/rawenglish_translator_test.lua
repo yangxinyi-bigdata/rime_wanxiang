@@ -383,6 +383,9 @@ function rawenglish_translator.func(input, seg, env)
     end
 
     -- 处理每个片段，收集每个片段的候选词
+    -- 如果是考虑更加高性能的处理方式, 每次顶多增加或者减少一个字母, 实际上不需要全部重新计算. 对于非最后一段其实可以固定了.
+    -- 每次只需要重新计算最后一段的候选词即可, 也就是计算的之后, 将候选词保存下来, 然后后面变化的时候, 只对最后一段进行变化, 其他的使用原来保存的
+
     local segment_candidates = {} -- 存储每个片段的候选词列表
     local used_fallback = false -- 记录是否使用了fallback
     local fallback_length_diff = 0 -- 记录fallback导致的长度差异
