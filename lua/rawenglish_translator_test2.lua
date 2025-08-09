@@ -16,7 +16,11 @@ local logger = logger_module.create("rawenglish_translator", {
 -- 清空日志文件
 logger.clear()
 
+
 local rawenglish_translator = {}
+
+-- 缓存：按片段索引保存上一次已计算的候选词（非最后一段）
+local combo_cache = { count = 0, list = {} }
 
 
 -- 实时读取配置的函数
@@ -382,46 +386,124 @@ function rawenglish_translator.func(input, seg, env)
         return
     end
 
-    -- 处理每个片段，收集每个片段的候选词
-    -- 如果是考虑更加高性能的处理方式, 每次顶多增加或者减少一个字母, 实际上不需要全部重新计算. 对于非最后一段其实可以固定了.
-    -- 每次只需要重新计算最后一段的候选词即可, 也就是计算的之后, 将候选词保存下来, 然后后面变化的时候, 只对最后一段进行变化, 其他的使用原来保存的
-
+    -- 处理每个片段（仅重新计算最后一段），收集每个片段的候选词
     local segment_candidates = {} -- 存储每个片段的候选词列表
-    local used_fallback = false -- 记录是否使用了fallback
-    local fallback_length_diff = 0 -- 记录fallback导致的长度差异
-    local delete_last_code = false -- 紧挨着反引号的一个单独字母情况下
-    local script_fail_code = 0 -- 反引号后面没有匹配成功的几位字母
+    local used_fallback = false -- 记录是否使用了fallback（仅可能发生在最后一段）
+    local fallback_length_diff = 0 -- 记录fallback导致的长度差异（仅最后一段）
+    local delete_last_code = false -- 紧挨着反引号的一个单独字母情况下（仅最后一段）
+    local script_fail_code = 0 -- 反引号后面没有匹配成功的几位字母（仅最后一段）
 
-    for i, segment in ipairs(segments) do
+    local seg_count = #segments
+
+    -- 当片段数量减少时，丢弃多余缓存；当增加时保留已有缓存
+    if seg_count < combo_cache.count then
+        for i = seg_count + 1, combo_cache.count do
+            combo_cache.list[i] = nil
+        end
+    end
+    combo_cache.count = seg_count
+
+    -- 1) 先填充非最后一段：直接使用缓存；若缓存不存在（首次进入），计算一次并写入缓存
+    for i = 1, math.max(0, seg_count - 1) do
+        if combo_cache.list[i] then
+            segment_candidates[i] = combo_cache.list[i]
+            logger.info(string.format("片段 %d 复用缓存，共 %d 个候选项", i, #segment_candidates[i]))
+        else
+            local segment = segments[i]
+            local candidates_for_segment = {}
+
+            if segment.type == "abc" then
+                logger.info(string.format("[首轮缓存构建] 处理文本片段 %d: '%s'", i, segment.content))
+                local allow_fallback = false -- 非最后一段不允许fallback
+
+                local segment_content = segment.content
+                if segment_content ~= "" then
+                    local candidates, segment_used_fallback = get_candidates(segment_content, seg, env, 2, allow_fallback)
+                    logger.info("get_candidates(非末段) 返回 segment_used_fallback: " .. tostring(segment_used_fallback))
+
+                    if #candidates > 0 then
+                        for index, cand in ipairs(candidates) do
+                            table.insert(candidates_for_segment, {
+                                text = cand.text,
+                                preedit = cand.preedit or segment.content,
+                                spans = cand:spans(),
+                                start = segment.start,
+                                _end = segment._end,
+                                length = segment.length,
+                                type = segment.type
+                            })
+                        end
+                    else
+                        -- 非末段没有候选则保留原样
+                        local other_spans = Spans()
+                        other_spans:add_span(segment.start, segment._end)
+                        table.insert(candidates_for_segment, {
+                            text = segment.content,
+                            preedit = segment.content,
+                            spans = other_spans,
+                            start = segment.start,
+                            _end = segment._end,
+                            length = segment.length,
+                            type = segment.type
+                        })
+                    end
+                end
+
+            elseif segment.type == "rawenglish_combo" then
+                logger.info(string.format("[首轮缓存构建] 处理反引号片段 %d: '%s'", i, segment.content))
+                local rawenglish_spans = Spans()
+                rawenglish_spans:add_span(segment.start, segment._end)
+                table.insert(candidates_for_segment, {
+                    text = segment.content,
+                    preedit = segment.original or segment.content,
+                    spans = rawenglish_spans,
+                    start = segment.start,
+                    _end = segment._end,
+                    length = segment.length,
+                    type = segment.type
+                })
+
+            else
+                logger.info(string.format("[首轮缓存构建] 处理其他类型片段 %d: type=%s, content='%s'", i, segment.type, segment.content))
+                local other_spans = Spans()
+                other_spans:add_span(segment.start, segment._end)
+                table.insert(candidates_for_segment, {
+                    text = segment.content,
+                    preedit = segment.content,
+                    spans = other_spans,
+                    start = segment.start,
+                    _end = segment._end,
+                    length = segment.length,
+                    type = segment.type
+                })
+            end
+
+            segment_candidates[i] = candidates_for_segment
+            combo_cache.list[i] = candidates_for_segment -- 写入缓存
+            logger.info(string.format("片段 %d 首次构建并缓存 %d 个候选项", i, #candidates_for_segment))
+        end
+    end
+
+    -- 2) 计算最后一段：每次都重新计算
+    if seg_count >= 1 then
+        local i = seg_count
+        local segment = segments[i]
         local candidates_for_segment = {}
 
         if segment.type == "abc" then
-            -- 文本片段：使用两个translator翻译
-            logger.info(string.format("处理文本片段 %d: '%s'", i, segment.content))
+            logger.info(string.format("处理最后一个文本片段 %d: '%s'", i, segment.content))
 
-            -- 判断是否允许使用fallback：只有最后一个segment且类型为abc时允许
-            local is_last_segment = (i == #segments)
-            local allow_fallback = is_last_segment
-            logger.info(string.format("片段 %d, 是否最后一个: %s, 允许fallback: %s", i,
-                tostring(is_last_segment), tostring(allow_fallback)))
+            local is_last_segment = true
+            local allow_fallback = true -- 只有最后一个允许fallback
 
-            -- todo
-            -- 判断是否开启辅助码all模式
             local segment_content = segment.content
             if rawenglish_translator.single_fuzhu and rawenglish_translator.fuzhu_mode == "all" then
-                -- 当最后一个seg, 如果有奇数个字母, 则放弃最后一个, 不获取它的候选词
-
-                -- 对于标点符号来说，是不能算在内的，首先判断是否存在标点符号，如果存在标点符号，就替换掉，然后再计算。
                 if is_last_segment then
-                    -- 检查输入是否包含标点符号
                     local has_punctuation = segment_content:match("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-'\"']") ~= nil
-
                     if has_punctuation then
                         logger.debug("有标点符号")
-                        -- 删除segmente_input中的所有标点符号
                         local segment_content_nopunc = segment_content:gsub("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-'\"']", "")
                         logger.debug("删除标点符号后的segment_content: " .. segment_content_nopunc)
-
                         if #segment_content_nopunc % 2 == 1 then
                             segment_content = segment_content:sub(1, -2)
                             delete_last_code = true
@@ -433,92 +515,45 @@ function rawenglish_translator.func(input, seg, env)
                             delete_last_code = true
                             logger.info("调整后segment_content: " .. segment_content)
                         end
-
                     end
-
                 end
-
             end
 
-            -- 如果 segment_content == "" 则不向candidates_for_segment 中添加候选词
-            if segment_content == "" then
-                -- 直接开始下一次循环
-                goto continue
-            else
+            if segment_content ~= "" then
                 local candidates, segment_used_fallback = get_candidates(segment_content, seg, env, 2, allow_fallback)
-                -- segment_used_fallback就是获取的候选项长度不足整个片段的长度. 当我把 wok 变成 wo传进去,长度应该还是满足的
-                logger.info("get_candidates返回segment_used_fallback: " .. tostring(segment_used_fallback))
+                logger.info("get_candidates(末段) 返回 segment_used_fallback: " .. tostring(segment_used_fallback))
 
-                -- 如果没有获取返回候选项, 说明传入的不是合并的拼音,则忽略这项
                 if #candidates == 0 then
-                    -- 输入了几个字母, cand._end就需要向前移动几位
                     script_fail_code = segment.length
-                    goto continue
                 end
 
-                -- 如果当前segment使用了fallback，更新全局fallback状态
                 if segment_used_fallback then
                     used_fallback = true
-                    logger.info("used_fallback: " .. tostring(used_fallback))
-                    -- 计算长度差异（最长候选词长度 - segment长度）
-
-                    -- 这个地方整个长度计算是错误的: 应该是长度 segment.length 大于 候选词长度, 
-                    -- 对于整个分词例如 nihkdd 没有找到完整的候选词,只匹配了 nihk, 因此候选词的长度更低
                     if #candidates > 0 then
                         local cand = candidates[1]
                         local cand_length = cand._end - cand.start
                         fallback_length_diff = #segment.content - cand_length
-                        logger.info(string.format("使用fallback，fallback_length_diff差异: %d",
-                            fallback_length_diff))
+                        logger.info(string.format("使用fallback，fallback_length_diff差异: %d", fallback_length_diff))
                     end
                 end
 
-                -- 遍历candidates并打印属性值
-                logger.info("获取到 " .. #candidates .. " 个候选词" ..
-                                (segment_used_fallback and " (使用了fallback)" or "") .. ":")
                 for index, cand in ipairs(candidates) do
-                    logger.info(string.format("候选词 %d: '%s'", index, cand.text))
-
-                    local test_spans = cand:spans()
-                    local test_spans_vertices = test_spans.vertices
-                    for i, vertex in ipairs(test_spans_vertices) do
-                        logger.info("test_spans_vertices Vertex " .. i .. ": " .. vertex)
-                    end
-
-                    -- 由于get_candidates已经完成长度检查，直接添加到候选列表
                     table.insert(candidates_for_segment, {
                         text = cand.text,
-                        -- 如果减少了一位, 这里就是 wo, 
                         preedit = cand.preedit or segment.content,
-                        -- 添加spans数据
                         spans = cand:spans(),
                         start = segment.start,
                         _end = segment._end,
                         length = segment.length,
                         type = segment.type
                     })
-                    logger.info(string.format("候选词 %d 已添加到segment候选列表", index))
                 end
-
-                -- -- 如果没有匹配的候选词，使用原内容
-                -- if #candidates_for_segment == 0 then
-                --     table.insert(candidates_for_segment, {
-                --         text = segment.content,
-                --         preedit = segment.content
-                --     })
-                --     logger.info("没有匹配的候选词，使用原内容")
-                -- end                
-
             end
 
         elseif segment.type == "rawenglish_combo" then
-            -- 反引号内容：固定一个候选项
-            logger.info(string.format("处理反引号片段 %d: '%s'", i, segment.content))
-            -- 对于反引号部分, 自己生成一个spans, rawenglish
+            logger.info(string.format("处理最后一个反引号片段 %d: '%s'", i, segment.content))
             local rawenglish_spans = Spans()
-            -- 这个地方的计算有错误, segment.start, segment._end
             rawenglish_spans:add_span(segment.start, segment._end)
-
             table.insert(candidates_for_segment, {
                 text = segment.content,
                 preedit = segment.original or segment.content,
@@ -530,9 +565,7 @@ function rawenglish_translator.func(input, seg, env)
             })
 
         else
-            -- 其他类型：保持原样
-            logger.info(string.format("处理其他类型片段 %d: type=%s, content='%s'", i, segment.type,
-                segment.content))
+            logger.info(string.format("处理最后一个其他类型片段 %d: type=%s, content='%s'", i, segment.type, segment.content))
             local other_spans = Spans()
             other_spans:add_span(segment.start, segment._end)
             table.insert(candidates_for_segment, {
@@ -544,13 +577,11 @@ function rawenglish_translator.func(input, seg, env)
                 length = segment.length,
                 type = segment.type
             })
-
         end
 
         segment_candidates[i] = candidates_for_segment
-        logger.info(string.format("片段 %d 收集到 %d 个候选项", i, #candidates_for_segment))
-
-        ::continue::
+        combo_cache.list[i] = candidates_for_segment -- 可选：也缓存最后一段，下一轮会被重算
+        logger.info(string.format("最后片段 %d 收集到 %d 个候选项", i, #candidates_for_segment))
     end
 
     -- 生成所有可能的组合
