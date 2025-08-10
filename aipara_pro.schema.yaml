@@ -116,8 +116,8 @@ engine:
 
   translators:
     # - lua_translator@*debug_translator     #调试翻译器，打印输入、分词、环境等信息
-    - lua_translator@*rawenglish_translator # 反引号翻译器，对于带有反引号内的内容单独处理
     - lua_translator@*ai_assistant_translator   #AI对话前缀翻译器
+    # - lua_translator@*rawenglish_translator # 反引号翻译器，对于带有反引号内的内容单独处理
     - punct_translator                     #配合 punct_segmentor 转换标点符号
     - script_translator                    #脚本翻译器，用于拼音、粤拼等基于音节表的输入方案
     - lua_translator@*shijian              #农历、日期、节气、节日、时间、周、问候模板等等，触发清单看下文

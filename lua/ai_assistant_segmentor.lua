@@ -154,11 +154,19 @@ function ai_assistant_segmentor.func(segmentation, env)
     local reply_trigger = ai_assistant_segmentor.reply_inputs_to_trigger[segmentation_input]
     if reply_trigger then
         logger.debug("检测到AI回复输入: " .. segmentation_input .. " (触发器: " .. reply_trigger .. ")")
+        debug_utils.print_segmentation_info(segmentation, logger)
         local ai_reply_segment = Segment(0, #input)
         ai_reply_segment.tags = Set {reply_trigger .. "_reply", "ai_reply"}
-        segmentation:pop_back()
-        segmentation:add_segment(ai_reply_segment)
-        logger.info("创建AI回复段落，标签: " .. reply_trigger .. "_reply")
+        if segmentation.size > 0 then
+            segmentation:pop_back()
+        end
+        if segmentation:add_segment(ai_reply_segment) then
+            logger.info("创建AI回复段落标签: " .. reply_trigger .. "_reply")
+        else
+            logger.error("失败: 创建AI回复段落标签: " .. reply_trigger .. "_reply")
+        end
+        -- debug_utils.print_segmentation_info(segmentation, logger)
+        
         return false -- 处理完成, 其他所有分词器不再处理
     end
 
@@ -172,7 +180,6 @@ function ai_assistant_segmentor.func(segmentation, env)
         prompt_segment.tags = Set {"ai_prompt", "abc"}
 
         segmentation:reset_length(0)
-        -- segmentation:pop_back()
         segmentation:add_segment(prompt_segment)
 
         return false
