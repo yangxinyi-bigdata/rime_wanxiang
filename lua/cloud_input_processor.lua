@@ -990,6 +990,12 @@ function cloud_input_processor.func(key, env)
     if key_repr == "Control+F10" then
         -- 应该是当前收到服务端发送过来的命令的时候, config就已经完成修改了.
         logger.debug("Control+F10: 强制更新所有模块配置")
+        if tcp_socket.process_rime_socket_data(env) then
+            logger.debug("配置更新执行成功")
+        else
+            logger.error("error配置更新执行失败")
+        end
+        -- 首先应该主动接受socket数据
         local config = env.engine.schema.config
 
         -- 使用统一的配置更新函数，强制更新所有模块
@@ -1088,7 +1094,7 @@ function cloud_input_processor.func(key, env)
         if seg then
             local cand = seg:get_selected_candidate()
             if cand then
-                logger.info("segment[" .. i .. "] cand.text: " .. cand.text)
+                -- logger.info("segment[" .. i .. "] cand.text: " .. cand.text)
             else
                 logger.info("segment[" .. i .. "] 没有选中的候选词")
             end

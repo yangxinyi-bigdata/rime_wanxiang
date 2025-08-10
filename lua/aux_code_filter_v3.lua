@@ -29,19 +29,20 @@ aux_code_filter.aux_code_hanzi = {}
 -- 配置更新函数
 function aux_code_filter.update_current_config(config)
     logger.info("开始更新aux_code_filter_v3模块配置")
-    
+
     aux_code_filter.single_fuzhu = config:get_bool("aux_code/single_fuzhu") or false
     aux_code_filter.fuzhu_mode = config:get_string("aux_code/fuzhu_mode") or ""
     aux_code_filter.shuangpin_zrm_txt = config:get_string("aux_code/shuangpin_zrm_txt") or ""
     aux_code_filter.english_mode_symbol = config:get_string("translator/english_mode_symbol") or ""
-    
+
     logger.info("single_fuzhu: " .. tostring(aux_code_filter.single_fuzhu))
     logger.info("fuzhu_mode: " .. aux_code_filter.fuzhu_mode)
     logger.info("shuangpin_zrm_txt: " .. aux_code_filter.shuangpin_zrm_txt)
-    
+
     -- 重新加载辅助码数据
-    aux_code_filter.aux_hanzi_code, aux_code_filter.aux_code_hanzi = aux_code_filter.readAuxTxt(aux_code_filter.shuangpin_zrm_txt)
-    
+    aux_code_filter.aux_hanzi_code, aux_code_filter.aux_code_hanzi = aux_code_filter.readAuxTxt(
+        aux_code_filter.shuangpin_zrm_txt)
+
     logger.info("aux_code_filter_v3模块配置更新完成")
 end
 
@@ -296,62 +297,76 @@ function aux_code_filter.func(translation, env)
         end
         return
     end
+    local success, error_msg = pcall(function()
 
-    local has_rawenglish = segmente_input:match(aux_code_filter.english_mode_symbol) ~= nil
-    if has_rawenglish then
-        -- 将segmente_input中的英文模式符号包裹的片段删除
-        -- 首先处理配对的英文模式符号
-        local pattern = aux_code_filter.english_mode_symbol .. "[^" .. aux_code_filter.english_mode_symbol .. "]*" .. aux_code_filter.english_mode_symbol
-        segmente_input = segmente_input:gsub(pattern, "")
-        
-        -- 然后处理未配对的英文模式符号（从最后一个英文模式符号开始到末尾）
-        local last_symbol_pos = segmente_input:match(".*" .. aux_code_filter.english_mode_symbol .. "()")
-        if last_symbol_pos then
-            -- 如果还有未配对的英文模式符号，移除从该位置开始的所有内容
-            segmente_input = segmente_input:sub(1, last_symbol_pos - 2)
+        local has_rawenglish = segmente_input:match(aux_code_filter.english_mode_symbol) ~= nil
+        if has_rawenglish then
+            -- 将segmente_input中的英文模式符号包裹的片段删除
+
+            -- 首先检查倒数第二个字符是否为英文模式符号（在删除成对符号之前）
+            local pattern =
+                aux_code_filter.english_mode_symbol .. "[^" .. aux_code_filter.english_mode_symbol .. "]*" ..
+                    aux_code_filter.english_mode_symbol
+
+            -- 检查是否存在成对的英文模式符号
+            if segmente_input:match(pattern) then
+                -- 在删除成对符号之前，检查倒数第二个字符
+                if #segmente_input >= 2 and segmente_input:sub(-2, -2) == aux_code_filter.english_mode_symbol then
+                    logger.debug("倒数第二个字符是英文模式符号，直接返回false")
+                    return false
+                end
+
+                -- 删除成对的英文模式符号
+                segmente_input = segmente_input:gsub(pattern, "")
+            end
+
+            logger.debug("删除英文模式符号包裹片段后的segmente_input: " .. segmente_input)
+            -- -- 如果删除英文模式符号片段之后,只剩下一个字母, 不应该触发删除辅助码
+            -- aux_code_filter.set_fuzhuma = false
+
+            -- 然后处理未配对的英文模式符号（从最后一个英文模式符号开始到末尾）
+            local last_symbol_pos = segmente_input:match(".*" .. aux_code_filter.english_mode_symbol .. "()")
+            if last_symbol_pos then
+                -- 如果还有未配对的英文模式符号，移除从该位置开始的所有内容
+                segmente_input = segmente_input:sub(1, last_symbol_pos - 2)
+            end
+
         end
-        
-        logger.debug("删除英文模式符号包裹片段后的segmente_input: " .. segmente_input)
-        -- -- 如果删除英文模式符号片段之后,只剩下一个字母, 不应该触发删除辅助码
-        -- aux_code_filter.set_fuzhuma = false
-    end
 
-    -- 检查输入是否包含标点符号, 
-    --[[ bug处理: 这里要考虑和ai对话标识符的冲突, 当标识符为 sum:  
+        -- 检查输入是否包含标点符号, 
+        --[[ bug处理: 这里要考虑和ai对话标识符的冲突, 当标识符为 sum:  
     last_three_has_punctuation = um: 
     segmente_input = sum, 
     对了我根本不应该考虑这些，我应该考虑的事，是不是存在标签，如果存在标签，一切豁免。 ]]
-    local last_three_has_punctuation = false
-    local has_punctuation = segmente_input:match("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-'\"']") ~= nil
-    if has_punctuation then
-        logger.debug("有标点符号")
-        last_three_has_punctuation = segmente_input:sub(-3):match("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-'\"']") ~= nil
-        -- 删除segmente_input中的所有标点符号
-        segmente_input = segmente_input:gsub("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-'\"']", "")
-        logger.debug("删除标点符号后的segmente_input: " .. segmente_input)
-    else
-        -- 没有标点符号, 那就是正常长句, 对于这种和原来的处理方案一样
-    end
-
-    -- 重新检查删除标点符号后的长度
-    if #segmente_input % 2 == 0 or #segmente_input == 1 then
-        logger.debug("segmente_input长度是偶数或者长度为1,直接返回")
-        aux_code_filter.set_fuzhuma = false
-        for cand in translation:iter() do
-            yield(cand)
+        local last_three_has_punctuation = false
+        local has_punctuation = segmente_input:match("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-'\"'`]") ~= nil
+        if has_punctuation then
+            logger.debug("有标点符号")
+            last_three_has_punctuation = segmente_input:sub(-3):match("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-'\"'`]") ~= nil
+            -- 删除segmente_input中的所有标点符号
+            segmente_input = segmente_input:gsub("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-'\"']", "")
+            logger.debug("删除标点符号后的segmente_input: " .. segmente_input)
+        else
+            -- 没有标点符号, 那就是正常长句, 对于这种和原来的处理方案一样
         end
-        return
 
-    else
-        -- 这个分支是删除标点符号之后,是奇数个字母,应该进行辅助码匹配.
+        -- 重新检查删除标点符号后的长度
+        if #segmente_input % 2 == 0 or #segmente_input == 1 then
+            logger.debug("segmente_input长度是偶数或者长度为1,直接返回")
+            aux_code_filter.set_fuzhuma = false
+            for cand in translation:iter() do
+                yield(cand)
+            end
+            return
 
-    end
+        else
+            -- 这个分支是删除标点符号之后,是奇数个字母,应该进行辅助码匹配.
 
-    -- local last_three_has_punctuation = segmente_input:sub(-3):match("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-`'\"']") ~= nil
+        end
 
-    debug_utils.print_segmentation_info(segmentation, logger)
+        -- local last_three_has_punctuation = segmente_input:sub(-3):match("[,.!?;:()%[%]<>/_=+*&^%%$#@~|%-`'\"']") ~= nil
 
-    local success, error_msg = pcall(function()
+        debug_utils.print_segmentation_info(segmentation, logger)
 
         if last_three_has_punctuation then
             -- 如果最后三位有标点符号,直接输出默认数据, 但我还是希望将超长度的过滤掉
@@ -855,16 +870,18 @@ function aux_code_filter.func(translation, env)
             end
         end
     elseif error_msg == false then
+        logger.info("直接返回了false")
         -- 没有进入到辅助码合适的字符, 直接输出原来的候选词
         for cand in translation:iter() do
+             logger.info("cand.text: " .. cand.text )
+            yield(cand)
+            -- -- 过滤掉长度匹配到最后一个辅助码的
+            -- local left_position = current_end - cand._end
+            -- if left_position ~= 0 then
+            --     yield(cand)
+            -- else
 
-            -- 过滤掉长度匹配到最后一个辅助码的
-            local left_position = current_end - cand._end
-            if left_position ~= 0 then
-                yield(cand)
-            else
-
-            end
+            -- end
 
         end
     end
