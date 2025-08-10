@@ -41,5 +41,8 @@ sync/cd9f2e79-5379-43b5-9b04-12b23e1cd55d/
 # Environment variables (contains sensitive API keys)
 .env
 
+# User configuration files (user-specific settings)
+user.yaml
+
 # Obsidian configuration files
 markdown/.obsidian/
