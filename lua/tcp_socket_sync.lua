@@ -32,7 +32,7 @@ if not socket_ok then
     logger.error("无法加载 socket 模块")
 end
 
-local M = {}
+local tcp_socket_sync = {}
 
 -- 获取当前时间戳（毫秒）
 local function get_current_time_ms()
@@ -60,7 +60,9 @@ local socket_system = {
         max_connection_failures = 3,
         write_failure_count = 0,
         max_failure_count = 3,
-        timeout = 0.01 -- 快速响应超时时间
+        timeout = 0, -- 快速响应超时时间
+        pending_lines = {}, -- 非阻塞检测期间读取到的消息缓冲（完整行）
+        partial_line = nil -- 非阻塞读取期间的半行缓存
     },
 
     -- AI转换服务（长时间等待）
@@ -74,7 +76,9 @@ local socket_system = {
         max_connection_failures = 3,
         write_failure_count = 0,
         max_failure_count = 3,
-        timeout = 1 -- AI转换超时时间
+        timeout = 0, -- AI转换超时时间
+        pending_lines = {}, -- 非阻塞检测期间读取到的消息缓冲（完整行）
+        partial_line = nil -- 非阻塞读取期间的半行缓存
     },
 
     -- 系统状态
@@ -82,20 +86,20 @@ local socket_system = {
 }
 
 -- 连接到Rime状态服务端（快速响应）
-function M.connect_to_rime_server()
+function tcp_socket_sync.connect_to_rime_server()
     local current_time = get_current_time_ms()
     local rime_state = socket_system.rime_state
 
     -- 如果已连接，先检测连接是否真的可用
     if rime_state.client and rime_state.is_connected then
         -- 使用我们的连接检测函数来验证
-        if M.check_rime_connection() then
+        if tcp_socket_sync.check_rime_connection() then
             logger.debug("Rime状态服务连接检测通过，无需重连")
             return true
         else
             logger.debug("Rime状态服务连接检测失败，需要重连")
             -- 连接已断开，先断开再重连
-            M.disconnect_from_rime_server()
+            tcp_socket_sync.disconnect_from_rime_server()
         end
     end
 
@@ -110,7 +114,7 @@ function M.connect_to_rime_server()
     -- 确保之前的连接已经完全断开
     if rime_state.client then
         logger.debug("发现残留的Rime客户端连接，强制关闭")
-        M.disconnect_from_rime_server()
+        tcp_socket_sync.disconnect_from_rime_server()
     end
 
     -- 尝试新连接
@@ -136,20 +140,20 @@ function M.connect_to_rime_server()
 end
 
 -- 连接到AI转换服务端（长时间等待）
-function M.connect_to_ai_server()
+function tcp_socket_sync.connect_to_ai_server()
     local current_time = get_current_time_ms()
     local ai_convert = socket_system.ai_convert
 
     -- 如果已连接，先检测连接是否真的可用
     if ai_convert.client and ai_convert.is_connected then
         -- 使用我们的连接检测函数来验证
-        if M.check_ai_connection() then
+        if tcp_socket_sync.check_ai_connection() then
             logger.debug("AI转换服务连接检测通过，无需重连")
             return true
         else
             logger.debug("AI转换服务连接检测失败，需要重连")
             -- 连接已断开，先断开再重连
-            M.disconnect_from_ai_server()
+            tcp_socket_sync.disconnect_from_ai_server()
         end
     end
 
@@ -164,7 +168,7 @@ function M.connect_to_ai_server()
     -- 确保之前的连接已经完全断开
     if ai_convert.client then
         logger.debug("发现残留的AI客户端连接，强制关闭")
-        M.disconnect_from_ai_server()
+        tcp_socket_sync.disconnect_from_ai_server()
     end
 
     -- 尝试新连接
@@ -190,7 +194,7 @@ function M.connect_to_ai_server()
 end
 
 -- 断开Rime状态服务连接
-function M.disconnect_from_rime_server()
+function tcp_socket_sync.disconnect_from_rime_server()
     local rime_state = socket_system.rime_state
     if rime_state.client then
         pcall(function()
@@ -199,11 +203,15 @@ function M.disconnect_from_rime_server()
         rime_state.client = nil
     end
     rime_state.is_connected = false
+    -- 清空缓冲的未处理行，避免跨连接使用旧数据
+    if rime_state.pending_lines then
+        rime_state.pending_lines = {}
+    end
     logger.debug("Rime状态服务连接已断开")
 end
 
 -- 断开AI转换服务连接
-function M.disconnect_from_ai_server()
+function tcp_socket_sync.disconnect_from_ai_server()
     local ai_convert = socket_system.ai_convert
     if ai_convert.client then
         pcall(function()
@@ -212,98 +220,109 @@ function M.disconnect_from_ai_server()
         ai_convert.client = nil
     end
     ai_convert.is_connected = false
+    if ai_convert.pending_lines then
+        ai_convert.pending_lines = {}
+    end
+    ai_convert.partial_line = nil
     logger.debug("AI转换服务连接已断开")
 end
 
 -- 断开与所有服务端的连接
-function M.disconnect_from_server()
-    M.disconnect_from_rime_server()
-    M.disconnect_from_ai_server()
+function tcp_socket_sync.disconnect_from_server()
+    tcp_socket_sync.disconnect_from_rime_server()
+    tcp_socket_sync.disconnect_from_ai_server()
     logger.debug("所有TCP连接已断开")
 end
 
 -- 检测AI转换服务连接状态
-function M.check_ai_connection()
+function tcp_socket_sync.check_ai_connection()
     local ai_convert = socket_system.ai_convert
     if not ai_convert.client or not ai_convert.is_connected then
         logger.debug("AI转换服务未连接")
         return false
     end
 
-    -- 使用非阻塞读取来检测连接状态
+    -- 非阻塞读取一行进行探活；读到的数据缓冲起来，不吞消息
     local original_timeout = ai_convert.client:gettimeout()
-    ai_convert.client:settimeout(0.001) -- 1毫秒超时，快速检测
-
-    local test_data, test_err = ai_convert.client:receive("*l")
-
-    -- 恢复原始超时设置
+    ai_convert.client:settimeout(0)
+    local line, err, partial = ai_convert.client:receive("*l")
     ai_convert.client:settimeout(original_timeout)
 
-    logger.debug("AI连接检测 test_data = " .. tostring(test_data) .. ", test_err = " .. tostring(test_err))
-
-    if test_err == "closed" then
-        logger.warn("检测到AI转换服务连接已断开")
-        M.disconnect_from_ai_server()
-        return false
-    elseif test_err == "timeout" then
-        -- 超时是正常的，说明连接正常但没有数据
-        logger.debug("AI连接检测正常（超时）")
-        return true
-    else
-        -- 其他错误
-        if test_err then
-            logger.warn("AI连接检测出现错误: " .. tostring(test_err))
-            return false
-        else
-            -- test_data有内容，连接正常
-            logger.debug("AI连接检测正常（有数据）")
-            return true
+    if line then
+        if ai_convert.partial_line then
+            line = ai_convert.partial_line .. line
+            ai_convert.partial_line = nil
         end
+        table.insert(ai_convert.pending_lines, line)
+        logger.debug("AI连接检测期间捕获到消息，已缓冲: " .. line)
+        return true
+    end
+
+    if err == nil then
+        return true
+    elseif err == "timeout" then
+        if partial and #partial > 0 then
+            ai_convert.partial_line = (ai_convert.partial_line or "") .. partial
+            logger.debug("AI连接检测期间捕获到半行数据，已暂存，长度: " ..
+                             tostring(#ai_convert.partial_line))
+        end
+        return true
+    elseif err == "closed" then
+        logger.warn("检测到AI转换服务连接已断开")
+        tcp_socket_sync.disconnect_from_ai_server()
+        return false
+    else
+        logger.warn("AI连接检测出现错误: " .. tostring(err))
+        return false
     end
 end
 
 -- 检测Rime状态服务连接状态
-function M.check_rime_connection()
+function tcp_socket_sync.check_rime_connection()
     local rime_state = socket_system.rime_state
     if not rime_state.client or not rime_state.is_connected then
         logger.debug("Rime状态服务未连接")
         return false
     end
 
-    -- 使用非阻塞读取来检测连接状态
-    local original_timeout = rime_state.client:gettimeout()
-    rime_state.client:settimeout(0.001) -- 1毫秒超时，快速检测
-
-    local test_data, test_err = rime_state.client:receive("*l")
-
-    -- 恢复原始超时设置
+    rime_state.client:settimeout(0) -- 非阻塞
+    local line, err, partial = rime_state.client:receive("*l")
     rime_state.client:settimeout(original_timeout)
 
-    logger.debug("Rime连接检测 test_data = " .. tostring(test_data) .. ", test_err = " .. tostring(test_err))
-
-    if test_err == "closed" then
-        logger.warn("检测到Rime状态服务连接已断开")
-        M.disconnect_from_rime_server()
-        return false
-    elseif test_err == "timeout" then
-        -- 超时是正常的，说明连接正常但没有数据
-        logger.debug("Rime连接检测正常（超时）")
-        return true
-    else
-        -- 其他错误
-        if test_err then
-            logger.warn("Rime连接检测出现错误: " .. tostring(test_err))
-            return false
-        else
-            -- test_data有内容，连接正常
-            logger.debug("Rime连接检测正常（有数据）")
-            return true
+    if line then
+        -- 若之前有半行，拼接后入队（不过 *l 返回的 line 已是不含分隔符的完整行）
+        if rime_state.partial_line then
+            line = rime_state.partial_line .. line
+            rime_state.partial_line = nil
         end
+        table.insert(rime_state.pending_lines, line)
+        logger.debug("Rime连接检测期间捕获到消息，已缓冲: " .. line)
+        return true
+    end
+
+    if err == nil then
+        -- 无数据，无错误
+        return true
+    elseif err == "timeout" then
+        -- 非阻塞读取可能返回partial（当前行未结束）
+        if partial and #partial > 0 then
+            rime_state.partial_line = (rime_state.partial_line or "") .. partial
+            logger.debug("Rime连接检测期间捕获到半行数据，已暂存，长度: " ..
+                             tostring(#rime_state.partial_line))
+        end
+        return true
+    elseif err == "closed" then
+        logger.warn("检测到Rime状态服务连接已断开")
+        tcp_socket_sync.disconnect_from_rime_server()
+        return false
+    else
+        logger.warn("Rime连接检测出现错误: " .. tostring(err))
+        return false
     end
 end
 
 -- 写入Rime状态服务TCP套接字
-function M.write_to_rime_socket(data)
+function tcp_socket_sync.write_to_rime_socket(data)
     if not socket_system.is_initialized then
         return false
     end
@@ -313,23 +332,23 @@ function M.write_to_rime_socket(data)
     -- 首先检查连接状态
     if not rime_state.client or not rime_state.is_connected then
         logger.debug("Rime状态服务未连接，尝试连接...")
-        if not M.connect_to_rime_server() then
+        if not tcp_socket_sync.connect_to_rime_server() then
             logger.warn("Rime状态服务连接不可用")
             return false
         end
     end
 
     -- 在发送数据前，先检测连接是否真的可用
-    if not M.check_rime_connection() then
+    if not tcp_socket_sync.check_rime_connection() then
         logger.warn("Rime连接检测失败，尝试重新连接...")
         -- 尝试重新连接
-        if not M.connect_to_rime_server() then
+        if not tcp_socket_sync.connect_to_rime_server() then
             logger.error("Rime状态服务重连失败，放弃数据发送")
             return false
         end
 
         -- 重连后再次检测
-        if not M.check_rime_connection() then
+        if not tcp_socket_sync.check_rime_connection() then
             logger.error("Rime状态服务重连后连接检测仍然失败，放弃数据发送")
             return false
         end
@@ -351,13 +370,13 @@ function M.write_to_rime_socket(data)
                          rime_state.write_failure_count .. ")")
 
         -- 连接已断开，立即断开
-        M.disconnect_from_rime_server()
+        tcp_socket_sync.disconnect_from_rime_server()
         return false
     end
 end
 
 -- 写入AI转换服务TCP套接字
-function M.write_to_ai_socket(data)
+function tcp_socket_sync.write_to_ai_socket(data)
     if not socket_system.is_initialized then
         return false
     end
@@ -367,23 +386,23 @@ function M.write_to_ai_socket(data)
     -- 首先检查连接状态
     if not ai_convert.client or not ai_convert.is_connected then
         logger.debug("AI转换服务未连接，尝试连接...")
-        if not M.connect_to_ai_server() then
+        if not tcp_socket_sync.connect_to_ai_server() then
             logger.warn("AI转换服务连接不可用")
             return false
         end
     end
 
     -- 在发送数据前，先检测连接是否真的可用
-    if not M.check_ai_connection() then
+    if not tcp_socket_sync.check_ai_connection() then
         logger.warn("AI连接检测失败，尝试重新连接...")
         -- 尝试重新连接
-        if not M.connect_to_ai_server() then
+        if not tcp_socket_sync.connect_to_ai_server() then
             logger.error("AI转换服务重连失败，放弃数据发送")
             return false
         end
 
         -- 重连后再次检测
-        if not M.check_ai_connection() then
+        if not tcp_socket_sync.check_ai_connection() then
             logger.error("AI转换服务重连后连接检测仍然失败，放弃数据发送")
             return false
         end
@@ -406,29 +425,45 @@ function M.write_to_ai_socket(data)
                          ai_convert.write_failure_count .. ")")
 
         -- 连接已断开，立即断开
-        M.disconnect_from_ai_server()
+        tcp_socket_sync.disconnect_from_ai_server()
         return false
     end
 end
 
 -- 非阻塞读取Rime状态服务TCP套接字数据
-function M.read_from_rime_socket()
+function tcp_socket_sync.read_from_rime_socket()
     local rime_state = socket_system.rime_state
     if not rime_state.client or not rime_state.is_connected then
         logger.debug("Rime状态服务未连接，尝试重新连接...")
-        if not M.connect_to_rime_server() then
+        if not tcp_socket_sync.connect_to_rime_server() then
             logger.warn("Rime状态服务重连失败")
             return nil
         end
         logger.debug("Rime状态服务重连成功，继续读取数据")
     end
 
-    local line, err = rime_state.client:receive("*l")
+    -- 优先返回检测阶段缓冲的消息，避免消息被测试逻辑吞掉
+    if rime_state.pending_lines and #rime_state.pending_lines > 0 then
+        local buffered = table.remove(rime_state.pending_lines, 1)
+        logger.debug("📥 从缓冲区读取到Rime消息: " .. buffered)
+        return buffered
+    end
+
+    local line, err, partial = rime_state.client:receive("*l")
 
     if line then
+        if rime_state.partial_line then
+            line = rime_state.partial_line .. line
+            rime_state.partial_line = nil
+        end
         logger.debug("📥 从Rime状态服务读取到原始数据: " .. line)
         return line
     elseif err == "timeout" then
+        -- 保存半行数据以便下次继续拼接
+        if partial and #partial > 0 then
+            rime_state.partial_line = (rime_state.partial_line or "") .. partial
+            logger.debug("⏸️ 收到半行数据，已暂存，当前长度: " .. tostring(#rime_state.partial_line))
+        end
         -- 超时表示当前无数据可读，这是正常情况
         return nil
     else
@@ -440,11 +475,11 @@ function M.read_from_rime_socket()
 end
 
 -- 带超时读取AI转换服务TCP套接字数据（按行读取，支持自定义超时）
-function M.read_from_ai_socket(timeout_seconds)
+function tcp_socket_sync.read_from_ai_socket(timeout_seconds)
     local ai_convert = socket_system.ai_convert
     if not ai_convert.client or not ai_convert.is_connected then
         logger.debug("AI转换服务未连接，尝试重新连接...")
-        if not M.connect_to_ai_server() then
+        if not tcp_socket_sync.connect_to_ai_server() then
             logger.warn("AI转换服务重连失败")
             return nil
         end
@@ -458,7 +493,18 @@ function M.read_from_ai_socket(timeout_seconds)
         logger.debug("🕐 临时设置AI转换服务按行读取超时时间为: " .. timeout_seconds .. "秒")
     end
 
-    local line, err = ai_convert.client:receive("*l")
+    -- 优先消费检测阶段缓冲的完整行
+    if ai_convert.pending_lines and #ai_convert.pending_lines > 0 then
+        local buffered = table.remove(ai_convert.pending_lines, 1)
+        if timeout_seconds and ai_convert.client then
+            ai_convert.client:settimeout(original_timeout)
+            logger.debug("🔄 恢复AI转换服务原始超时时间: " .. original_timeout .. "秒")
+        end
+        logger.debug("📥 从缓冲区读取到AI消息: " .. buffered)
+        return buffered
+    end
+
+    local line, err, partial = ai_convert.client:receive("*l")
 
     -- 恢复原始超时设置
     if timeout_seconds and ai_convert.client then
@@ -467,26 +513,34 @@ function M.read_from_ai_socket(timeout_seconds)
     end
 
     if line then
+        if ai_convert.partial_line then
+            line = ai_convert.partial_line .. line
+            ai_convert.partial_line = nil
+        end
         logger.debug("📥 从AI转换服务读取到原始数据: " .. line)
         return line
     elseif err == "timeout" then
         -- 超时表示等待时间内无数据可读
+        if partial and #partial > 0 then
+            ai_convert.partial_line = (ai_convert.partial_line or "") .. partial
+            logger.debug("⏸️ 收到半行数据，已暂存，当前长度: " .. tostring(#ai_convert.partial_line))
+        end
         logger.warn("⏰ AI转换服务等待超时 (" .. (timeout_seconds or ai_convert.timeout) .. "秒)")
         return nil
     else
         -- 其他错误，可能是连接断开
         logger.warn("AI转换服务TCP读取错误: " .. tostring(err))
-        M.disconnect_from_ai_server()
+        tcp_socket_sync.disconnect_from_ai_server()
         return nil
     end
 end
 
 -- 读取AI转换服务TCP套接字所有可用数据（支持自定义超时）
-function M.read_all_from_ai_socket(timeout_seconds)
+function tcp_socket_sync.read_all_from_ai_socket(timeout_seconds)
     local ai_convert = socket_system.ai_convert
     if not ai_convert.client or not ai_convert.is_connected then
         logger.debug("AI转换服务未连接，尝试重新连接...")
-        if not M.connect_to_ai_server() then
+        if not tcp_socket_sync.connect_to_ai_server() then
             logger.warn("AI转换服务重连失败")
             return nil
         end
@@ -537,7 +591,7 @@ function M.read_all_from_ai_socket(timeout_seconds)
             -- 其他错误，可能是连接断开
             logger.warn("AI转换服务TCP批量读取错误: " .. tostring(err))
             if string.len(all_data) == 0 then
-                M.disconnect_from_ai_server()
+                tcp_socket_sync.disconnect_from_ai_server()
                 -- 恢复原始超时设置
                 if timeout_seconds and ai_convert.client then
                     ai_convert.client:settimeout(original_timeout)
@@ -563,11 +617,11 @@ function M.read_all_from_ai_socket(timeout_seconds)
 end
 
 -- 快速清理AI转换服务TCP套接字积压数据
-function M.flush_ai_socket_buffer()
+function tcp_socket_sync.flush_ai_socket_buffer()
     local ai_convert = socket_system.ai_convert
     if not ai_convert.client or not ai_convert.is_connected then
         logger.debug("AI转换服务未连接，尝试重新连接...")
-        if not M.connect_to_ai_server() then
+        if not tcp_socket_sync.connect_to_ai_server() then
             logger.warn("AI转换服务重连失败，无法清理缓冲区")
             return 0
         end
@@ -609,11 +663,11 @@ end
 
 -- 读取AI转换服务最新消息（丢弃旧消息，只返回最后一条）- 优化版本
 -- 返回值格式: {data = parsed_data or nil, status = "success"|"timeout"|"no_data"|"error", raw_message = string or nil}
-function M.read_latest_from_ai_socket(timeout_seconds)
+function tcp_socket_sync.read_latest_from_ai_socket(timeout_seconds)
     local ai_convert = socket_system.ai_convert
     if not ai_convert.client or not ai_convert.is_connected then
         logger.debug("AI转换服务未连接，尝试重新连接...")
-        if not M.connect_to_ai_server() then
+        if not tcp_socket_sync.connect_to_ai_server() then
             logger.warn("AI转换服务重连失败")
             return {
                 data = nil,
@@ -636,27 +690,35 @@ function M.read_latest_from_ai_socket(timeout_seconds)
     local total_lines = 0
     local max_attempts = 50 -- 最多尝试50次读取，防止无限循环
 
-    for attempt = 1, max_attempts do
-        local line, err = ai_convert.client:receive("*l")
+    -- 先消费缓冲区里的行
+    if ai_convert.pending_lines and #ai_convert.pending_lines > 0 then
+        latest_line = table.remove(ai_convert.pending_lines, #ai_convert.pending_lines)
+        total_lines = 1
+        logger.debug("📥 从缓冲区获取最新AI消息: " .. latest_line)
+    else
+        -- 无缓冲则尝试从socket拉取
+        for attempt = 1, max_attempts do
+            local line, err = ai_convert.client:receive("*l")
 
-        if line then
-            latest_line = line -- 保存最新的一行
-            total_lines = total_lines + 1
-            logger.debug("📥 读取到消息行: " .. line)
-        elseif err == "timeout" then
-            -- 超时表示没有更多数据，退出循环
-            logger.debug("⏰ 第 " .. attempt .. " 次读取超时，停止读取")
-            break
-        else
-            -- 其他错误
-            logger.warn("AI转换服务TCP读取错误: " .. tostring(err))
-            M.disconnect_from_ai_server()
-            return {
-                data = nil,
-                status = "error",
-                raw_message = nil,
-                error_msg = tostring(err)
-            }
+            if line then
+                latest_line = line -- 保存最新的一行
+                total_lines = total_lines + 1
+                logger.debug("📥 读取到消息行: " .. line)
+            elseif err == "timeout" then
+                -- 超时表示没有更多数据，退出循环
+                logger.debug("⏰ 第 " .. attempt .. " 次读取超时，停止读取")
+                break
+            else
+                -- 其他错误
+                logger.warn("AI转换服务TCP读取错误: " .. tostring(err))
+                tcp_socket_sync.disconnect_from_ai_server()
+                return {
+                    data = nil,
+                    status = "error",
+                    raw_message = nil,
+                    error_msg = tostring(err)
+                }
+            end
         end
     end
 
@@ -671,7 +733,7 @@ function M.read_latest_from_ai_socket(timeout_seconds)
         logger.debug("🎯 返回最新消息: " .. latest_line)
 
         -- 尝试解析JSON数据
-        local parsed_data = M.parse_socket_data(latest_line)
+        local parsed_data = tcp_socket_sync.parse_socket_data(latest_line)
         return {
             data = parsed_data,
             status = "success",
@@ -689,7 +751,7 @@ function M.read_latest_from_ai_socket(timeout_seconds)
 end
 
 -- 解析从Python端接收的数据
-function M.parse_socket_data(data)
+function tcp_socket_sync.parse_socket_data(data)
     if not data or #data == 0 then
         return nil
     end
@@ -708,7 +770,9 @@ function M.parse_socket_data(data)
 end
 
 -- 处理从Python端接收的命令
-function M.handle_socket_command(command_messege, context)
+function tcp_socket_sync.handle_socket_command(command_messege, env)
+    -- 从 env 提取 context（可能为nil）
+    local context = env.engine.context
 
     --[[ 接收到消息格式: 
     {"messege_type": "command_response", "response": "rime_state_received", "timestamp": 1753022593756, "client_id": "rime-127.0.0.1:57187", "command_messege": [{"command": "set_option", "command_type": "option", "option_name": "full_shape", "option_value": true, "timestamp": 1753022590433}]}
@@ -723,7 +787,7 @@ function M.handle_socket_command(command_messege, context)
     if command == "ping" then
         -- 响应ping命令
         logger.debug("📞 收到ping命令")
-        M.write_to_rime_socket('{"response": "pong"}')
+        tcp_socket_sync.write_to_rime_socket('{"response": "pong"}')
         return true
     elseif command == "set_option" then
         -- 修改设置
@@ -741,7 +805,7 @@ function M.handle_socket_command(command_messege, context)
                 timestamp = get_current_time_ms(),
                 responding_to = "set_option"
             }
-            M.write_to_rime_socket(json.encode(response))
+            tcp_socket_sync.write_to_rime_socket(json.encode(response))
         else
             logger.warn("context为nil，无法设置选项: " .. tostring(command_messege.option_name))
             local response = {
@@ -752,7 +816,7 @@ function M.handle_socket_command(command_messege, context)
                 timestamp = get_current_time_ms(),
                 responding_to = "set_option"
             }
-            M.write_to_rime_socket(json.encode(response))
+            tcp_socket_sync.write_to_rime_socket(json.encode(response))
         end
         return true
 
@@ -771,7 +835,7 @@ function M.handle_socket_command(command_messege, context)
                 timestamp = get_current_time_ms(),
                 responding_to = "set_property"
             }
-            M.write_to_rime_socket(json.encode(response))
+            tcp_socket_sync.write_to_rime_socket(json.encode(response))
         else
             logger.warn("context为nil，无法设置属性: " .. tostring(command_messege.property_name))
             local response = {
@@ -782,49 +846,8 @@ function M.handle_socket_command(command_messege, context)
                 timestamp = get_current_time_ms(),
                 responding_to = "set_property"
             }
-            M.write_to_rime_socket(json.encode(response))
+            tcp_socket_sync.write_to_rime_socket(json.encode(response))
         end
-        return true
-
-    elseif command == "server_ping" then
-        -- 响应服务端ping命令
-        logger.debug("📞 收到服务端ping命令")
-        local response = {
-            response = "pong",
-            client_id = "lua_tcp_client",
-            timestamp = get_current_time_ms(),
-            responding_to = "server_ping"
-        }
-        M.write_to_rime_socket(json.encode(response))
-        return true
-    elseif command == "server_broadcast" then
-        -- 处理服务端广播消息
-        local message = command_messege.message or "无消息内容"
-        local broadcast_id = command_messege.broadcast_id or "unknown"
-        local timestamp = command_messege.timestamp or "unknown"
-        logger.debug("📢 收到服务端广播消息:")
-        logger.debug("   📝 内容: " .. message)
-        logger.debug("   🆔 广播ID: " .. tostring(broadcast_id))
-        logger.debug("   ⏰ 时间戳: " .. tostring(timestamp))
-
-        local response = {
-            response = "broadcast_received",
-            client_id = "lua_tcp_client",
-            broadcast_id = broadcast_id,
-            timestamp = get_current_time_ms(),
-            responding_to = "server_broadcast"
-        }
-        M.write_to_rime_socket(json.encode(response))
-        return true
-    elseif command == "get_status" then
-        -- 返回当前状态
-        logger.debug("📊 收到状态查询命令")
-        local stats = M.get_stats()
-        local response = {
-            response = "status",
-            data = stats
-        }
-        M.write_to_rime_socket(json.encode(response))
         return true
     elseif command == "paste_executed" then
         -- 粘贴命令执行成功响应
@@ -835,6 +858,65 @@ function M.handle_socket_command(command_messege, context)
         local error_msg = command_messege.error or "未知错误"
         logger.error("❌ 服务端执行粘贴操作失败: " .. tostring(error_msg))
         return true
+    elseif command == "set_config" then
+        -- 配置变更通知
+        local config_name = command_messege.config_name
+        local config_path = command_messege.config_path
+        local config_value = command_messege.config_value
+        local description = command_messege.description
+        local timestamp = command_messege.timestamp
+
+        logger.info("🔧 收到配置变更通知:")
+        logger.info("   配置名称: " .. tostring(config_name))
+        logger.info("   配置路径: " .. tostring(config_path))
+        logger.info("   配置值: " .. tostring(config_value))
+        logger.info("   变更描述: " .. tostring(description))
+        logger.info("   时间戳: " .. tostring(timestamp))
+
+        -- 实际更新配置
+        local config = env.engine.schema.config
+
+        -- 将点分隔的路径转换为Rime配置路径（用斜杠分隔）
+        local rime_config_path = string.gsub(config_path, "%.", "/")
+        logger.debug("转换后的配置路径: " .. rime_config_path)
+
+        if config_value ~= nil then
+            local value_type = type(config_value)
+            local success = false
+
+            if value_type == "boolean" then
+                config:set_bool(rime_config_path, config_value)
+                success = true
+                logger.debug("设置布尔配置: " .. rime_config_path .. " = " .. tostring(config_value))
+            elseif value_type == "number" then
+                -- 尝试判断是整数还是浮点数
+                if config_value == math.floor(config_value) then
+                    config:set_int(rime_config_path, config_value)
+                    logger.debug("设置整数配置: " .. rime_config_path .. " = " .. tostring(config_value))
+                else
+                    config:set_double(rime_config_path, config_value)
+                    logger.debug("设置浮点数配置: " .. rime_config_path .. " = " .. tostring(config_value))
+                end
+                success = true
+            elseif value_type == "string" then
+                config:set_string(rime_config_path, config_value)
+                success = true
+                logger.debug("设置字符串配置: " .. rime_config_path .. " = " .. tostring(config_value))
+            else
+                logger.warn("不支持的配置值类型: " .. value_type)
+            end
+
+            if success then
+                tcp_socket_sync.update_all_modules_config(config, logger)
+                logger.info("✅ update_all_modules_config配置更新成功")
+            else
+                logger.error("❌ 配置更新失败: " .. rime_config_path)
+            end
+        else
+            logger.warn("配置值为空，跳过更新")
+        end
+
+        return true
     else
         logger.warn("❓ 未知的TCP命令: " .. command)
         return false
@@ -842,11 +924,11 @@ function M.handle_socket_command(command_messege, context)
 end
 
 -- 定期处理Rime状态服务TCP套接字数据
-function M.process_rime_socket_data(context)
-    local data = M.read_from_rime_socket()
+function tcp_socket_sync.process_rime_socket_data(env)
+    local data = tcp_socket_sync.read_from_rime_socket()
     if data then
         logger.debug("🎯 成功接收到Rime状态服务完整消息: " .. data)
-        local parsed_data = M.parse_socket_data(data)
+        local parsed_data = tcp_socket_sync.parse_socket_data(data)
         if parsed_data then
             logger.debug("📨 Rime状态消息解析成功")
             if parsed_data.messege_type == "command_response" then
@@ -857,11 +939,11 @@ function M.process_rime_socket_data(context)
                         -- 如果是数组，遍历处理每个命令
                         for i, command_item in ipairs(parsed_data.command_messege) do
                             logger.debug("📨 处理第 " .. i .. " 条命令: " .. tostring(command_item.command))
-                            M.handle_socket_command(command_item, context)
+                            tcp_socket_sync.handle_socket_command(command_item, env)
                         end
                     else
                         -- 如果是单个命令对象（向后兼容）
-                        M.handle_socket_command(parsed_data.command_messege, context)
+                        tcp_socket_sync.handle_socket_command(parsed_data.command_messege, env)
                     end
                 end
             elseif parsed_data.messege_type == "command_executed" then
@@ -879,65 +961,12 @@ function M.process_rime_socket_data(context)
     end
 end
 
--- 带超时的处理AI转换服务TCP套接字数据（用于大模型等长时间等待的场景）
-function M.process_ai_socket_data_with_timeout(timeout_seconds)
-    local ai_convert = socket_system.ai_convert
-    if not ai_convert.client or not ai_convert.is_connected then
-        logger.debug("AI转换服务未连接，尝试重新连接...")
-        if not M.connect_to_ai_server() then
-            logger.warn("AI转换服务重连失败，无法等待数据")
-            return nil
-        end
-        logger.debug("AI转换服务重连成功，继续等待数据")
-    end
-
-    local line = M.read_from_ai_socket(timeout_seconds)
-
-    if line then
-        logger.debug("📥 收到AI转换服务回复数据: " .. line)
-        local parsed_data = M.parse_socket_data(line)
-        if parsed_data then
-            logger.debug("📨 AI转换数据解析成功")
-            if parsed_data.messege_type == "convert_result" then
-                for k, v in pairs(parsed_data) do
-                    logger.debug("parsed_data[" .. tostring(k) .. "] = " .. tostring(v))
-                end
-                return parsed_data
-            elseif parsed_data.messege_type == "chat_result" then
-                logger.debug("📨 收到对话结果数据")
-                for k, v in pairs(parsed_data) do
-                    logger.debug("chat_result[" .. tostring(k) .. "] = " .. tostring(v))
-                end
-                return parsed_data
-            elseif parsed_data.messege_type == "command_response" then
-                logger.debug("📨 收到命令响应，但期望转换结果")
-                -- 处理可能的多条命令
-                if parsed_data.command_messege and type(parsed_data.command_messege) == "table" then
-                    if #parsed_data.command_messege > 0 then
-                        -- 如果是数组，遍历处理每个命令
-                        for i, command_item in ipairs(parsed_data.command_messege) do
-                            logger.debug("📨 AI服务处理第 " .. i .. " 条命令: " ..
-                                             tostring(command_item.command))
-                            M.handle_socket_command(command_item)
-                        end
-                    else
-                        -- 如果是单个命令对象（向后兼容）
-                        M.handle_socket_command(parsed_data.command_messege)
-                    end
-                end
-                return nil -- 收到的不是转换结果
-            end
-        end
-    end
-
-    return nil
-end
-
 -- 和Rime状态服务进行数据交换
-function M.sync_with_server(context, option_info, send_commit_text)
+function tcp_socket_sync.sync_with_server(env, option_info, send_commit_text)
     send_commit_text = send_commit_text or false
     local success, error_msg = pcall(function()
         local current_time = get_current_time_ms()
+        local context = env.engine.context
 
         -- 构建基础状态数据
         local state_data = {
@@ -984,11 +1013,11 @@ function M.sync_with_server(context, option_info, send_commit_text)
         logger.info("json_data: " .. json_data)
 
         -- 写入Rime状态服务TCP套接字
-        M.write_to_rime_socket(json_data)
+        tcp_socket_sync.write_to_rime_socket(json_data)
 
         -- 处理来自Rime状态服务端的数据
         if socket_system.is_initialized and socket_system.rime_state.is_connected then
-            M.process_rime_socket_data(context)
+            tcp_socket_sync.process_rime_socket_data(env)
         end
     end)
 
@@ -1001,7 +1030,7 @@ function M.sync_with_server(context, option_info, send_commit_text)
 end
 
 -- 统计信息
-function M.get_stats()
+function tcp_socket_sync.get_stats()
     local stats = {
         is_initialized = socket_system.is_initialized,
         host = socket_system.host,
@@ -1028,13 +1057,8 @@ function M.get_stats()
     return stats
 end
 
--- 公开接口：手动处理Rime状态服务TCP套接字数据
-function M.manual_process_rime_socket_data()
-    return M.process_rime_socket_data()
-end
-
 -- 公开接口：获取连接信息
-function M.get_connection_info()
+function tcp_socket_sync.get_connection_info()
     return {
         host = socket_system.host,
         rime_state = {
@@ -1049,23 +1073,23 @@ function M.get_connection_info()
 end
 
 -- 公开接口：检查双端口系统是否就绪（任一服务可用即为就绪）
-function M.is_system_ready()
+function tcp_socket_sync.is_system_ready()
     return socket_system.is_initialized and
                (socket_system.rime_state.is_connected or socket_system.ai_convert.is_connected)
 end
 
 -- 公开接口：检查Rime状态服务连接状态
-function M.is_rime_socket_ready()
+function tcp_socket_sync.is_rime_socket_ready()
     return socket_system.is_initialized and socket_system.rime_state.is_connected
 end
 
 -- 公开接口：检查AI转换服务连接状态
-function M.is_ai_socket_ready()
+function tcp_socket_sync.is_ai_socket_ready()
     return socket_system.is_initialized and socket_system.ai_convert.is_connected
 end
 
 -- 公开接口：强制重置连接状态（用于服务端重启后立即重连）
-function M.force_reconnect()
+function tcp_socket_sync.force_reconnect()
     logger.info("强制重置所有TCP连接状态")
 
     -- 重置连接状态和重连计时器
@@ -1077,11 +1101,11 @@ function M.force_reconnect()
     socket_system.ai_convert.write_failure_count = 0
 
     -- 断开现有连接
-    M.disconnect_from_server()
+    tcp_socket_sync.disconnect_from_server()
 
     -- 尝试重新连接
-    local rime_connected = M.connect_to_rime_server()
-    local ai_connected = M.connect_to_ai_server()
+    local rime_connected = tcp_socket_sync.connect_to_rime_server()
+    local ai_connected = tcp_socket_sync.connect_to_ai_server()
 
     logger.info("强制重连结果 - Rime:" .. tostring(rime_connected) .. " AI:" .. tostring(ai_connected))
 
@@ -1089,7 +1113,7 @@ function M.force_reconnect()
 end
 
 -- 公开接口：设置连接参数
-function M.set_connection_params(host, rime_port, ai_port)
+function tcp_socket_sync.set_connection_params(host, rime_port, ai_port)
     if host then
         socket_system.host = host
     end
@@ -1105,7 +1129,7 @@ function M.set_connection_params(host, rime_port, ai_port)
 end
 
 -- 公开接口：发送转换请求（仅发送，不等待响应）
-function M.send_convert_request(schema_name, shuru_schema, confirmed_pos_input, long_candidates_table, timeout_seconds)
+function tcp_socket_sync.send_convert_request(schema_name, shuru_schema, confirmed_pos_input, long_candidates_table, timeout_seconds)
     local timeout = timeout_seconds or socket_system.ai_convert.timeout -- 默认使用AI服务超时时间
     local success, error_msg = pcall(function()
         local current_time = get_current_time_ms()
@@ -1135,7 +1159,7 @@ function M.send_convert_request(schema_name, shuru_schema, confirmed_pos_input, 
 
         if json_data then
             -- 写入AI转换服务TCP套接字
-            M.write_to_ai_socket(json_data)
+            tcp_socket_sync.write_to_ai_socket(json_data)
             logger.debug("转换请求发送成功")
             return true
         else
@@ -1153,30 +1177,29 @@ function M.send_convert_request(schema_name, shuru_schema, confirmed_pos_input, 
 end
 
 -- 公开接口：读取转换结果（流式读取，类似AI助手的读取方式）
-function M.read_convert_result(timeout_seconds)
+function tcp_socket_sync.read_convert_result(timeout_seconds)
     local timeout = timeout_seconds or 0.1 -- 默认100ms超时，适合流式读取
-    
+
     -- 使用现有的read_latest_from_ai_socket函数
-    local stream_result = M.read_latest_from_ai_socket(timeout)
-    
+    local stream_result = tcp_socket_sync.read_latest_from_ai_socket(timeout)
+
     if stream_result and stream_result.status == "success" and stream_result.data then
         local parsed_data = stream_result.data
-        
+
         -- 检查是否是转换结果
         if parsed_data.messege_type == "convert_result_stream" then
             logger.debug("读取到转换结果数据")
-            
+
             -- 从服务端数据中获取 is_final 状态
             local is_final = parsed_data.is_final or false
             local is_partial = parsed_data.is_partial or false
             local is_timeout = parsed_data.is_timeout or false
             local is_error = parsed_data.is_error or false
-            
-            logger.debug("转换结果状态 - is_final: " .. tostring(is_final) .. 
-                        ", is_partial: " .. tostring(is_partial) ..
-                        ", is_timeout: " .. tostring(is_timeout) ..
-                        ", is_error: " .. tostring(is_error))
-            
+
+            logger.debug("转换结果状态 - is_final: " .. tostring(is_final) .. ", is_partial: " ..
+                             tostring(is_partial) .. ", is_timeout: " .. tostring(is_timeout) .. ", is_error: " ..
+                             tostring(is_error))
+
             return {
                 status = "success",
                 data = parsed_data,
@@ -1219,7 +1242,7 @@ function M.read_convert_result(timeout_seconds)
 end
 
 -- 公开接口：发送粘贴命令到服务端（跨平台通用）
-function M.send_paste_command()
+function tcp_socket_sync.send_paste_command(env)
     local success, error_msg = pcall(function()
         local current_time = get_current_time_ms()
 
@@ -1237,12 +1260,12 @@ function M.send_paste_command()
 
         if json_data then
             -- 写入Rime状态服务TCP套接字
-            local send_success = M.write_to_rime_socket(json_data)
+            local send_success = tcp_socket_sync.write_to_rime_socket(json_data)
             if send_success then
                 logger.info("🍴 粘贴命令发送成功，等待服务端执行")
 
                 -- 可选：等待服务端响应
-                local response = M.process_rime_socket_data()
+                local response = tcp_socket_sync.process_rime_socket_data(env)
                 if response then
                     logger.info("📥 收到粘贴命令执行响应")
                     return true
@@ -1269,7 +1292,7 @@ function M.send_paste_command()
 end
 
 -- 公开接口：发送对话消息到AI服务（仅发送）
-function M.send_chat_message(commit_text, chat_type, response_key)
+function tcp_socket_sync.send_chat_message(commit_text, chat_type, response_key)
     local success, error_msg = pcall(function()
         local current_time = get_current_time_ms()
 
@@ -1288,7 +1311,7 @@ function M.send_chat_message(commit_text, chat_type, response_key)
 
         if json_data then
             -- 写入AI转换服务TCP套接字
-            M.write_to_ai_socket(json_data)
+            tcp_socket_sync.write_to_ai_socket(json_data)
             logger.debug("对话消息发送成功，类型: " .. tostring(chat_type))
         else
             logger.error("对话消息序列化失败: " .. tostring(chat_data))
@@ -1304,72 +1327,8 @@ function M.send_chat_message(commit_text, chat_type, response_key)
     return true
 end
 
--- 公开接口：接收AI对话流式回复数据（单次调用版本）
-function M.receive_chat_stream_once(timeout_seconds)
-    local timeout = timeout_seconds or 10 -- 默认10秒超时
-
-    local success, result = pcall(function()
-        logger.debug("单次获取AI对话回复数据...")
-
-        -- 获取AI回复数据
-        local ai_response = M.process_ai_socket_data_with_timeout(timeout_seconds)
-
-        -- 构造统一的stream_data结构
-        local stream_data = {
-            content = "",
-            timestamp = get_current_time_ms(),
-            is_final = false
-        }
-
-        if ai_response and ai_response.messege_type == "chat_result" then
-            logger.debug("收到流式对话数据: " .. tostring(ai_response.content or ""))
-
-            -- 设置内容和状态
-            stream_data.content = ai_response.content or ""
-            stream_data.is_final = ai_response.is_final or ai_response.finished or false
-
-            logger.debug("当前对话内容: " .. stream_data.content)
-            logger.debug("is_final=" .. tostring(stream_data.is_final))
-        elseif ai_response == nil then
-            -- 没有收到数据，保持默认值
-            logger.debug("没有收到AI数据")
-        else
-            -- 收到非对话结果数据，保持默认值
-            if ai_response then
-                logger.debug("收到非对话结果数据: " .. tostring(ai_response.messege_type))
-            end
-        end
-
-        return stream_data
-    end)
-
-    if not success then
-        logger.error("单次接收AI对话数据失败: " .. tostring(result))
-        return {
-            content = "",
-            timestamp = get_current_time_ms(),
-            is_final = false,
-            error = result
-        }
-    end
-
-    return result
-end
-
--- 公开接口：发送对话消息并接收回复（组合功能，向后兼容）
-function M.send_and_receive_chat(commit_text, context, chat_type, timeout_seconds)
-    -- 发送消息
-    local send_success = M.send_chat_message(commit_text, chat_type)
-    if not send_success then
-        return nil
-    end
-
-    -- 接收流式回复
-    return M.receive_chat_stream(context, timeout_seconds)
-end
-
 -- 初始化系统
-function M.init()
+function tcp_socket_sync.init()
     logger.info("双端口TCP套接字状态同步系统初始化")
 
     -- 检查是否已经初始化
@@ -1378,10 +1337,12 @@ function M.init()
         return true
     end
 
+    logger.clear()
+
     -- 尝试连接到Rime状态服务
-    local rime_connected = M.connect_to_rime_server()
+    local rime_connected = tcp_socket_sync.connect_to_rime_server()
     -- 尝试连接到AI转换服务
-    local ai_connected = M.connect_to_ai_server()
+    local ai_connected = tcp_socket_sync.connect_to_ai_server()
 
     if rime_connected or ai_connected then
         socket_system.is_initialized = true
@@ -1403,13 +1364,13 @@ function M.init()
 end
 
 -- 清理资源
-function M.fini()
+function tcp_socket_sync.fini()
     logger.info("双端口TCP套接字系统清理")
 
     -- 断开所有TCP连接
-    M.disconnect_from_server()
+    tcp_socket_sync.disconnect_from_server()
 
     logger.info("双端口TCP套接字系统清理完成")
 end
 
-return M
+return tcp_socket_sync

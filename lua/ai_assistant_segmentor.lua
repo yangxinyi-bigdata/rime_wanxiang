@@ -112,6 +112,8 @@ function ai_assistant_segmentor.update_current_config(config)
         logger.warn("未找到 chat_triggers 配置")
     end
 
+    -- 不进行排序：假设配置不会产生多前缀同时匹配同一输入；若出现即为配置问题。
+
     logger.info("ai_assistant_segmentor模块配置更新完成")
 end
 
@@ -166,7 +168,7 @@ function ai_assistant_segmentor.func(segmentation, env)
             logger.error("失败: 创建AI回复段落标签: " .. reply_trigger .. "_reply")
         end
         -- debug_utils.print_segmentation_info(segmentation, logger)
-        
+
         return false -- 处理完成, 其他所有分词器不再处理
     end
 
@@ -185,48 +187,47 @@ function ai_assistant_segmentor.func(segmentation, env)
         return false
     end
 
-    -- 检查是否匹配任何AI触发器
-    local matched_trigger = nil
-    local matched_prefix = nil
+    do
+        -- 触发器匹配：先精确(O(1))，否则前缀首匹配；配置应保证唯一
+        if segmentation.size < 2 then
+            local matched_prefix, matched_trigger_name, full_matched_prefix
+            for prefix, t_name in pairs(ai_assistant_segmentor.chat_triggers_reverse) do
+                if #segmentation_input >= #prefix and segmentation_input:sub(1, #prefix) == prefix then
+                    if #segmentation_input == #prefix then
+                        full_matched_prefix = true
+                    end
+                    matched_prefix = prefix
+                    matched_trigger_name = t_name
+                    break -- 首次命中立即退出；若配置出现多重匹配应调整配置
+                end
+            end
 
-    -- 使用反向查表，O(1) 判定是否为纯触发器输入
-    local trigger_name = ai_assistant_segmentor.chat_triggers_reverse[segmentation_input]
-    if trigger_name then
-        local trigger_prefix = ai_assistant_segmentor.chat_triggers[trigger_name]
-        local ai_segment = Segment(0, #trigger_prefix)
-        ai_segment.tags = Set {trigger_name, "ai_talk"}
-        logger.debug(trigger_name .. " 触发器匹配, 添加标签: " .. trigger_name)
+            if matched_trigger_name then
+                local ai_segment = Segment(0, #matched_prefix)
+                ai_segment.tags = Set {matched_trigger_name, "ai_talk"}
+                logger.debug(string.format("前缀触发匹配: %s -> %s", matched_prefix, matched_trigger_name))
 
-        -- 设置当前AI上下文
-        context:set_property("current_ai_context", trigger_name)
-        logger.info("设置AI上下文: " .. trigger_name)
+                context:set_property("current_ai_context", matched_trigger_name)
+                logger.info("设置AI上下文: " .. matched_trigger_name)
 
-        if segmentation.size > 0 then
-            segmentation:pop_back()
+                segmentation:reset_length(0)
+                if segmentation:add_segment(ai_segment) then
+                    logger.debug("添加ai_talk分段成功")
+                    if full_matched_prefix then
+                        return false
+                    else
+                        segmentation:forward()
+                    end
+                    
+                else
+                    logger.debug("添加ai_talk分段失败")
+                end
+
+            end
         end
-        
-        segmentation:add_segment(ai_segment)
-        
-
-        logger.info("循环内部")
-        debug_utils.print_segmentation_info(segmentation, logger)
-        
     end
 
-    -- 判断第一段是不是"ai_talk", 如果只有一段"ai_talk", 则应该向前推进
-    local success, error_msg = pcall(function()
-        local first_segment = segmentation:get_at(0)
-        if segmentation.size == 1 and first_segment and first_segment:has_tag("ai_talk") then
-            segmentation:forward()
-            logger.debug("AI话题段落已向前推进")
-        end
-    end)
-    
-    if not success then
-        logger.error("处理AI话题段落时发生错误: " .. tostring(error_msg))
-    end
-    
-    debug_utils.print_segmentation_info(segmentation, logger)
+    -- debug_utils.print_segmentation_info(segmentation, logger)
     return true -- 不能false啊,应该继续让后面的分词器继续处理呢!
 end
 

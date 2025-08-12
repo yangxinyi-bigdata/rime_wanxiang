@@ -4,26 +4,16 @@ local logger_module = require("logger")
 local logger = logger_module.create("cloud_input_processor", {
     enabled = true,
     unique_file_log = false,
-    log_level = "INFO"
+    log_level = "DEBUG"
 })
+
+
 
 -- 初始化时清空日志文件
 logger.clear()
 
 -- 引入文本切分模块
--- local text_splitter = require("text_splitter")
 local debug_utils = require("debug_utils")
-
--- 其他需要更新配置的lua脚本
-local smart_cursor_processor = nil
-local ai_assistant_segmentor = nil
-local rawenglish_segment = nil
-local rawenglish_translator = nil
-local ai_assistant_translator = nil
-local aux_code_filter_v3 = nil
-local cloud_ai_filter_v2 = nil
-local punct_eng_chinese_filter = nil
-local text_splitter = nil
 
 -- 安全加载模块，防止脚本不存在时出错
 local function safe_require(module_name)
@@ -37,18 +27,18 @@ local function safe_require(module_name)
     end
 end
 
-smart_cursor_processor = safe_require("smart_cursor_processor")
-ai_assistant_segmentor = safe_require("ai_assistant_segmentor")
-rawenglish_segment = safe_require("rawenglish_segment")
-rawenglish_translator = safe_require("rawenglish_translator")
-ai_assistant_translator = safe_require("ai_assistant_translator")
-aux_code_filter_v3 = safe_require("aux_code_filter_v3")
-cloud_ai_filter_v2 = safe_require("cloud_ai_filter_v2")
-punct_eng_chinese_filter = safe_require("punct_eng_chinese_filter")
-text_splitter = safe_require("text_splitter")
+local smart_cursor_processor = safe_require("smart_cursor_processor")
+local ai_assistant_segmentor = safe_require("ai_assistant_segmentor")
+local rawenglish_segment = safe_require("rawenglish_segment")
+local rawenglish_translator = safe_require("rawenglish_translator")
+local ai_assistant_translator = safe_require("ai_assistant_translator")
+local aux_code_filter_v3 = safe_require("aux_code_filter_v3")
+local cloud_ai_filter_v2 = safe_require("cloud_ai_filter_v2")
+local punct_eng_chinese_filter = safe_require("punct_eng_chinese_filter")
+local text_splitter = safe_require("text_splitter")
 
 -- 引入TCP同步模块
-local tcp_socket = nil
+local tcp_socket
 local tcp_ok, tcp_err = pcall(function()
     tcp_socket = require("tcp_socket_sync")
 end)
@@ -801,9 +791,8 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
 
                         -- 记录两个结果
                         logger.info("包含第一段的全部候选词文本: " .. all_selected_candidate_with_first)
-                        logger.info("不包含第一段的全部候选词文本: " .. all_selected_candidate_without_first)
-
-                        -- 发送聊天消息到AI服务，使用keepon_chat_trigger作为对话类型
+                        logger.info("不包含第一段的全部候选词文本: " ..
+                                        all_selected_candidate_without_first)
 
                         local ok, result = pcall(function()
 
@@ -906,7 +895,6 @@ local function set_cloud_convert_flag(context)
         if context:get_property("cloud_convert_flag") == "0" then
             logger.debug("云输入提示标志为 0, 设置为 1")
             context:set_property("cloud_convert_flag", "1")
-            -- context:set_option("cloud_convert_prompt", true)
             logger.debug("cloud_convert_flag 已设置为 1")
 
         end
@@ -915,7 +903,6 @@ local function set_cloud_convert_flag(context)
         -- 如果不在组词状态或没有达到触发条件,则重置提示选项
         logger.debug("当前不在组词状态或未达到触发条件,云输入提示已重置")
         if context:get_property("cloud_convert_flag") == "1" then
-            -- context:set_option("cloud_convert_prompt", false)
             context:set_property("cloud_convert_flag", "0")
             logger.debug("cloud_convert_flag 已设置为 0")
 
@@ -947,10 +934,6 @@ function cloud_input_processor.init(env)
         -- 更新记录的 schema ID
         cloud_input_processor.last_schema_id = current_schema_id
         logger.debug("cloud_input_processor及所有模块配置加载完成")
-    else
-        -- 即使不需要全面更新，也要确保当前模块的基本配置是正确的
-        cloud_input_processor.update_current_config(config)
-        logger.debug("cloud_input_processor配置更新完成（其他模块跳过）")
     end
 
     --  fixed 设置一个变量
@@ -968,13 +951,9 @@ function cloud_input_processor.func(key, env)
     local context = engine.context
     local segmentation = context.composition:toSegmentation()
     local input = context.input
+    local config = env.engine.schema.config
     local key_repr = key:repr()
-    -- logger.debug("测试虚拟按键: " .. key_repr)
-
-    if key_repr == "Release+Control_L" then
-        logger.debug("拦截所有Release+Control_L按键")
-        return kAccepted
-    end
+    logger.debug("测试虚拟按键: " .. key_repr)
 
     if context:get_property("should_intercept_key_release") == "1" then
         -- 检查是否需要拦截Release+Shift_L按键
@@ -986,26 +965,26 @@ function cloud_input_processor.func(key, env)
         end
     end
 
-    -- 测试: 尝试去调用各个模块的update_current_config函数
-    if key_repr == "Control+F10" then
-        -- 应该是当前收到服务端发送过来的命令的时候, config就已经完成修改了.
-        logger.debug("Control+F10: 强制更新所有模块配置")
-        if tcp_socket.process_rime_socket_data(env) then
-            logger.debug("配置更新执行成功")
-        else
-            logger.error("error配置更新执行失败")
-        end
-        -- 首先应该主动接受socket数据
-        local config = env.engine.schema.config
+    -- -- 测试: 尝试去调用各个模块的update_current_config函数
+    -- if key_repr == "Control+F10" then
+    --     -- 应该是当前收到服务端发送过来的命令的时候, config就已经完成修改了.
+    --     logger.debug("Control+F10: 强制更新所有模块配置")
+    --     if tcp_socket.process_rime_socket_data(env) then
+    --         logger.debug("配置更新执行成功")
+    --     else
+    --         logger.error("error配置更新执行失败")
+    --     end
+    --     -- 首先应该主动接受socket数据
+    --     local config = env.engine.schema.config
 
-        -- 使用统一的配置更新函数，强制更新所有模块
-        cloud_input_processor.update_all_modules_config(config)
+    --     -- 使用统一的配置更新函数，强制更新所有模块
+    --     cloud_input_processor.update_all_modules_config(config)
 
-        logger.debug("Control+F10: 所有模块配置更新完成")
-    end
+    --     logger.debug("Control+F10: 所有模块配置更新完成")
+    -- end
 
-    -- 检查Control+F11按键的处理
-    if key_repr == "Control+F11" then
+    -- 检查Alt+F11按键的处理
+    if key_repr == "Alt+F11" then
         if context:get_property("get_ai_stream") == "start" then
             logger.debug("get_ai_stream==start, 触发重新刷新候选词: ")
             if context.input == "" then
@@ -1014,7 +993,7 @@ function cloud_input_processor.func(key, env)
                 logger.debug("设置AI回复输入: " .. current_ai_context)
             end
             context:refresh_non_confirmed_composition()
-            return kAccepted
+            return kNoop
         elseif context:get_property("get_ai_stream") == "stop" then
             if cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply then
                 logger.debug("get_ai_stream==stop, 自动上屏: ")
@@ -1024,15 +1003,28 @@ function cloud_input_processor.func(key, env)
                     logger.debug("失败在确认当前AI回复候选词")
                 end
             end
+            return kNoop
+        else
+            logger.debug("get_ai_stream==idle")
+            return kNoop
+        end
+    end
 
-        elseif context:get_property("get_cloud_stream") == "true" then
+    -- -- 拦截所有alt键
+    -- if key_repr == "Alt+Alt_L" or key_repr == "Release+Alt_L" or key_repr == "Alt+Release+Alt_L"  then
+    --     logger.debug("拦截Alt")
+    --     return kAccepted
+    -- end
+
+    if key_repr == "Alt+F10" then
+        if context:get_property("get_cloud_stream") == "true" then
             logger.debug("get_cloud_stream==true, 触发重新刷新云输入候选词: ")
             context:refresh_non_confirmed_composition()
-            return kAccepted
+            
         else
-            logger.debug("get_ai_stream==idle && get_cloud_stream==false, 依然拦截输入Control+F11: ")
-            return kAccepted
+            logger.debug("get_cloud_stream==false")
         end
+        return kAccepted
     end
 
     local is_composing = context:is_composing()
@@ -1058,7 +1050,7 @@ function cloud_input_processor.func(key, env)
                 -- 使用TCP通信发送粘贴命令到Python服务端（跨平台通用）
                 if tcp_socket then
                     logger.debug("🍴 通过TCP发送粘贴命令到Python服务端 (intercept模式)")
-                    local paste_success = tcp_socket.send_paste_command()
+                    local paste_success = tcp_socket.send_paste_command(env)
                     if paste_success then
                         logger.debug("✅ 粘贴命令发送成功 (intercept模式)")
                     else
@@ -1086,21 +1078,7 @@ function cloud_input_processor.func(key, env)
     local first_segment = segmentation:get_at(0)
     local last_segment = segmentation:back()
 
-    debug_utils.print_segmentation_info(segmentation, logger)
-    -- 对所有的segment进行遍历, 获取每一段的get_selected_candidate
-
-    for i = 0, segmentation.size - 1 do
-        local seg = segmentation:get_at(i)
-        if seg then
-            local cand = seg:get_selected_candidate()
-            if cand then
-                -- logger.info("segment[" .. i .. "] cand.text: " .. cand.text)
-            else
-                logger.info("segment[" .. i .. "] 没有选中的候选词")
-            end
-        end
-    end
-    -- 英文模式豁免
+    -- 英文模式豁免, 就是这段引起的bug, 也就是当前面有 ai_talk标签的时候一定会进入这段代码中
     logger.debug("property: rawenglish_prompt: " .. context:get_property("rawenglish_prompt"))
     if first_segment:has_tag("ai_talk") and context:get_property("rawenglish_prompt") == "0" then
         logger.debug("first_segment.tags: ai_talk")
@@ -1122,6 +1100,8 @@ function cloud_input_processor.func(key, env)
         if result then
             return result
         end
+
+        -- debug_utils.print_segmentation_info(segmentation, logger)
 
         -- -- 这个方式不太好,放弃这个方法，换一个更好的方法。处理AI会话是否要进行传输等操作
         -- local result = handle_ai_chat_selection(key_repr, tag_chat_trigger, env, last_segment)
@@ -1170,8 +1150,6 @@ function cloud_input_processor.func(key, env)
             return kNoop
         end
 
-        local segmentation = context.composition:toSegmentation()
-
         -- 检查按键是否有效
         if not key then
             error("按键对象为空")
@@ -1189,7 +1167,7 @@ function cloud_input_processor.func(key, env)
         -- 首先打印seg的信息
         -- 使用debug_utils打印Segmentation信息
         -- debug_utils.print_segmentation_info(segmentation, logger)
-        logger.debug("当前云输入提示标志: " .. context:get_property("rawenglish_prompt"))
+        logger.debug("当前英文模式: " .. context:get_property("rawenglish_prompt"))
 
         if context:get_property("rawenglish_prompt") == "1" then
             if key_repr:match("^Release%+") then
@@ -1319,19 +1297,25 @@ function cloud_input_processor.func(key, env)
         logger.debug("")
 
         -- 设置云输入法表示标
+        
         set_cloud_convert_flag(context)
 
         -- 检查当前按键是否为预设的触发键
         if key:repr() == cloud_input_processor.cloud_convert_symbol and context:get_property("cloud_convert_flag") ==
             "1" then
-            logger.debug("触发云输入处理cloud_convert, 添加option")
-            context:set_option("cloud_convert", true)
+            logger.debug("触发云输入处理cloud_convert")
+            -- debug_utils.print_segmentation_info(segmentation, logger)
+            context:set_property("cloud_convert", "1")
+            logger.debug("cloud_convert添加之后")
+            context:refresh_non_confirmed_composition()
+            -- debug_utils.print_segmentation_info(segmentation, logger)
 
             -- 设置拦截标志，用于拦截后续的按键释放事件
             context:set_property("should_intercept_key_release", "1")
             logger.debug("设置拦截按键释放标志")
 
             -- 返回已处理,阻止其他处理器处理这个按键
+            
             return kAccepted
         end
 

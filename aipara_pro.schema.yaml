@@ -103,7 +103,7 @@ engine:
     - express_editor                       #编辑器，处理空格、回车上屏、回退键
 
   segmentors:
-    # - lua_segmentor@*debug_segmentor     #添加调试分词器
+    - lua_segmentor@*debug_segmentor     #添加调试分词器
     - lua_segmentor@*ai_assistant_segmentor     #AI对话自定义分词器，分割 a: 和拼音部分
     - lua_segmentor@*rawenglish_segment      #添加反引号分词器
     # - lua_segmentor@*debug_segmentor2      #添加调试分词器
@@ -117,7 +117,7 @@ engine:
   translators:
     # - lua_translator@*debug_translator     #调试翻译器，打印输入、分词、环境等信息
     - lua_translator@*ai_assistant_translator   #AI对话前缀翻译器
-    # - lua_translator@*rawenglish_translator # 反引号翻译器，对于带有反引号内的内容单独处理
+    - lua_translator@*rawenglish_translator # 反引号翻译器，对于带有反引号内的内容单独处理
     - punct_translator                     #配合 punct_segmentor 转换标点符号
     - script_translator                    #脚本翻译器，用于拼音、粤拼等基于音节表的输入方案
     - lua_translator@*shijian              #农历、日期、节气、节日、时间、周、问候模板等等，触发清单看下文
@@ -151,10 +151,10 @@ ai_assistant:
   enabled: true
   behavior:
     auto_commit_reply: true           # 是否自动上屏AI回复内容, 也就是ai回复内容出现在候选框, 内容完成之后,直接上屏
-    clipboard_mode: true        # 是否使用剪贴板模式
+    clipboard_mode: false       # 是否使用剪贴板模式
     prompt_chat: "a"    # 触发提示消息的字母
-    strip_chat_prefix: false
-    commit_question: true
+    strip_chat_prefix: true
+    commit_question: false
   chat_triggers:
     simple_ai_chat: "a:"          # 简单对话
     normal_ai_chat: "ai:"                # AI对话
@@ -218,7 +218,6 @@ ai_assistant:
 #节日：ojr 或者 /jr
 #问候模板：/day 或者 oday
 #生日信息：/sr或者osr
-    test_ai_chat: 'AI回复:'
 birthday_reminder:  #日期格式：必须是4位数字，格式为MMDD（月份和日期），例如：1月27日 → 0127 ，#备注格式：在日期后添加逗号，然后添加任意文本作为备注，例如："0501,我的好朋友"，也可以无备注
   solar_birthdays:  # 公历生日, 姓名: "日期,备注" or 姓名: "日期"
     小明: "0501,准备礼物"
@@ -305,7 +304,7 @@ translator:
 #    - "^[a-z]{1,6}"    #基本的6码3字不调频
   enable_correction: false #是否开启自动纠错
   initial_quality: 3       # 初始质量拼音的权重应该比英文大
-  cloud_convert_symbol: "Shift+Return"  # 云输入符号转换，按下 Shift+Return 键触发
+  cloud_convert_symbol: "Return"  # 云输入符号转换，按下 Shift+Return 键触发
   # cloud_convert_symbol: "Return"  # 云输入符号转换，按下 Shift+Return 键触发
   english_mode_symbol: "`"  # 英文模式下的符号
   rawenglish_delimiter_before: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符

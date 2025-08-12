@@ -38,8 +38,6 @@ else
     end
 end
 
--- local RimeTcpServer = require("rime_socket_server")
-
 -- 模块级配置缓存
 local smart_cursor_processor = {}
 smart_cursor_processor.move_next_punct = nil
@@ -167,19 +165,9 @@ function smart_cursor_processor.init(env)
 
     env.commit_notifier = context.commit_notifier:connect(function(context)
         -- 上屏之后,将当前的状态和上屏内容发送过去
-        if tcp_socket then
-            logger.info("上屏通知触发sync_with_server")
-            -- 传递提交内容文本的信息
-            tcp_socket.sync_with_server(context, true, true)
-        else
-            logger.debug("sync_module为nil，跳过状态更新")
-        end
-
-        logger.debug("context.input测试")
-        local engine = env.engine
-        -- engine:commit_text("测试")
-        logger.debug("context.input测试")
-        
+        logger.info("上屏通知触发sync_with_server")
+        -- 传递提交内容文本的信息
+        tcp_socket.sync_with_server(env, true, true)
     end)
 
     env.update_notifier = context.update_notifier:connect(function(context)
@@ -198,6 +186,10 @@ function smart_cursor_processor.init(env)
                 context:set_property("cloud_convert_flag", "0")
             end
 
+            if context:get_property("cloud_convert") == "1" then
+                context:set_property("cloud_convert", "0")
+            end
+
             -- 清空反引号英文模式的状态
             if context:get_property("rawenglish_prompt") == "1" then
                 context:set_property("rawenglish_prompt", "0")
@@ -208,7 +200,7 @@ function smart_cursor_processor.init(env)
                 context:set_property("intercept_select_key", "0")
             end
 
-            -- -- 清空ai流式传输状态
+            -- (因为ai传输是跨两次输入的,所以不能在这里清空,否则会导致失效)清空ai流式传输状态
             -- if context:get_property("get_ai_stream") ~= "idle" then
             --     context:set_property("get_ai_stream", "idle")
             -- end
@@ -270,6 +262,9 @@ function smart_cursor_processor.init(env)
     -- end)
 
     env.new_update_notifier = context.update_notifier:connect(function(context)
+        -- 每次上下文更新都和服务端同步
+        logger.debug("sync_with_server和服务端同步信息")
+        tcp_socket.sync_with_server(env, true)
 
         -- 判断is_composing状态是否发生了变化
         local current_is_composing = context:is_composing()
@@ -281,26 +276,16 @@ function smart_cursor_processor.init(env)
             logger.debug("初始化 previous_is_composing: " .. tostring(current_is_composing))
             return
         end
-
         -- 转换字符串为布尔值
         local prev_state = (previous_is_composing == "true")
-
         -- 检查状态是否发生变化
         if current_is_composing ~= prev_state then
             logger.debug("is_composing状态发生变化: " .. tostring(prev_state) .. " -> " ..
                              tostring(current_is_composing))
-            logger.debug("从输入状态变化，触发发送当前开关信息.")
-            if tcp_socket then
-                -- 传递option信息
-                tcp_socket.sync_with_server(context, true)
-            else
-                logger.debug("sync_module为nil，跳过状态更新")
-            end
             -- 更新记录的状态
             context:set_property("previous_is_composing", tostring(current_is_composing))
 
         end
-
         -- 检查从非输入状态变成输入状态
         if current_is_composing and not prev_state then
             logger.debug("从非输入状态,变成输入状态")
@@ -332,6 +317,70 @@ function smart_cursor_processor.init(env)
             end
         end
     end)
+
+    -- env.new_update_notifier = context.update_notifier:connect(function(context)
+
+    --     -- 判断is_composing状态是否发生了变化
+    --     local current_is_composing = context:is_composing()
+    --     local previous_is_composing = context:get_property("previous_is_composing")
+
+    --     -- 如果没有记录过previous状态，则初始化
+    --     if previous_is_composing == "" then
+    --         context:set_property("previous_is_composing", tostring(current_is_composing))
+    --         logger.debug("初始化 previous_is_composing: " .. tostring(current_is_composing))
+    --         return
+    --     end
+
+    --     -- 转换字符串为布尔值
+    --     local prev_state = (previous_is_composing == "true")
+
+    --     -- 检查状态是否发生变化
+    --     if current_is_composing ~= prev_state then
+    --         logger.debug("is_composing状态发生变化: " .. tostring(prev_state) .. " -> " ..
+    --                          tostring(current_is_composing))
+    --         logger.debug("从输入状态变化，触发发送当前开关信息.")
+    --         if tcp_socket then
+    --             -- 传递option信息
+    --             tcp_socket.sync_with_server(env, true)
+    --         else
+    --             logger.debug("sync_module为nil，跳过状态更新")
+    --         end
+    --         -- 更新记录的状态
+    --         context:set_property("previous_is_composing", tostring(current_is_composing))
+
+    --     end
+
+    --     -- 检查从非输入状态变成输入状态
+    --     if current_is_composing and not prev_state then
+    --         logger.debug("从非输入状态,变成输入状态")
+    --         -- 开始判断连续ai对话分支内容
+    --         -- context:set_property("keepon_chat_trigger", "translate_ai_chat")
+    --         local keepon_chat_trigger = context:get_property('keepon_chat_trigger')
+    --         logger.info("keepon_chat_trigger: " .. keepon_chat_trigger)
+    --         -- 属性存在值代表要进入自动ai对话模式
+    --         if keepon_chat_trigger ~= "" then
+    --             local segmentation = context.composition:toSegmentation()
+    --             local last_segment = segmentation:back()
+    --             local first_segment = segmentation:get_at(0)
+    --             logger.info("keepon_chat_trigger: " .. keepon_chat_trigger)
+    --             local input = context.input
+
+    --             -- 测试另外一种方案,在前边添加字母"a:"这类的内容。
+    --             -- 思路: 当keepon_chat_trigger属性中存在值的时候,应该通过这个属性获取到 chat_trigger
+    --             local chat_trigger_name = smart_cursor_processor.chat_triggers[keepon_chat_trigger]
+    --             logger.info("chat_trigger_name: " .. chat_trigger_name)
+    --             -- 然后当用户输入第一个字母的时候,应该将chat_trigger_name添加到input的最前边. 
+    --             -- 第一个字母也伴随着is_composing状态的改变, 也就是说监控到is_composing变成True, 然后再去添加chat_trigger_name?
+    --             -- 还是应该判断,当从非输入状态变成输入状态,则应该进行添加,这样也不用判断了
+    --             if #input == 1 then -- and not first_segment:has_tags("ai_reply") 
+    --                 logger.info("input: " .. input)
+    --                 context.input = chat_trigger_name .. input
+    --                 -- context:refresh_non_confirmed_composition()
+    --             end
+
+    --         end
+    --     end
+    -- end)
 
 end
 
@@ -521,7 +570,6 @@ function smart_cursor_processor.func(key, env)
 
     local key_repr = key:repr()
     logger.info("key_repr: " .. key_repr)
-
 
     local success, result = pcall(function()
 

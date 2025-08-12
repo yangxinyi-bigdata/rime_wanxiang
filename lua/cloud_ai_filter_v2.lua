@@ -243,8 +243,6 @@ function cloud_ai_filter.func(translation, env)
 
     -- 包含标点符号或反引号，使用智能切分处理
 
-    logger.info("cloud_convert: " .. tostring(context:get_option("cloud_convert")))
-
     local segment = ""
 
     -- 在segment后面添加prompt
@@ -393,7 +391,7 @@ function cloud_ai_filter.func(translation, env)
     end
 
     -- 第一次进入的时候cloud_convert为true, 如果为false 则直接返回. 第二次如果这个有一个为真, 则
-    if not context:get_option("cloud_convert") and context:get_property("get_cloud_stream") ~= "true" then
+    if context:get_property("cloud_convert") ~= "1" and context:get_property("get_cloud_stream") ~= "true" then
         logger.info("not cloud_convert, get_cloud_stream ~= true")
         -- 查看有没有云翻译的标识, 没有的话直接返回原有的候选词
         yield(first_original_cand) -- 输出原有第一个候选词
@@ -406,12 +404,12 @@ function cloud_ai_filter.func(translation, env)
 
     end
 
-    -- 代码走到这里,代表已经进入context:get_option("cloud_convert")成立分支
+    -- 代码走到这里,代表已经进入context:get_property("cloud_convert") == "1" 成立分支
     -- 首次触发云输入（发送请求并开始流式获取）
-    logger.info("已经进入云输入法分支: cloud_convert " .. tostring(context:get_option("cloud_convert")) .. " get_cloud_stream: " .. context:get_property("get_cloud_stream"))
+    logger.info("已经进入云输入法分支: cloud_convert " .. tostring(context:get_option("get_property")) .. " get_cloud_stream: " .. context:get_property("get_cloud_stream"))
     logger.info("cand_text: " .. cand_text .. " cand_type: " .. cand_type)
 
-    if context:get_option("cloud_convert") then
+    if context:get_property("cloud_convert") == "1" then
         local ok, err = pcall(function()
             -- 长度足够的候选词放入到long_candidates_table, 不够的放到no_long_candidates_table,只放一个
 
@@ -453,12 +451,9 @@ function cloud_ai_filter.func(translation, env)
 
         local ok, err = pcall(function()
             -- 读取云输入结果（流式读取）
-            local timeout
-            if context:get_option("cloud_convert") then
-                timeout = 1
-                context:set_option("cloud_convert", false) -- 重置选项，避免重复触发
-            else
-                timeout = 0.01
+            local timeout = 0.01
+            if context:get_property("cloud_convert") == "1" then
+                context:set_property("cloud_convert", "0") -- 重置选项，避免重复触发
             end
             local stream_result = tcp_socket.read_convert_result(timeout)
             local ordered_candidates = {}
