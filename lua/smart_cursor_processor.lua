@@ -168,7 +168,7 @@ function smart_cursor_processor.init(env)
         logger.info("上屏通知触发sync_with_server")
         -- 传递提交内容文本的信息
         if context:get_property("send_key") ~= "" then
-            tcp_socket.sync_with_server(env, true, true, "button", context:get_property("send_key"))
+            tcp_socket.sync_with_server(env, true, true, "button", context:get_property("send_key") )
             context:set_property("send_key", "")
         else
             tcp_socket.sync_with_server(env, true, true)
