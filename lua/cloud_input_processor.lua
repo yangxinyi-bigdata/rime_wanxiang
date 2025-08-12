@@ -7,8 +7,6 @@ local logger = logger_module.create("cloud_input_processor", {
     log_level = "DEBUG"
 })
 
-
-
 -- 初始化时清空日志文件
 logger.clear()
 
@@ -103,6 +101,8 @@ function cloud_input_processor.update_current_config(config)
         "ai_assistant/behavior/clipboard_mode") or false
     cloud_input_processor.ai_assistant_config.behavior.prompt_chat = config:get_string(
         "ai_assistant/behavior/prompt_chat")
+    cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key = config:get_string(
+        "ai_assistant/behavior/auto_commit_reply_send_key")
 
     logger.debug("行为配置 - commit_question: " ..
                      tostring(cloud_input_processor.ai_assistant_config.behavior.commit_question))
@@ -112,6 +112,8 @@ function cloud_input_processor.update_current_config(config)
                      tostring(cloud_input_processor.ai_assistant_config.behavior.clipboard_mode))
     logger.debug("行为配置 - prompt_chat: " ..
                      tostring(cloud_input_processor.ai_assistant_config.behavior.prompt_chat))
+    logger.debug("行为配置 - auto_commit_reply_send_key: " ..
+                     tostring(cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key))
 
     -- 动态读取 chat_triggers 配置
     local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
@@ -227,6 +229,13 @@ function cloud_input_processor.update_all_modules_config(config)
     end
 
     logger.debug("所有模块配置更新完成")
+end
+
+local property_update_table = {}
+function cloud_input_processor.update_context_property(property_name, property_value)
+    -- 将这里要更新的属性保存到全局变量中
+    property_update_table[property_name] = property_value
+    logger.debug("保存待更新属性到table: " .. property_name .. " = " .. tostring(property_value))
 end
 
 -- 计算候选词中汉字的数量
@@ -929,6 +938,14 @@ function cloud_input_processor.init(env)
     end
 
     if need_update then
+        -- 在初始化时设置配置更新处理器
+        if tcp_socket and tcp_socket.set_config_update_handler then
+            -- 将update_all_modules_config函数绑定到tcp_socket
+            tcp_socket.set_config_update_handler(cloud_input_processor.update_all_modules_config,
+                cloud_input_processor.update_context_property)
+            logger.debug("已将配置更新处理器绑定到tcp_socket")
+        end
+
         -- 使用统一的配置更新函数更新所有模块配置
         cloud_input_processor.update_all_modules_config(config)
         -- 更新记录的 schema ID
@@ -954,6 +971,18 @@ function cloud_input_processor.func(key, env)
     local config = env.engine.schema.config
     local key_repr = key:repr()
     logger.debug("测试虚拟按键: " .. key_repr)
+
+    -- 检查并应用待更新的属性
+    if next(property_update_table) ~= nil then
+        logger.debug("发现待更新的属性，开始应用到context中")
+        for property_name, property_value in pairs(property_update_table) do
+            logger.debug("更新属性: " .. property_name .. " = " .. tostring(property_value))
+            context:set_property(property_name, tostring(property_value))
+        end
+        -- 清空属性更新表
+        property_update_table = {}
+        logger.debug("属性更新完成，已清空property_update_table")
+    end
 
     if context:get_property("should_intercept_key_release") == "1" then
         -- 检查是否需要拦截Release+Shift_L按键
@@ -997,11 +1026,23 @@ function cloud_input_processor.func(key, env)
         elseif context:get_property("get_ai_stream") == "stop" then
             if cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply then
                 logger.debug("get_ai_stream==stop, 自动上屏: ")
-                if context:confirm_current_selection() then
-                    logger.debug("确认当前AI回复候选词")
-                else
-                    logger.debug("失败在确认当前AI回复候选词")
-                end
+                logger.debug("确认当前AI回复候选词")
+
+                logger.debug("intercept_select_key: 1")
+                context:set_property("intercept_select_key", "1")
+
+                -- 在这里忘记考虑多行的可能性了,如果多行的话,这个地方会出现bug,所以还是应该用下面的那个.
+                -- 所以用confirm_current_selection面对多行可能会出现问题
+                local key = KeyEvent("space")
+                engine:process_key(key)
+                logger.debug("发送space键自动上屏")
+
+                -- if context:confirm_current_selection() then
+                --     -- 记录一个属性发送回车
+                --     context:set_property("send_return_key", "1")
+                -- else
+                --     logger.debug("失败在确认当前AI回复候选词")
+                -- end
             end
             return kNoop
         else
@@ -1020,7 +1061,7 @@ function cloud_input_processor.func(key, env)
         if context:get_property("get_cloud_stream") == "true" then
             logger.debug("get_cloud_stream==true, 触发重新刷新云输入候选词: ")
             context:refresh_non_confirmed_composition()
-            
+
         else
             logger.debug("get_cloud_stream==false")
         end
@@ -1038,9 +1079,17 @@ function cloud_input_processor.func(key, env)
         if key_repr == "space" or key_repr == "1" then
             logger.debug("进入分支 get_property intercept_select_key: 1")
 
+            logger.debug("set_property intercept_select_key: 0")
+            context:set_property("intercept_select_key", "0")
+
             -- 判断是不是直接一个段落, 内容中是否存在换行符.
             local commit_text = context:get_commit_text()
             logger.debug("commit_text: " .. commit_text)
+            -- 记录一个属性发送一个按键
+            if cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key ~= "" and cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key ~= "none" then
+                context:set_property("send_key", cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key)
+            end
+            
             if commit_text and commit_text:find("\n") then
                 logger.debug("commit_text 中存在换行符")
                 -- 拦截按键, 清空当前context中的内容.
@@ -1050,7 +1099,8 @@ function cloud_input_processor.func(key, env)
                 -- 使用TCP通信发送粘贴命令到Python服务端（跨平台通用）
                 if tcp_socket then
                     logger.debug("🍴 通过TCP发送粘贴命令到Python服务端 (intercept模式)")
-                    local paste_success = tcp_socket.send_paste_command(env)
+                    local paste_success = tcp_socket.sync_with_server(env, false, false, "button", "paste")
+
                     if paste_success then
                         logger.debug("✅ 粘贴命令发送成功 (intercept模式)")
                     else
@@ -1060,13 +1110,9 @@ function cloud_input_processor.func(key, env)
                     logger.warn("⚠️ TCP模块未加载，无法发送粘贴命令 (intercept模式)")
                 end
 
-                logger.debug("set_property intercept_select_key: 0")
-                context:set_property("intercept_select_key", "0")
                 return kAccepted
             else
                 logger.debug("commit_text 中不存在换行符")
-                logger.debug("set_property intercept_select_key: 0")
-                context:set_property("intercept_select_key", "0")
                 return kNoop
             end
 
@@ -1297,7 +1343,7 @@ function cloud_input_processor.func(key, env)
         logger.debug("")
 
         -- 设置云输入法表示标
-        
+
         set_cloud_convert_flag(context)
 
         -- 检查当前按键是否为预设的触发键
@@ -1315,7 +1361,7 @@ function cloud_input_processor.func(key, env)
             logger.debug("设置拦截按键释放标志")
 
             -- 返回已处理,阻止其他处理器处理这个按键
-            
+
             return kAccepted
         end
 

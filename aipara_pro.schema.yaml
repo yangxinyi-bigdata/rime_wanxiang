@@ -153,8 +153,10 @@ ai_assistant:
     auto_commit_reply: true           # 是否自动上屏AI回复内容, 也就是ai回复内容出现在候选框, 内容完成之后,直接上屏
     clipboard_mode: false       # 是否使用剪贴板模式
     prompt_chat: "a"    # 触发提示消息的字母
-    strip_chat_prefix: true
+    strip_chat_prefix: false
     commit_question: false
+    auto_commit_reply_send_key: "enter"
+
   chat_triggers:
     simple_ai_chat: "a:"          # 简单对话
     normal_ai_chat: "ai:"                # AI对话

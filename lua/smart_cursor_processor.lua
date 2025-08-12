@@ -167,7 +167,12 @@ function smart_cursor_processor.init(env)
         -- 上屏之后,将当前的状态和上屏内容发送过去
         logger.info("上屏通知触发sync_with_server")
         -- 传递提交内容文本的信息
-        tcp_socket.sync_with_server(env, true, true)
+        if context:get_property("send_key") ~= "" then
+            tcp_socket.sync_with_server(env, true, true, "button", context:get_property("send_key"))
+            context:set_property("send_key", "")
+        else
+            tcp_socket.sync_with_server(env, true, true)
+        end
     end)
 
     env.update_notifier = context.update_notifier:connect(function(context)

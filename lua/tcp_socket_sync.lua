@@ -34,6 +34,29 @@ end
 
 local tcp_socket_sync = {}
 
+-- 存储更新函数的引用
+tcp_socket_sync.update_all_modules_config = nil
+
+-- 设置配置更新处理器（由外部调用）, 可以由调用者传入一个函数handler, 将这个函数绑定到config_update_handler中.
+function tcp_socket_sync.set_config_update_handler(config_update_function, property_update_function)
+    tcp_socket_sync.update_all_modules_config = config_update_function
+    tcp_socket_sync.property_update_function = property_update_function
+end
+
+-- 更新配置
+function tcp_socket_sync.update_configs(config)
+    if tcp_socket_sync.update_all_modules_config then
+        tcp_socket_sync.update_all_modules_config(config)
+    end
+end
+
+-- 更新context属性
+function tcp_socket_sync.update_property(property_name, property_value)
+    if tcp_socket_sync.property_update_function then
+        tcp_socket_sync.property_update_function(property_name, property_value)
+    end
+end
+
 -- 获取当前时间戳（毫秒）
 local function get_current_time_ms()
     return os.time() * 1000 + math.floor((os.clock() % 1) * 1000)
@@ -819,45 +842,6 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
             tcp_socket_sync.write_to_rime_socket(json.encode(response))
         end
         return true
-
-    elseif command == "set_property" then
-        -- 修改属性
-        logger.debug("command_messege.property_name: " .. tostring(command_messege.property_name))
-        logger.debug("command_messege.property_value: " .. tostring(command_messege.property_value))
-        if context then
-            context:set_property(command_messege.property_name, command_messege.property_value)
-            logger.debug("已设置属性: " .. tostring(command_messege.property_name) .. " = " ..
-                             tostring(command_messege.property_value))
-            local response = {
-                response = "property_set",
-                property_name = command_messege.property_name,
-                success = true,
-                timestamp = get_current_time_ms(),
-                responding_to = "set_property"
-            }
-            tcp_socket_sync.write_to_rime_socket(json.encode(response))
-        else
-            logger.warn("context为nil，无法设置属性: " .. tostring(command_messege.property_name))
-            local response = {
-                response = "property_set",
-                property_name = command_messege.property_name,
-                success = false,
-                error = "context is nil",
-                timestamp = get_current_time_ms(),
-                responding_to = "set_property"
-            }
-            tcp_socket_sync.write_to_rime_socket(json.encode(response))
-        end
-        return true
-    elseif command == "paste_executed" then
-        -- 粘贴命令执行成功响应
-        logger.info("✅ 服务端已成功执行粘贴操作")
-        return true
-    elseif command == "paste_failed" then
-        -- 粘贴命令执行失败响应
-        local error_msg = command_messege.error or "未知错误"
-        logger.error("❌ 服务端执行粘贴操作失败: " .. tostring(error_msg))
-        return true
     elseif command == "set_config" then
         -- 配置变更通知
         local config_name = command_messege.config_name
@@ -907,7 +891,7 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
             end
 
             if success then
-                tcp_socket_sync.update_all_modules_config(config, logger)
+                tcp_socket_sync.update_configs(config)
                 logger.info("✅ update_all_modules_config配置更新成功")
             else
                 logger.error("❌ 配置更新失败: " .. rime_config_path)
@@ -916,6 +900,22 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
             logger.warn("配置值为空，跳过更新")
         end
 
+        return true
+    elseif command == "set_property" then
+        -- 修改属性
+        logger.debug("command_messege.property_name: " .. tostring(command_messege.property_name))
+        logger.debug("command_messege.property_value: " .. tostring(command_messege.property_value))
+        tcp_socket_sync.update_property(command_messege.property_name, command_messege.property_value)
+
+        return true
+    elseif command == "paste_executed" then
+        -- 粘贴命令执行成功响应
+        logger.info("✅ 服务端已成功执行粘贴操作")
+        return true
+    elseif command == "paste_failed" then
+        -- 粘贴命令执行失败响应
+        local error_msg = command_messege.error or "未知错误"
+        logger.error("❌ 服务端执行粘贴操作失败: " .. tostring(error_msg))
         return true
     else
         logger.warn("❓ 未知的TCP命令: " .. command)
@@ -962,7 +962,7 @@ function tcp_socket_sync.process_rime_socket_data(env)
 end
 
 -- 和Rime状态服务进行数据交换
-function tcp_socket_sync.sync_with_server(env, option_info, send_commit_text)
+function tcp_socket_sync.sync_with_server(env, option_info, send_commit_text, command_key, command_value)
     send_commit_text = send_commit_text or false
     local success, error_msg = pcall(function()
         local current_time = get_current_time_ms()
@@ -976,6 +976,18 @@ function tcp_socket_sync.sync_with_server(env, option_info, send_commit_text)
             switches_option = {}, -- 初始化为空表
             properties = {} -- 初始化属性表
         }
+        if command_key then
+            -- 发送字符串命令,例如"enter",代表对端将会接收到之后发送一个回车按键
+            -- 构建粘贴命令数据
+            local command_message = {
+                messege_type = "command",
+                command = command_key,
+                command_value = command_value,
+                timestamp = current_time,
+                client_id = "lua_tcp_client"
+            }
+            state_data.command_message = command_message
+        end
 
         if send_commit_text then
             -- 发送上屏内容
@@ -1129,7 +1141,8 @@ function tcp_socket_sync.set_connection_params(host, rime_port, ai_port)
 end
 
 -- 公开接口：发送转换请求（仅发送，不等待响应）
-function tcp_socket_sync.send_convert_request(schema_name, shuru_schema, confirmed_pos_input, long_candidates_table, timeout_seconds)
+function tcp_socket_sync.send_convert_request(schema_name, shuru_schema, confirmed_pos_input, long_candidates_table,
+    timeout_seconds)
     local timeout = timeout_seconds or socket_system.ai_convert.timeout -- 默认使用AI服务超时时间
     local success, error_msg = pcall(function()
         local current_time = get_current_time_ms()

@@ -291,8 +291,9 @@ function ai_assistant_translator.func(input, segment, env)
         elseif stream_data.is_final then
             -- 最终数据，停止获取
             context:set_property("get_ai_stream", "stop")
-            logger.debug("intercept_select_key: 1")
-            context:set_property("intercept_select_key", "1")
+            -- 改成lua/cloud_input_processor.lua"Alt+F11"中设置这个属性
+            -- logger.debug("intercept_select_key: 1")
+            -- context:set_property("intercept_select_key", "1")
             logger.debug("收到最终数据(is_final=true)，停止流式获取")
         else
             -- 非最终数据，继续获取
