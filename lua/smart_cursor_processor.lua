@@ -150,6 +150,10 @@ function smart_cursor_processor.init(env)
     --     context:set_option("http_server", true)
     -- end
 
+    -- env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
+    --     logger.debug("unhandled_key_notifier")
+    -- end)
+
     env.select_notifier = context.select_notifier:connect(function(context)
         -- 只要出发了选词通知,就关闭搜索模式
         -- 退出搜索模式
@@ -167,6 +171,7 @@ function smart_cursor_processor.init(env)
         -- 上屏之后,将当前的状态和上屏内容发送过去
         logger.info("上屏通知触发sync_with_server")
         -- 传递提交内容文本的信息
+        logger.debug("send_key: " .. context:get_property("send_key"))
         if context:get_property("send_key") ~= "" then
             tcp_socket.sync_with_server(env, true, true, "button", context:get_property("send_key") )
             context:set_property("send_key", "")

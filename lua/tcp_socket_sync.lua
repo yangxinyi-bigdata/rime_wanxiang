@@ -1314,9 +1314,13 @@ function tcp_socket_sync.send_chat_message(commit_text, chat_type, response_key)
             messege_type = "chat",
             commit_text = commit_text, -- 对话内容
             chat_type = chat_type, -- AI对话类型
-            response_key = response_key,
+            -- response_key = response_key,
             timestamp = current_time
         }
+
+        if response_key then
+            chat_data.response_key = response_key
+        end
 
         -- 序列化聊天数据
         local json_data = json.encode(chat_data)

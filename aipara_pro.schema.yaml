@@ -150,12 +150,14 @@ engine:
 ai_assistant:
   enabled: true
   behavior:
-    auto_commit_reply: true           # 是否自动上屏AI回复内容, 也就是ai回复内容出现在候选框, 内容完成之后,直接上屏
+    auto_commit_reply: false          # 是否自动上屏AI回复内容, 也就是ai回复内容出现在候选框, 内容完成之后,直接上屏
     clipboard_mode: false       # 是否使用剪贴板模式
     prompt_chat: "a"    # 触发提示消息的字母
     strip_chat_prefix: false
-    commit_question: false
+    commit_question: true
     auto_commit_reply_send_key: "enter"
+    ai_reply_send_key: "enter"
+    after_question_send_key: "enter"
 
   chat_triggers:
     simple_ai_chat: "a:"          # 简单对话
@@ -166,7 +168,7 @@ ai_assistant:
     cat_ai_chat: "ac:"               # 猫娘对话
     trans_ai_chat: "at:"     # 普通中英翻译
     translate_ai_chat: "t:"     # 结构化翻译中英翻译
-    code_ai_chat: "code:"       # 编程助手
+    code_ai_chat: "co:"         # 编程助手
     write_ai_chat: "write:"     # 写作助手
     search_ai_chat: "as:"        # 搜索助手
     openai_search_ai_chat: "aw:"        # openai_web_search搜索助手

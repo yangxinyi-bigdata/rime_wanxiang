@@ -103,6 +103,8 @@ function cloud_input_processor.update_current_config(config)
         "ai_assistant/behavior/prompt_chat")
     cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key = config:get_string(
         "ai_assistant/behavior/auto_commit_reply_send_key")
+    cloud_input_processor.ai_assistant_config.behavior.after_question_send_key = config:get_string(
+        "ai_assistant/behavior/after_question_send_key")
 
     logger.debug("行为配置 - commit_question: " ..
                      tostring(cloud_input_processor.ai_assistant_config.behavior.commit_question))
@@ -114,6 +116,8 @@ function cloud_input_processor.update_current_config(config)
                      tostring(cloud_input_processor.ai_assistant_config.behavior.prompt_chat))
     logger.debug("行为配置 - auto_commit_reply_send_key: " ..
                      tostring(cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key))
+    logger.debug("行为配置 - after_question_send_key: " ..
+                     tostring(cloud_input_processor.ai_assistant_config.behavior.after_question_send_key))
 
     -- 动态读取 chat_triggers 配置
     local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
@@ -827,7 +831,11 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
                             end
 
                             if cloud_input_processor.ai_assistant_config.behavior.commit_question then
-                                tcp_socket.send_chat_message(all_selected_candidate_without_first, chat_trigger) -- 正常输入换行
+                                local response_key
+                                if cloud_input_processor.ai_assistant_config.behavior.after_question_send_key then
+                                    response_key = cloud_input_processor.ai_assistant_config.behavior.after_question_send_key
+                                end
+                                tcp_socket.send_chat_message(all_selected_candidate_without_first, chat_trigger, response_key) -- 正常输入换行
                                 -- 再判断strip_chat_prefix为true或者false,如果为true,则清空并且重新上屏字符串
                                 if cloud_input_processor.ai_assistant_config.behavior.strip_chat_prefix then
 
@@ -1028,8 +1036,6 @@ function cloud_input_processor.func(key, env)
                 logger.debug("get_ai_stream==stop, 自动上屏: ")
                 logger.debug("确认当前AI回复候选词")
 
-                logger.debug("intercept_select_key: 1")
-                context:set_property("intercept_select_key", "1")
 
                 -- 在这里忘记考虑多行的可能性了,如果多行的话,这个地方会出现bug,所以还是应该用下面的那个.
                 -- 所以用confirm_current_selection面对多行可能会出现问题
@@ -1086,6 +1092,7 @@ function cloud_input_processor.func(key, env)
             local commit_text = context:get_commit_text()
             logger.debug("commit_text: " .. commit_text)
             -- 记录一个属性发送一个按键
+            logger.debug("auto_commit_reply_send_key: " .. cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key)
             if cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key ~= "" and cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key ~= "none" then
                 context:set_property("send_key", cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key)
             end
@@ -1140,7 +1147,6 @@ function cloud_input_processor.func(key, env)
             break
         end
 
-        -- 这个方式不太好,放弃这个方法，换一个更好的方法。处理AI会话是否要进行传输等操作
         local result = all_segmentation_selected_candidate(key_repr, tag_chat_trigger, env, segmentation)
         logger.debug("all_segmentation_selected_candidate result: " .. tostring(result))
         if result then
