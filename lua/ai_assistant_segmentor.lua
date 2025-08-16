@@ -29,7 +29,6 @@ ai_assistant_segmentor.reply_inputs_to_trigger = {}
 ai_assistant_segmentor.chat_triggers_reverse = {}
 
 -- 读取配置的辅助函数，从config中读取并缓存到模块级变量
--- 读取配置的辅助函数，从config中读取并缓存到模块级变量
 function ai_assistant_segmentor.update_current_config(config)
     logger.info("开始更新ai_assistant_segmentor模块配置")
 
@@ -128,7 +127,15 @@ end
 function ai_assistant_segmentor.func(segmentation, env)
     local context = env.engine.context
     local input = context.input
-
+    -- 保存到属性当中
+    if #input >= 8 then
+        context:set_property("input_string", input)
+    elseif #input == 8 then
+        if #context:get_property("input_string", input) == 9 then
+            context:set_property("input_string", "")
+        end 
+    end
+    
     -- 检查AI助手是否启用
     if not ai_assistant_segmentor.enabled then
         return true -- AI助手未启用，不处理
@@ -157,7 +164,7 @@ function ai_assistant_segmentor.func(segmentation, env)
     if reply_trigger then
         logger.debug("检测到AI回复输入: " .. segmentation_input .. " (触发器: " .. reply_trigger .. ")")
         debug_utils.print_segmentation_info(segmentation, logger)
-        local ai_reply_segment = Segment(0, #input)
+        local ai_reply_segment = Segment(0, #segmentation_input)
         ai_reply_segment.tags = Set {reply_trigger .. "_reply", "ai_reply"}
         if segmentation.size > 0 then
             segmentation:pop_back()

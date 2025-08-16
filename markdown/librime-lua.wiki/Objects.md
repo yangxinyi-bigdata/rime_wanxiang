@@ -969,16 +969,15 @@ element |  | 轉換成ConfigItem
 
 方法：
 
-| 方法名 | 参数  | 返回值 | 解释  |
-| --- | --- | --- | --- |
-|     |     |     |     |
-set
-get(key) | key: string | ConfigItem |
-get_value(key) | key: string | ConfigValue | 
-has_key | | boolean | 
-clear
-empty | | boolean | 
-keys | | table | 
+| 方法名            | 参数                 | 返回值         | 解释        |     |
+| -------------- | ------------------ | ----------- | --------- | --- |
+| set            | key: string, value | void        | 设置配置项     |     |
+| get(key)       | key: string        | ConfigItem  | 获取配置项     |     |
+| get_value(key) | key: string        | ConfigValue | 获取配置值     |     |
+| has_key        | key: string        | boolean     | 检查是否包含指定键 |     |
+| clear          |                    | void        | 清空所有配置    |     |
+| empty          |                    | boolean     | 检查是否为空    |     |
+| keys           |                    | table       | 获取所有键的列表  |     |
 
 ## ConfigList
 
@@ -1035,18 +1034,18 @@ set_string
 
 属性：
 
-属性名 | 类型 | 解释
---- | --- | --- 
-type | string | 1. "kNull" <br> 2. "kScalar" <br> 3. "kList" <br> 4. "kMap"
+| 属性名  | 类型     | 解释                                                          |
+| ---- | ------ | ----------------------------------------------------------- |
+| type | string | 1. "kNull" <br> 2. "kScalar" <br> 3. "kList" <br> 4. "kMap" |
 empty
 
-方法：
+方法：  
 
-方法名 | 参数 | 返回值 | 解释
---- | --- | --- | ---
-get_value | | | 当 type == "kScalar" 时使用
-get_list | | | 当 type == "kList" 时使用
-get_map | | | 当 type == "kMap" 时使用
+| 方法名       | 参数  | 返回值 | 解释                      |
+| --------- | --- | --- | ----------------------- |
+| get_value |     |     | 当 type == "kScalar" 时使用 |
+| get_list  |     |     | 当 type == "kList" 时使用   |
+| get_map   |     |     | 当 type == "kMap" 时使用    |
 
 ## KeyEvent
 

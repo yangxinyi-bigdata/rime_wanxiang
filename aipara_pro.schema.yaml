@@ -163,8 +163,6 @@ ai_assistant:
     simple_ai_chat: "a:"          # 简单对话
     normal_ai_chat: "ai:"                # AI对话
     context_ai_chat: "c:"           # 上下文对话
-    role_ai_chat: "ar:"              # 角色扮演对话
-    queen_ai_chat: "aq:"             # 女王对话
     cat_ai_chat: "ac:"               # 猫娘对话
     trans_ai_chat: "at:"     # 普通中英翻译
     translate_ai_chat: "t:"     # 结构化翻译中英翻译
@@ -173,15 +171,12 @@ ai_assistant:
     search_ai_chat: "as:"        # 搜索助手
     openai_search_ai_chat: "aw:"        # openai_web_search搜索助手
     summarize_ai_chat: "sum:"             # 总结工具
-    explain_ai_chat: "exp:"               # 解释工具
     improve_ai_chat: "imp:"               # 改进工具
   chat_names:
     simple_ai_chat: "AI提问:"
     normal_ai_chat: "AI提问:"
     context_ai_chat: "AI提问:"
-    role_ai_chat: "角色对话:"
     cat_ai_chat: "猫娘对话:"
-    queen_ai_chat: "与女王对话:"
     trans_ai_chat: "AI翻译:"
     translate_ai_chat: "AI翻译:"
     code_ai_chat: "AI编程:"
@@ -189,15 +184,12 @@ ai_assistant:
     search_ai_chat: "AI搜索:"
     openai_search_ai_chat: "AI搜索:"
     summarize_ai_chat: "AI总结:"
-    explain_ai_chat: "AI解释:"
     improve_ai_chat: "AI改进:"
   reply_messages_preedits:
     simple_ai_chat: "AI回复:"
     normal_ai_chat: "AI回复:"
     context_ai_chat: "AI回复:"
-    role_ai_chat: "角色:"
     cat_ai_chat: "猫娘:"
-    queen_ai_chat: "女王:"
     trans_ai_chat: "AI翻译:"
     translate_ai_chat: "AI翻译:"
     code_ai_chat: "AI编程:"
@@ -205,10 +197,8 @@ ai_assistant:
     search_ai_chat: "AI搜索:"
     openai_search_ai_chat: "AI搜索:"
     summarize_ai_chat: "AI总结:"
-    explain_ai_chat: "AI解释:"
     improve_ai_chat: "AI改进:"
-
-
+birthday_reminder:  #日期格式：必须是4位数字，格式为MMDD（月份和日期），例如：1月27日 → 0127 ，#备注格式：在日期后添加逗号，然后添加任意文本作为备注，例如："0501,我的好朋友"，也可以无备注
 #shijian:仅仅作为提示使用，编码已经写死，引导适应性更高，如有需求lua中修改
 #时间：osj 或者 /sj
 #日期：orq 或者 /rq
@@ -222,7 +212,6 @@ ai_assistant:
 #节日：ojr 或者 /jr
 #问候模板：/day 或者 oday
 #生日信息：/sr或者osr
-birthday_reminder:  #日期格式：必须是4位数字，格式为MMDD（月份和日期），例如：1月27日 → 0127 ，#备注格式：在日期后添加逗号，然后添加任意文本作为备注，例如："0501,我的好朋友"，也可以无备注
   solar_birthdays:  # 公历生日, 姓名: "日期,备注" or 姓名: "日期"
     小明: "0501,准备礼物"
     大明: "0405"

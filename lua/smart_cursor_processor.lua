@@ -168,6 +168,10 @@ function smart_cursor_processor.init(env)
     end)
 
     env.commit_notifier = context.commit_notifier:connect(function(context)
+        -- 清空context:set_property("input_string", input)
+        context:set_property("input_string", "")
+        logger.info("清空context:set_property input_string")
+
         -- 上屏之后,将当前的状态和上屏内容发送过去
         logger.info("上屏通知触发sync_with_server")
         -- 传递提交内容文本的信息
@@ -185,6 +189,8 @@ function smart_cursor_processor.init(env)
         -- 退出搜索模式
         -- logger.debug("触发update_notifier context更新通知")
         if not context:is_composing() then
+            
+            -- logger.debug("input_string: " .. context:get_property("input_string"))
             if context:get_option("search_move") then
                 logger.debug("update_notifier通知:is_composing为false, 退出搜索模式")
                 context:set_option("search_move", false)
@@ -298,18 +304,27 @@ function smart_cursor_processor.init(env)
         end
         -- 检查从非输入状态变成输入状态
         if current_is_composing and not prev_state then
+            local input = context.input
             logger.debug("从非输入状态,变成输入状态")
             -- 开始判断连续ai对话分支内容
             -- context:set_property("keepon_chat_trigger", "translate_ai_chat")
             local keepon_chat_trigger = context:get_property('keepon_chat_trigger')
             logger.info("keepon_chat_trigger: " .. keepon_chat_trigger)
             -- 属性存在值代表要进入自动ai对话模式
-            if keepon_chat_trigger ~= "" then
+
+            logger.info("input_string: " .. context:get_property("input_string"))
+            if context:get_property("input_string") ~= "" then
+                if #input == 1 then -- and not first_segment:has_tags("ai_reply") 
+                    logger.info("input: " .. input)
+                    context.input = context:get_property("input_string") .. input
+                    -- context:refresh_non_confirmed_composition()
+                end
+            elseif keepon_chat_trigger ~= "" then
                 local segmentation = context.composition:toSegmentation()
                 local last_segment = segmentation:back()
                 local first_segment = segmentation:get_at(0)
                 logger.info("keepon_chat_trigger: " .. keepon_chat_trigger)
-                local input = context.input
+                
 
                 -- 测试另外一种方案,在前边添加字母"a:"这类的内容。
                 -- 思路: 当keepon_chat_trigger属性中存在值的时候,应该通过这个属性获取到 chat_trigger
@@ -325,6 +340,7 @@ function smart_cursor_processor.init(env)
                 end
 
             end
+
         end
     end)
 
@@ -570,10 +586,8 @@ function smart_cursor_processor.func(key, env)
     local kRejected = 0 -- 表示按键被拒绝
     local kAccepted = 1 -- 表示按键已被处理
     local kNoop = 2 -- 表示按键未被处理,继续传递给下一个处理器
-    local is_composing = context:is_composing()
-    if not key or not context:is_composing() then
-        return kNoop
-    end
+
+    logger.info("context: " .. tostring(context))
 
     local composition = context.composition
     local search_move_prompt = " ▶ [搜索模式:] "
@@ -785,7 +799,13 @@ function smart_cursor_processor.func(key, env)
                 end
             end
             return kNoop
-
+        elseif key_repr == "Escape" then
+            -- 记录一个属性或者是直接清空
+            logger.debug("清空属性")
+            context:set_property("input_string", "")
+            logger.debug("清空input_string, 结束输入context:clear()")
+            context:clear()
+            
         elseif key_repr == smart_cursor_processor.move_prev_punct then
             logger.debug("触发向左智能移动")
             if smart_cursor_processor.move_to_prev_punctuation(env) then

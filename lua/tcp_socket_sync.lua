@@ -864,9 +864,9 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
         local rime_config_path = string.gsub(config_path, "%.", "/")
         logger.debug("转换后的配置路径: " .. rime_config_path)
 
+        local success = false
         if config_value ~= nil then
             local value_type = type(config_value)
-            local success = false
 
             if value_type == "boolean" then
                 config:set_bool(rime_config_path, config_value)
@@ -890,14 +890,17 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
                 logger.warn("不支持的配置值类型: " .. value_type)
             end
 
-            if success then
-                tcp_socket_sync.update_configs(config)
-                logger.info("✅ update_all_modules_config配置更新成功")
-            else
-                logger.error("❌ 配置更新失败: " .. rime_config_path)
-            end
         else
-            logger.warn("配置值为空，跳过更新")
+            success = true
+            config:set_string(rime_config_path, "__DELETED__")
+            logger.debug("设置配置删除标记: " .. rime_config_path .. " = __DELETED__")
+            -- logger.warn("配置值为空，跳过更新")
+        end
+        if success then
+            tcp_socket_sync.update_configs(config)
+            logger.info("✅ update_all_modules_config配置更新成功")
+        else
+            logger.error("❌ 配置更新失败: " .. rime_config_path)
         end
 
         return true

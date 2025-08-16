@@ -833,9 +833,11 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
                             if cloud_input_processor.ai_assistant_config.behavior.commit_question then
                                 local response_key
                                 if cloud_input_processor.ai_assistant_config.behavior.after_question_send_key then
-                                    response_key = cloud_input_processor.ai_assistant_config.behavior.after_question_send_key
+                                    response_key = cloud_input_processor.ai_assistant_config.behavior
+                                                       .after_question_send_key
                                 end
-                                tcp_socket.send_chat_message(all_selected_candidate_without_first, chat_trigger, response_key) -- 正常输入换行
+                                tcp_socket.send_chat_message(all_selected_candidate_without_first, chat_trigger,
+                                    response_key) -- 正常输入换行
                                 -- 再判断strip_chat_prefix为true或者false,如果为true,则清空并且重新上屏字符串
                                 if cloud_input_processor.ai_assistant_config.behavior.strip_chat_prefix then
 
@@ -1002,24 +1004,6 @@ function cloud_input_processor.func(key, env)
         end
     end
 
-    -- -- 测试: 尝试去调用各个模块的update_current_config函数
-    -- if key_repr == "Control+F10" then
-    --     -- 应该是当前收到服务端发送过来的命令的时候, config就已经完成修改了.
-    --     logger.debug("Control+F10: 强制更新所有模块配置")
-    --     if tcp_socket.process_rime_socket_data(env) then
-    --         logger.debug("配置更新执行成功")
-    --     else
-    --         logger.error("error配置更新执行失败")
-    --     end
-    --     -- 首先应该主动接受socket数据
-    --     local config = env.engine.schema.config
-
-    --     -- 使用统一的配置更新函数，强制更新所有模块
-    --     cloud_input_processor.update_all_modules_config(config)
-
-    --     logger.debug("Control+F10: 所有模块配置更新完成")
-    -- end
-
     -- 检查Alt+F11按键的处理
     if key_repr == "Alt+F11" then
         if context:get_property("get_ai_stream") == "start" then
@@ -1035,7 +1019,6 @@ function cloud_input_processor.func(key, env)
             if cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply then
                 logger.debug("get_ai_stream==stop, 自动上屏: ")
                 logger.debug("确认当前AI回复候选词")
-
 
                 -- 在这里忘记考虑多行的可能性了,如果多行的话,这个地方会出现bug,所以还是应该用下面的那个.
                 -- 所以用confirm_current_selection面对多行可能会出现问题
@@ -1092,11 +1075,14 @@ function cloud_input_processor.func(key, env)
             local commit_text = context:get_commit_text()
             logger.debug("commit_text: " .. commit_text)
             -- 记录一个属性发送一个按键
-            logger.debug("auto_commit_reply_send_key: " .. cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key)
-            if cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key ~= "" and cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key ~= "none" then
-                context:set_property("send_key", cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key)
+            logger.debug("auto_commit_reply_send_key: " ..
+                             cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key)
+            if cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key ~= "" and
+                cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key ~= "none" then
+                context:set_property("send_key",
+                    cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key)
             end
-            
+
             if commit_text and commit_text:find("\n") then
                 logger.debug("commit_text 中存在换行符")
                 -- 拦截按键, 清空当前context中的内容.
@@ -1197,14 +1183,10 @@ function cloud_input_processor.func(key, env)
     -- 使用 pcall 捕获所有可能的错误
     local success, result = pcall(function()
 
+
         if #input <= 1 then
             logger.debug("input为1, 不判断直接退出")
             return kNoop
-        end
-
-        -- 检查按键是否有效
-        if not key then
-            error("按键对象为空")
         end
 
         -- 如果输入的按键是一个反引号,则判断这个反引号是不是一个和前边的反引号配对的闭合单引号
