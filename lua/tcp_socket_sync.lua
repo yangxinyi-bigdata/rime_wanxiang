@@ -947,6 +947,9 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
             
         else
             logger.warn("get_clipboard 命令未提供有效的文本可追加")
+            -- 在这个地方应该添加一个prompt通知用户
+            
+
         end
 
         return true

@@ -46,3 +46,4 @@ user.yaml
 
 # Obsidian configuration (now a symlink to iCloud, no need to track)
 markdown/.obsidian/
+markdown/.obsidian

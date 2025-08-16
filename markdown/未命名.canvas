@@ -1,0 +1,9 @@
+{
+	"nodes":[
+		{"id":"2aab6d17964831b6","x":0,"y":-368,"width":224,"height":73,"type":"text","text":"你好哈哈\n我可以\n哈哈"},
+		{"id":"495d9dff1118b8ff","x":-340,"y":-295,"width":250,"height":60,"type":"text","text":"这是啥"}
+	],
+	"edges":[
+		{"id":"64aad8bb10dd64fa","fromNode":"495d9dff1118b8ff","fromSide":"right","toNode":"2aab6d17964831b6","toSide":"left"}
+	]
+}
