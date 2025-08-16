@@ -1,3 +1,0 @@
-rawenglish_translator 首先这是一个translator.
-传入的参数中有seg和input.
-rawenglish

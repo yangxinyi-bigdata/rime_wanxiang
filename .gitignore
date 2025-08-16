@@ -44,6 +44,4 @@ sync/cd9f2e79-5379-43b5-9b04-12b23e1cd55d/
 # User configuration files (user-specific settings)
 user.yaml
 
-# Obsidian configuration (now a symlink to iCloud, no need to track)
-markdown/.obsidian/
-markdown/.obsidian
+Rime_markdown
