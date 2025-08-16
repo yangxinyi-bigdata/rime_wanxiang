@@ -42,6 +42,7 @@ end
 local smart_cursor_processor = {}
 smart_cursor_processor.move_next_punct = nil
 smart_cursor_processor.move_prev_punct = nil
+smart_cursor_processor.paste_to_input = nil
 smart_cursor_processor.search_move_cursor = nil
 smart_cursor_processor.shuru_schema = nil
 smart_cursor_processor.chat_triggers = {}
@@ -54,11 +55,13 @@ function smart_cursor_processor.update_current_config(config)
     smart_cursor_processor.move_next_punct = config:get_string("key_binder/move_next_punct")
     smart_cursor_processor.move_prev_punct = config:get_string("key_binder/move_prev_punct")
     smart_cursor_processor.search_move_cursor = config:get_string("key_binder/search_move_cursor")
+    smart_cursor_processor.paste_to_input = config:get_string("key_binder/paste_to_input")
     smart_cursor_processor.shuru_schema = config:get_string("schema/my_shuru_schema")
 
     logger.info("键位配置 - move_next_punct: " .. tostring(smart_cursor_processor.move_next_punct))
     logger.info("键位配置 - move_prev_punct: " .. tostring(smart_cursor_processor.move_prev_punct))
     logger.info("键位配置 - search_move_cursor: " .. tostring(smart_cursor_processor.search_move_cursor))
+    logger.info("键位配置 - paste_to_input: " .. tostring(smart_cursor_processor.paste_to_input))
     logger.info("键位配置 - shuru_schema: " .. tostring(smart_cursor_processor.shuru_schema))
 
     -- 重新初始化chat_triggers
@@ -177,7 +180,7 @@ function smart_cursor_processor.init(env)
         -- 传递提交内容文本的信息
         logger.debug("send_key: " .. context:get_property("send_key"))
         if context:get_property("send_key") ~= "" then
-            tcp_socket.sync_with_server(env, true, true, "button", context:get_property("send_key") )
+            tcp_socket.sync_with_server(env, true, true, "button", context:get_property("send_key"))
             context:set_property("send_key", "")
         else
             tcp_socket.sync_with_server(env, true, true)
@@ -189,7 +192,7 @@ function smart_cursor_processor.init(env)
         -- 退出搜索模式
         -- logger.debug("触发update_notifier context更新通知")
         if not context:is_composing() then
-            
+
             -- logger.debug("input_string: " .. context:get_property("input_string"))
             if context:get_option("search_move") then
                 logger.debug("update_notifier通知:is_composing为false, 退出搜索模式")
@@ -324,7 +327,6 @@ function smart_cursor_processor.init(env)
                 local last_segment = segmentation:back()
                 local first_segment = segmentation:get_at(0)
                 logger.info("keepon_chat_trigger: " .. keepon_chat_trigger)
-                
 
                 -- 测试另外一种方案,在前边添加字母"a:"这类的内容。
                 -- 思路: 当keepon_chat_trigger属性中存在值的时候,应该通过这个属性获取到 chat_trigger
@@ -587,13 +589,16 @@ function smart_cursor_processor.func(key, env)
     local kAccepted = 1 -- 表示按键已被处理
     local kNoop = 2 -- 表示按键未被处理,继续传递给下一个处理器
 
-    logger.info("context: " .. tostring(context))
+    local key_repr = key:repr()
+    logger.info("key_repr: " .. key_repr)
+
+    local is_composing = context:is_composing()
+    if not key or not context:is_composing() then
+        return kNoop
+    end
 
     local composition = context.composition
     local search_move_prompt = " ▶ [搜索模式:] "
-
-    local key_repr = key:repr()
-    logger.info("key_repr: " .. key_repr)
 
     local success, result = pcall(function()
 
@@ -805,7 +810,24 @@ function smart_cursor_processor.func(key, env)
             context:set_property("input_string", "")
             logger.debug("清空input_string, 结束输入context:clear()")
             context:clear()
-            
+            return kAccepted
+
+        elseif key_repr == smart_cursor_processor.paste_to_input then
+            -- 粘贴命令, 向服务器请求粘贴板中的文本内容get_clipboard
+            if tcp_socket then
+                logger.debug("🍴通过TCP发送get_clipboard命令到Python服务端")
+                local paste_success = tcp_socket.sync_with_server(env, false, false, "get_clipboard")
+
+                if paste_success then
+                    logger.debug("✅ get_clipboard令发送成功")
+                else
+                    logger.error("❌ get_clipboard命令发送失败")
+                end
+            else
+                logger.warn("⚠️ TCP模块未加载，无法发送粘贴命令")
+            end
+            return kAccepted
+
         elseif key_repr == smart_cursor_processor.move_prev_punct then
             logger.debug("触发向左智能移动")
             if smart_cursor_processor.move_to_prev_punctuation(env) then

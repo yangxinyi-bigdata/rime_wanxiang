@@ -976,36 +976,16 @@ end
 function cloud_input_processor.func(key, env)
     local engine = env.engine
     local context = engine.context
+
     local segmentation = context.composition:toSegmentation()
     local input = context.input
     local config = env.engine.schema.config
     local key_repr = key:repr()
     logger.debug("测试虚拟按键: " .. key_repr)
 
-    -- 检查并应用待更新的属性
-    if next(property_update_table) ~= nil then
-        logger.debug("发现待更新的属性，开始应用到context中")
-        for property_name, property_value in pairs(property_update_table) do
-            logger.debug("更新属性: " .. property_name .. " = " .. tostring(property_value))
-            context:set_property(property_name, tostring(property_value))
-        end
-        -- 清空属性更新表
-        property_update_table = {}
-        logger.debug("属性更新完成，已清空property_update_table")
-    end
-
-    if context:get_property("should_intercept_key_release") == "1" then
-        -- 检查是否需要拦截Release+Shift_L按键
-        if key_repr == "Release+Shift_L" or key_repr == "Release+Shift_R" then
-            logger.debug("拦截Release+Shift_L按键（由于之前处理了Shift+组合键）")
-            -- 清除标志，避免影响后续操作
-            context:set_property("should_intercept_key_release", "0")
-            return kAccepted
-        end
-    end
-
-    -- 检查Alt+F11按键的处理
+        -- 检查Alt+F11按键的处理
     if key_repr == "Alt+F11" then
+        -- logger.debug("执行到Alt+F11分支")
         if context:get_property("get_ai_stream") == "start" then
             logger.debug("get_ai_stream==start, 触发重新刷新候选词: ")
             if context.input == "" then
@@ -1040,11 +1020,33 @@ function cloud_input_processor.func(key, env)
         end
     end
 
-    -- -- 拦截所有alt键
-    -- if key_repr == "Alt+Alt_L" or key_repr == "Release+Alt_L" or key_repr == "Alt+Release+Alt_L"  then
-    --     logger.debug("拦截Alt")
-    --     return kAccepted
-    -- end
+    local is_composing = context:is_composing()
+    if not key or not context:is_composing() then
+        return kNoop
+    end
+    
+    -- 检查并应用待更新的属性
+    if next(property_update_table) ~= nil then
+        logger.debug("发现待更新的属性，开始应用到context中")
+        for property_name, property_value in pairs(property_update_table) do
+            logger.debug("更新属性: " .. property_name .. " = " .. tostring(property_value))
+            context:set_property(property_name, tostring(property_value))
+        end
+        -- 清空属性更新表
+        property_update_table = {}
+        logger.debug("属性更新完成，已清空property_update_table")
+    end
+
+    if context:get_property("should_intercept_key_release") == "1" then
+        -- 检查是否需要拦截Release+Shift_L按键
+        if key_repr == "Release+Shift_L" or key_repr == "Release+Shift_R" then
+            logger.debug("拦截Release+Shift_L按键（由于之前处理了Shift+组合键）")
+            -- 清除标志，避免影响后续操作
+            context:set_property("should_intercept_key_release", "0")
+            return kAccepted
+        end
+    end
+
 
     if key_repr == "Alt+F10" then
         if context:get_property("get_cloud_stream") == "true" then
@@ -1055,11 +1057,6 @@ function cloud_input_processor.func(key, env)
             logger.debug("get_cloud_stream==false")
         end
         return kAccepted
-    end
-
-    local is_composing = context:is_composing()
-    if not key or not context:is_composing() then
-        return kNoop
     end
 
     -- AI回复上屏处理分支
@@ -1182,7 +1179,6 @@ function cloud_input_processor.func(key, env)
 
     -- 使用 pcall 捕获所有可能的错误
     local success, result = pcall(function()
-
 
         if #input <= 1 then
             logger.debug("input为1, 不判断直接退出")

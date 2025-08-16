@@ -796,6 +796,7 @@ end
 function tcp_socket_sync.handle_socket_command(command_messege, env)
     -- 从 env 提取 context（可能为nil）
     local context = env.engine.context
+    local config = env.engine.schema.config
 
     --[[ 接收到消息格式: 
     {"messege_type": "command_response", "response": "rime_state_received", "timestamp": 1753022593756, "client_id": "rime-127.0.0.1:57187", "command_messege": [{"command": "set_option", "command_type": "option", "option_name": "full_shape", "option_value": true, "timestamp": 1753022590433}]}
@@ -858,7 +859,7 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
         logger.info("   时间戳: " .. tostring(timestamp))
 
         -- 实际更新配置
-        local config = env.engine.schema.config
+        
 
         -- 将点分隔的路径转换为Rime配置路径（用斜杠分隔）
         local rime_config_path = string.gsub(config_path, "%.", "/")
@@ -911,6 +912,45 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
         tcp_socket_sync.update_property(command_messege.property_name, command_messege.property_value)
 
         return true
+    elseif command == "clipboard_data" then
+        logger.debug("command_messege: clipboard_data")
+        -- 处理获取剪贴板命令：将 clipboard.text 追加到 context.input
+        local clipboard = command_messege.clipboard or {}
+        local clipboard_text = clipboard.text
+        local success_flag = command_messege.success
+
+        if success_flag == false then
+            local err_msg = (clipboard and clipboard.error) or command_messege.error or "unknown"
+            logger.warn("get_clipboard 返回失败，错误信息: " .. tostring(err_msg))
+            return true
+        end
+
+        if clipboard_text ~= "" then
+            local english_mode_symbol = config:get_string("translator/english_mode_symbol") or ""
+            -- 将英文符号替换成空格.
+            if english_mode_symbol ~= "" then
+            if clipboard_text:find(english_mode_symbol, 1, true) then
+                clipboard_text = clipboard_text:gsub(
+                    english_mode_symbol:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1"), " ")
+            end
+
+            local rawenglish_prompt = context:get_property("rawenglish_prompt")
+            if rawenglish_prompt == "1" then
+                context.input = context.input .. clipboard_text
+                logger.debug("get_clipboard 粘贴clipboard_text: " .. clipboard_text)
+            else
+                
+                context.input = context.input .. english_mode_symbol .. clipboard_text .. english_mode_symbol
+                logger.debug("get_clipboard 粘贴clipboard_text: " .. english_mode_symbol .. clipboard_text .. english_mode_symbol)
+            end
+            
+            
+        else
+            logger.warn("get_clipboard 命令未提供有效的文本可追加")
+        end
+
+        return true
+
     elseif command == "paste_executed" then
         -- 粘贴命令执行成功响应
         logger.info("✅ 服务端已成功执行粘贴操作")
@@ -935,7 +975,7 @@ function tcp_socket_sync.process_rime_socket_data(env)
         if parsed_data then
             logger.debug("📨 Rime状态消息解析成功")
             if parsed_data.messege_type == "command_response" then
-                logger.debug("📨 检测到嵌套命令 command_messege 字段.")
+                logger.debug("📨 检测到嵌套命令 command_response 字段.")
                 -- command_messege 现在是一个数组，可能包含多条命令
                 if parsed_data.command_messege then
                     if #parsed_data.command_messege > 0 then

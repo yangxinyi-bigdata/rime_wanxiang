@@ -83,8 +83,8 @@ switches:
 engine:
   processors:
     # - lua_processor@*debug_processor      #调试处理器，打印输入、分词、环境等信息
-    - lua_processor@*cloud_input_processor  #触发云输入法快捷键
     - lua_processor@*smart_cursor_processor #智能光标移动处理器，在标点符号处停止    
+    - lua_processor@*cloud_input_processor  #触发云输入法快捷键
     # - chord_composer                     #并击处理器，与置顶参数：是否启用并击，选项配合使用
     - lua_processor@*select_character     #以词定字，默认左中括号上屏一个词的前一个字，右中括号上屏一个词的后一个字
     - lua_processor@*super_sequence*P      #手动排序，高亮候选 ctrl+j左移动 ctrl+k 右移动 ctrl+0 移除位移
@@ -103,7 +103,7 @@ engine:
     - express_editor                       #编辑器，处理空格、回车上屏、回退键
 
   segmentors:
-    - lua_segmentor@*debug_segmentor     #添加调试分词器
+    # - lua_segmentor@*debug_segmentor     #添加调试分词器
     - lua_segmentor@*ai_assistant_segmentor     #AI对话自定义分词器，分割 a: 和拼音部分
     - lua_segmentor@*rawenglish_segment      #添加反引号分词器
     # - lua_segmentor@*debug_segmentor2      #添加调试分词器
@@ -408,9 +408,10 @@ key_binder:
   # Lua 配置: 超级tips上屏按键
   tips_key: "period"   #修改时候去default找
   search: ";"             # 辅码引导符，要添加到 speller/alphabet
-  move_next_punct: "Super+d"
-  move_prev_punct: "Super+s"
-  search_move_cursor: "Super+f"  # 搜索移动光标
+  search_move_cursor: "Alt+F1"  # 搜索移动光标 "Super+f"
+  move_next_punct: "Alt+F2" # 光标向后移动一个标点符号的距离: "Super+d"
+  move_prev_punct: "Alt+F3" # 光标向前移动一个标点符号的距离: "Super+s"
+  paste_to_input: "Alt+F4" # 粘贴命令 "Super+v"
   bindings:             # 也可以再增加方案专有的
     #- { when: composing, accept: Tab, send: '[' } ## 取消注释后：tab引导辅助码
     - {when: composing, accept: Control+w, send: Control+BackSpace}

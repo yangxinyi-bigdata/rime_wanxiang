@@ -188,3 +188,46 @@ if cursor_pos then
 else
     print("没找到")
 end
+
+
+-- =============== split_by_rawenglish 空格场景测试 ===============
+local function print_segments(label, input, segments)
+    print("\n[split_by_rawenglish] " .. label)
+    print("input: " .. input)
+    for i, seg in ipairs(segments) do
+        print(string.format("  #%d type=%s start=%d end=%d len=%d content='%s'", i, seg.type, seg.start, seg._end,
+            seg.length, seg.content))
+    end
+end
+
+local function run_rawenglish_test(input, seg_start, delimiter_before, delimiter_after)
+    seg_start = seg_start or 0
+    delimiter_before = delimiter_before or "`"
+    delimiter_after = delimiter_after or "`"
+    local segments = text_splitter.split_by_rawenglish(input, seg_start, #input, delimiter_before, delimiter_after)
+    print_segments("seg_start=" .. tostring(seg_start), input, segments)
+end
+
+-- 1) 基本：英文片段内含单个空格
+run_rawenglish_test("nihk`ok de`", 0)
+
+-- 2) 英文片段内含多个连续空格
+run_rawenglish_test("nihk`ok  de`", 0)
+
+-- 3) 英文片段内含多个词与空格
+run_rawenglish_test("nihk`ok de fg`", 0)
+
+-- 4) 开头就是英文片段（含空格），后接中文拼音
+run_rawenglish_test("`hello world`nihk", 0)
+
+-- 5) 两个英文片段（都含空格）
+run_rawenglish_test("ni`hello   world`hk`foo bar`", 0)
+
+-- 6) 未闭合的英文片段（含空格）
+run_rawenglish_test("ni`hello world", 0)
+
+-- 7) 英文片段前后有空格与中文
+run_rawenglish_test("ni `hello world` hk", 0)
+
+-- 8) 原例：英文片段包含换行（也测试与空格混合）
+run_rawenglish_test("nihk`ok\n de`", 0)

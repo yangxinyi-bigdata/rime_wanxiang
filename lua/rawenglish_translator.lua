@@ -268,7 +268,6 @@ function rawenglish_translator.func(input, seg, env)
     spans_manager.auto_clear_check(context, context_input)
 
     logger.debug("")
-    logger.debug("")
     logger.debug("开始处理输入: " .. input)
     logger.debug("seg信息: ")
     debug_utils.print_segment_info(seg, logger)

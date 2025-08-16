@@ -128,10 +128,13 @@ function ai_assistant_segmentor.func(segmentation, env)
     local context = env.engine.context
     local input = context.input
     -- 保存到属性当中
-    if #input >= 8 then
+    logger.debug("input: " .. input .. " #input: " .. tostring(#input))
+    if #input > 8 then
         context:set_property("input_string", input)
     elseif #input == 8 then
-        if #context:get_property("input_string", input) == 9 then
+        local input_string = context:get_property("input_string")
+        -- logger.debug("input_string: " .. input_string .. " #input_string" .. tostring(#input_string))
+        if #context:get_property("input_string") == 9 then
             context:set_property("input_string", "")
         end 
     end
