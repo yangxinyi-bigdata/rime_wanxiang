@@ -219,6 +219,11 @@ function smart_cursor_processor.init(env)
                 context:set_property("intercept_select_key", "0")
             end
 
+            -- 清空云输入法获取状态local get_cloud_stream = context:get_property("get_cloud_stream")
+            if context:get_property("get_cloud_stream") ~= "idle" then
+                context:set_property("get_cloud_stream", "idle")
+            end
+
             -- (因为ai传输是跨两次输入的,所以不能在这里清空,否则会导致失效)清空ai流式传输状态
             -- if context:get_property("get_ai_stream") ~= "idle" then
             --     context:set_property("get_ai_stream", "idle")

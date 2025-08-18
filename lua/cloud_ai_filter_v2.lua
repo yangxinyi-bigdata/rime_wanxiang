@@ -76,7 +76,7 @@ cloud_ai_filter.ziranma_mapping_config = nil
 -- 配置更新函数
 function cloud_ai_filter.update_current_config(config)
     logger.info("开始更新cloud_ai_filter_v2模块配置")
-    
+
     -- 读取 behavior 配置
     cloud_ai_filter.behavior = {}
     cloud_ai_filter.behavior.prompt_chat = config:get_string("ai_assistant/behavior/prompt_chat")
@@ -131,7 +131,7 @@ function cloud_ai_filter.update_current_config(config)
     logger.info("云候选词最大数量: " .. cloud_ai_filter.max_cloud_candidates)
     logger.info("AI候选词最大数量: " .. cloud_ai_filter.max_ai_candidates)
     logger.info("当前分隔符: " .. cloud_ai_filter.delimiter)
-    
+
     logger.info("cloud_ai_filter_v2模块配置更新完成")
 end
 
@@ -391,8 +391,8 @@ function cloud_ai_filter.func(translation, env)
     end
 
     -- 第一次进入的时候cloud_convert为true, 如果为false 则直接返回. 第二次如果这个有一个为真, 则
-    if context:get_property("cloud_convert") ~= "1" and context:get_property("get_cloud_stream") ~= "true" then
-        logger.info("not cloud_convert, get_cloud_stream ~= true")
+    if context:get_property("cloud_convert") ~= "1" and context:get_property("get_cloud_stream") ~= "starting" then
+        logger.info("not cloud_convert, get_cloud_stream ~= starting")
         -- 查看有没有云翻译的标识, 没有的话直接返回原有的候选词
         yield(first_original_cand) -- 输出原有第一个候选词
         set_cloud_convert_flag(first_original_cand, context, cloud_ai_filter.delimiter)
@@ -406,7 +406,8 @@ function cloud_ai_filter.func(translation, env)
 
     -- 代码走到这里,代表已经进入context:get_property("cloud_convert") == "1" 成立分支
     -- 首次触发云输入（发送请求并开始流式获取）
-    logger.info("已经进入云输入法分支: cloud_convert " .. tostring(context:get_option("get_property")) .. " get_cloud_stream: " .. context:get_property("get_cloud_stream"))
+    logger.info("已经进入云输入法分支: cloud_convert " .. tostring(context:get_property("cloud_convert")) ..
+                    " get_cloud_stream: " .. context:get_property("get_cloud_stream"))
     logger.info("cand_text: " .. cand_text .. " cand_type: " .. cand_type)
 
     if context:get_property("cloud_convert") == "1" then
@@ -426,27 +427,30 @@ function cloud_ai_filter.func(translation, env)
             logger.info("根据segment切片得到 segment_input: " .. segment_input)
 
             -- 发送翻译请求（异步，不等待响应）
-            local send_success = tcp_socket.send_convert_request(cloud_ai_filter.schema_name, cloud_ai_filter.shuru_schema, segment_input,
-                long_candidates_table)
+            local send_success = tcp_socket.send_convert_request(cloud_ai_filter.schema_name,
+                cloud_ai_filter.shuru_schema, segment_input, long_candidates_table)
             if send_success then
                 logger.info("云输入翻译请求发送成功，开始流式获取结果")
-                context:set_property("get_cloud_stream", "true")
+                context:set_property("get_cloud_stream", "starting")
                 env.first_read_convert_result = true
             else
                 logger.error("云输入翻译请求发送失败")
-                context:set_property("get_cloud_stream", "false")
-                logger.info("get_cloud_stream, 设置为false")
+                context:set_property("get_cloud_stream", "error")
+                logger.info("get_cloud_stream, 设置为error")
+                -- 在这里代表没有发送成功,则应该提示用户错误.
+                -- segment.prompt = " [服务端未连接] "
+                -- logger.warn("segment.prompt:  [服务端未连接] ")
             end
         end)
         if not ok then
             logger.error("tcp_socket.send_convert_request 调用失败: " .. tostring(err))
-            context:set_property("get_cloud_stream", "false")
-            logger.info("get_cloud_stream, 设置为false")
+            context:set_property("get_cloud_stream", "error")
+            logger.info("get_cloud_stream, 设置为error")
         end
     end
 
     -- 检查是否正在流式获取云输入结果
-    if context:get_property("get_cloud_stream") == "true" then
+    if context:get_property("get_cloud_stream") == "starting" then
         logger.info("正在流式获取云输入结果，读取最新数据...")
 
         local ok, err = pcall(function()
@@ -485,8 +489,8 @@ function cloud_ai_filter.func(translation, env)
                 if parsed_data.ai_candidates then
                     for i, ai_cand in ipairs(parsed_data.ai_candidates) do
                         if i <= cloud_ai_filter.max_ai_candidates then
-                            local candidate =
-                                Candidate("ai_cloud", segment._start, segment._end, ai_cand.value or ai_cand, "")
+                            local candidate = Candidate("ai_cloud", segment._start, segment._end,
+                                ai_cand.value or ai_cand, "")
                             candidate.quality = 950 + (cloud_ai_filter.max_ai_candidates - i + 1) * 10
                             candidate.preedit = first_original_cand.preedit -- 保持原始预编辑文本
                             table.insert(ordered_candidates, candidate)
@@ -497,8 +501,8 @@ function cloud_ai_filter.func(translation, env)
 
                 if stream_result.is_final then
                     -- 最终数据，停止流式获取
-                    context:set_property("get_cloud_stream", "false")
-                    logger.info("get_cloud_stream, 设置为false")
+                    context:set_property("get_cloud_stream", "stop")
+                    logger.info("get_cloud_stream, 设置为stop")
                     -- 清空缓存数据，避免影响下次输入
                     clear_cloud_result_cache()
                     logger.info("云输入结果获取完成，停止流式获取，已清空缓存")
@@ -507,12 +511,12 @@ function cloud_ai_filter.func(translation, env)
             elseif stream_result and stream_result.status == "timeout" then
                 -- 超时是正常的，继续等待
                 logger.debug("云输入结果读取超时(正常) - 服务端可能还在处理")
-                context:set_property("get_cloud_stream", "true")
+                context:set_property("get_cloud_stream", "starting")
 
             elseif stream_result and stream_result.status == "error" then
                 -- 连接错误，停止获取
-                context:set_property("get_cloud_stream", "false")
-                logger.info("get_cloud_stream, 设置为false")
+                context:set_property("get_cloud_stream", "error")
+                logger.info("get_cloud_stream, 设置为error")
                 -- 连接错误时也清空缓存，避免使用不可靠的数据
                 clear_cloud_result_cache()
                 logger.error("云输入服务连接错误，停止流式获取，已清空缓存: " ..

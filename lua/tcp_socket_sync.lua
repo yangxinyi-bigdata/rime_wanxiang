@@ -925,13 +925,14 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
             return true
         end
 
-        if clipboard_text ~= "" then
+        if clipboard_text and clipboard_text ~= "" then
             local english_mode_symbol = config:get_string("translator/english_mode_symbol") or ""
             -- 将英文符号替换成空格.
             if english_mode_symbol ~= "" then
-            if clipboard_text:find(english_mode_symbol, 1, true) then
-                clipboard_text = clipboard_text:gsub(
-                    english_mode_symbol:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1"), " ")
+                if clipboard_text:find(english_mode_symbol, 1, true) then
+                    clipboard_text = clipboard_text:gsub(
+                        english_mode_symbol:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1"), " ")
+                end
             end
 
             local rawenglish_prompt = context:get_property("rawenglish_prompt")
@@ -947,9 +948,11 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
             
         else
             logger.warn("get_clipboard 命令未提供有效的文本可追加")
-            -- 在这个地方应该添加一个prompt通知用户
+            -- 在这个地方应该添加一个prompt通知用户, 应该是提取最后一个segment
+            local segmentation = context.composition:toSegmentation()
+            local last_segment = segmentation:back()
+            last_segment.prompt = " [剪贴板为空] "
             
-
         end
 
         return true
@@ -1190,7 +1193,7 @@ end
 function tcp_socket_sync.send_convert_request(schema_name, shuru_schema, confirmed_pos_input, long_candidates_table,
     timeout_seconds)
     local timeout = timeout_seconds or socket_system.ai_convert.timeout -- 默认使用AI服务超时时间
-    local success, error_msg = pcall(function()
+    local success, result_or_error = pcall(function()
         local current_time = get_current_time_ms()
 
         -- 构建要转换的拼音字符串
@@ -1218,9 +1221,14 @@ function tcp_socket_sync.send_convert_request(schema_name, shuru_schema, confirm
 
         if json_data then
             -- 写入AI转换服务TCP套接字
-            tcp_socket_sync.write_to_ai_socket(json_data)
-            logger.debug("转换请求发送成功")
-            return true
+            local result = tcp_socket_sync.write_to_ai_socket(json_data)
+            if result then
+                logger.debug("转换请求发送成功")
+                return true
+            else
+                logger.debug("转换请求发送失败")
+                return false
+            end
         else
             logger.debug("convert_data序列化失败,请排查错误: " .. tostring(convert_data))
             return false
@@ -1228,11 +1236,11 @@ function tcp_socket_sync.send_convert_request(schema_name, shuru_schema, confirm
     end)
 
     if not success then
-        logger.error("发送转换请求失败: " .. tostring(error_msg))
+        logger.error("发送转换请求失败: " .. tostring(result_or_error))
         return false
     end
 
-    return true
+    return result_or_error
 end
 
 -- 公开接口：读取转换结果（流式读取，类似AI助手的读取方式）

@@ -30,18 +30,18 @@ function punct_eng_chinese_filter.update_current_config(config)
         logger.error("无效的配置对象")
         return
     end
-    
+
     punct_eng_chinese_filter.delimiter = config:get_string("speller/delimiter"):sub(1, 1) or " "
     logger.info("更新分隔符: " .. punct_eng_chinese_filter.delimiter)
-    
+
     -- 读取云转换触发符号配置
     punct_eng_chinese_filter.cloud_convert_symbol = config:get_string("translator/cloud_convert_symbol")
     logger.info("云转换触发符号: " .. punct_eng_chinese_filter.cloud_convert_symbol)
-    
+
     -- 重新初始化AI标签
     punct_eng_chinese_filter.ai_reply_tags = {}
     punct_eng_chinese_filter.ai_chat_triggers = {}
-    
+
     -- 读取 AI 助手触发器配置，动态生成回复标签
     local chat_triggers_map = config:get_map("ai_assistant/chat_triggers")
     if chat_triggers_map then
@@ -68,7 +68,7 @@ end
 function punct_eng_chinese_filter.init(env)
     -- 初始化时清空日志文件
     logger.info("标点英中文过滤器初始化完成")
-    
+
     -- 配置更新由 cloud_input_processor 统一管理，无需在此处调用
     logger.info("等待 cloud_input_processor 统一更新配置")
 end
@@ -99,6 +99,10 @@ function punct_eng_chinese_filter.func(translation, env)
                 cloud_symbol_display = "回车"
             end
             local cloud_prompt_text = "    ▶ [" .. cloud_symbol_display .. " AI转换]  "
+            local cloud_prompt_error = "    ▶[服务端未连接] "
+            local cloud_prompt_starting = "    ▶[云端获取中] "
+            local cloud_prompt_stop = "    ▶[云端转换完成] "
+
             local rawenglish_prompt_text = "    ▶ [英文模式]  "
             local search_move_prompt = "    ▶ [搜索模式]  "
             local search_move_prompt_char = "    ▶ [搜索模式:%s]  "
@@ -107,6 +111,7 @@ function punct_eng_chinese_filter.func(translation, env)
             local search_move = context:get_option("search_move")
             local rawenglish_prompt = context:get_property("rawenglish_prompt")
             local cloud_convert_flag = context:get_property("cloud_convert_flag")
+            local get_cloud_stream = context:get_property("get_cloud_stream")
 
             -- 判断显示哪个提示（ search_move优先级更高, rawenglish_prompt第二）
             if search_move then
@@ -122,14 +127,30 @@ function punct_eng_chinese_filter.func(translation, env)
                     segment.prompt = rawenglish_prompt_text
                     logger.info("设置反引号提示: " .. rawenglish_prompt_text)
                 end
+            elseif get_cloud_stream == "error" then
+                if segment.prompt ~= cloud_prompt_error then
+                    segment.prompt = cloud_prompt_error
+                    logger.info("设置云输入提示: " .. cloud_prompt_error)
+                end
+            elseif get_cloud_stream == "starting" then
+                if segment.prompt ~= cloud_prompt_starting then
+                    segment.prompt = cloud_prompt_starting
+                    logger.info("设置云输入提示: " .. cloud_prompt_starting)
+                end
+            elseif get_cloud_stream == "stop" then
+                if segment.prompt ~= cloud_prompt_stop then
+                    segment.prompt = cloud_prompt_stop
+                    logger.info("设置云输入提示: " .. cloud_prompt_stop)
+                end
             elseif cloud_convert_flag == "1" then
+                -- 这个地方不对, 首先应该确定get_cloud_stream在不同情况下的值, 应该是在cloud_convert_flag 为1 的时候会进来.
+                -- 在这的状态应该是只要是足够发起AI对话的通知即可
                 -- 只有在 rawenglish_prompt 为 0 时才显示 cloud_convert_flag 的提示
                 if segment.prompt ~= cloud_prompt_text then
                     logger.info("segment.prompt: " .. segment.prompt .. " cloud_prompt_text: " .. cloud_prompt_text)
                     segment.prompt = cloud_prompt_text
                     logger.info("设置云输入提示: " .. cloud_prompt_text)
                 end
-
             end
         end
 
@@ -264,7 +285,7 @@ function punct_eng_chinese_filter.func(translation, env)
                     -- logger.info("候选词为chinese_pos, 删除comment, 格式为chinese_pos:1,2,9,10,")
                     cand.comment = cand.comment:gsub("^chinese_pos:[%d,]+", "")
                 end
-                                
+
                 if cand_type == "baidu_cloud" then
                     cand.comment = "   [云输入]"
                 elseif cand_type == "ai_cloud" then

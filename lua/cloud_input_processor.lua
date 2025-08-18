@@ -1049,12 +1049,12 @@ function cloud_input_processor.func(key, env)
 
 
     if key_repr == "Alt+F10" then
-        if context:get_property("get_cloud_stream") == "true" then
-            logger.debug("get_cloud_stream==true, 触发重新刷新云输入候选词: ")
+        if context:get_property("get_cloud_stream") == "starting" then
+            logger.debug("get_cloud_stream==starting, 触发重新刷新云输入候选词: ")
             context:refresh_non_confirmed_composition()
 
         else
-            logger.debug("get_cloud_stream==false")
+            logger.debug("get_cloud_stream:  " .. context:get_property("get_cloud_stream"))
         end
         return kAccepted
     end
