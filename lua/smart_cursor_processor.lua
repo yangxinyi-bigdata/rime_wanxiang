@@ -824,7 +824,7 @@ function smart_cursor_processor.func(key, env)
             -- 粘贴命令, 向服务器请求粘贴板中的文本内容get_clipboard
             if tcp_socket then
                 logger.debug("🍴通过TCP发送get_clipboard命令到Python服务端")
-                local paste_success = tcp_socket.sync_with_server(env, false, false, "get_clipboard")
+                local paste_success = tcp_socket.sync_with_server(env, false, false, "get_clipboard", "", 0.2)
 
                 if paste_success then
                     logger.debug("✅ get_clipboard令发送成功")

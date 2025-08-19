@@ -308,8 +308,10 @@ function tcp_socket_sync.check_rime_connection()
         return false
     end
 
-    -- rime_state.client:settimeout(0) -- 非阻塞
+    local original_timeout = rime_state.client:gettimeout()
+    rime_state.client:settimeout(0) -- 非阻塞
     local line, err, partial = rime_state.client:receive("*l")
+    rime_state.client:settimeout(original_timeout)
 
     if line then
         -- 若之前有半行，拼接后入队（不过 *l 返回的 line 已是不含分隔符的完整行）
@@ -456,7 +458,7 @@ function tcp_socket_sync.write_to_ai_socket(data)
 end
 
 -- 非阻塞读取Rime状态服务TCP套接字数据
-function tcp_socket_sync.read_from_rime_socket()
+function tcp_socket_sync.read_from_rime_socket(timeout)
     local rime_state = socket_system.rime_state
     if not rime_state.client or not rime_state.is_connected then
         logger.debug("Rime状态服务未连接，尝试重新连接...")
@@ -474,7 +476,15 @@ function tcp_socket_sync.read_from_rime_socket()
         return buffered
     end
 
-    local line, err, partial = rime_state.client:receive("*l")
+    local line, err, partial
+    if timeout then
+        local original_timeout = rime_state.client:gettimeout()
+        rime_state.client:settimeout(timeout)
+        line, err, partial = rime_state.client:receive("*l")
+        rime_state.client:settimeout(original_timeout)
+    else
+        line, err, partial = rime_state.client:receive("*l")
+    end
 
     if line then
         if rime_state.partial_line then
@@ -975,9 +985,20 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
 end
 
 -- 定期处理Rime状态服务TCP套接字数据
-function tcp_socket_sync.process_rime_socket_data(env)
-    local data = tcp_socket_sync.read_from_rime_socket()
-    if data then
+function tcp_socket_sync.process_rime_socket_data(env, timeout)
+    local processed_any = false
+    local processed_count = 0
+    local max_messages = 5
+    while true do
+        if processed_count >= max_messages then
+            logger.debug("⏹️ 已达到本次处理上限: " .. tostring(max_messages) .. " 条消息")
+            break
+        end
+        local data = tcp_socket_sync.read_from_rime_socket(timeout)
+        if not data then
+            break
+        end
+
         logger.debug("🎯 成功接收到Rime状态服务完整消息: " .. data)
         local parsed_data = tcp_socket_sync.parse_socket_data(data)
         if parsed_data then
@@ -1002,18 +1023,20 @@ function tcp_socket_sync.process_rime_socket_data(env)
                 logger.info("✅ 收到命令执行成功通知: paste_executed")
                 logger.debug("命令执行成功响应内容: " .. data)
             end
-            return true -- 返回成功标志
+            processed_any = true
+            processed_count = processed_count + 1
         else
             logger.warn("⚠️  Rime状态消息解析失败")
-            return false
+            -- 解析失败，继续尝试读取下一条
+            processed_count = processed_count + 1
         end
-    else
-        return false -- 没有接收到数据
     end
+
+    return processed_any -- 处理过至少一条消息则为true，否则false
 end
 
 -- 和Rime状态服务进行数据交换
-function tcp_socket_sync.sync_with_server(env, option_info, send_commit_text, command_key, command_value)
+function tcp_socket_sync.sync_with_server(env, option_info, send_commit_text, command_key, command_value, timeout)
     send_commit_text = send_commit_text or false
     local success, error_msg = pcall(function()
         local current_time = get_current_time_ms()
@@ -1080,7 +1103,7 @@ function tcp_socket_sync.sync_with_server(env, option_info, send_commit_text, co
 
         -- 处理来自Rime状态服务端的数据
         if socket_system.is_initialized and socket_system.rime_state.is_connected then
-            tcp_socket_sync.process_rime_socket_data(env)
+            tcp_socket_sync.process_rime_socket_data(env, timeout)
         end
     end)
 
