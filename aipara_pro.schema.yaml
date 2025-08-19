@@ -154,6 +154,7 @@ ai_assistant:
     clipboard_mode: false       # 是否使用剪贴板模式
     prompt_chat: "a"    # 触发提示消息的字母
     strip_chat_prefix: false
+    add_reply_prefix: false
     commit_question: true
     auto_commit_reply_send_key: "enter"
     ai_reply_send_key: "enter"
@@ -172,11 +173,24 @@ ai_assistant:
     openai_search_ai_chat: "aw:"        # openai_web_search搜索助手
     summarize_ai_chat: "sum:"             # 总结工具
     improve_ai_chat: "imp:"               # 改进工具
+  chat_triggers_name:
+    simple_ai_chat: "简单对话"          # 简单对话
+    normal_ai_chat: "基本AI对话"                # AI对话
+    context_ai_chat: "上下文对话"           # 上下文对话
+    cat_ai_chat: "猫娘小咪"               # 猫娘对话
+    trans_ai_chat: "中英翻译"     # 普通中英翻译
+    translate_ai_chat: "高级中英翻译"     # 结构化翻译中英翻译
+    code_ai_chat: "编程助手"         # 编程助手
+    write_ai_chat: "写作助手"     # 写作助手
+    search_ai_chat: "搜索助手"        # 搜索助手
+    openai_search_ai_chat: "openai搜索"        # openai_web_search搜索助手
+    summarize_ai_chat: "总结工具"             # 总结工具
+    improve_ai_chat: "改进工具"               # 改进工具
   chat_names:
     simple_ai_chat: "AI提问:"
     normal_ai_chat: "AI提问:"
     context_ai_chat: "AI提问:"
-    cat_ai_chat: "猫娘对话:"
+    cat_ai_chat: "猫娘小咪:"
     trans_ai_chat: "AI翻译:"
     translate_ai_chat: "AI翻译:"
     code_ai_chat: "AI编程:"
@@ -303,6 +317,7 @@ translator:
   rawenglish_delimiter_before: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
   rawenglish_delimiter_after: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
   replace_punct_enabled: true  # 是否启用中文标点替换功能，true 为启用，false 为禁用
+  keep_input_uncommit: true  # 保留未上屏的input中输入内容
   preedit_format:     #影响到输入框的显示和“Shift+回车”上屏的字符，交给super_preedit处理
     # __patch:
     #   - 自然码渲染   # 引用

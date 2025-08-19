@@ -34,6 +34,7 @@ function ai_assistant_segmentor.update_current_config(config)
 
     -- 读取 enabled 配置
     local enabled = config:get_bool("ai_assistant/enabled")
+    ai_assistant_segmentor.keep_input_uncommit = config:get_bool("translator/keep_input_uncommit")
     ai_assistant_segmentor.enabled = enabled or false
     logger.info("AI助手启用状态: " .. tostring(ai_assistant_segmentor.enabled))
 
@@ -129,14 +130,16 @@ function ai_assistant_segmentor.func(segmentation, env)
     local input = context.input
     -- 保存到属性当中
     logger.debug("input: " .. input .. " #input: " .. tostring(#input))
-    if #input > 8 then
-        context:set_property("input_string", input)
-    elseif #input == 8 then
-        local input_string = context:get_property("input_string")
-        -- logger.debug("input_string: " .. input_string .. " #input_string" .. tostring(#input_string))
-        if #context:get_property("input_string") == 9 then
-            context:set_property("input_string", "")
-        end 
+    if ai_assistant_segmentor.keep_input_uncommit then
+        if #input > 8 then
+            context:set_property("input_string", input)
+        elseif #input == 8 then
+            local input_string = context:get_property("input_string")
+            -- logger.debug("input_string: " .. input_string .. " #input_string" .. tostring(#input_string))
+            if #context:get_property("input_string") == 9 then
+                context:set_property("input_string", "")
+            end 
+        end
     end
     
     -- 检查AI助手是否启用

@@ -57,6 +57,7 @@ function smart_cursor_processor.update_current_config(config)
     smart_cursor_processor.search_move_cursor = config:get_string("key_binder/search_move_cursor")
     smart_cursor_processor.paste_to_input = config:get_string("key_binder/paste_to_input")
     smart_cursor_processor.shuru_schema = config:get_string("schema/my_shuru_schema")
+    smart_cursor_processor.keep_input_uncommit = config:get_bool("translator/keep_input_uncommit")
 
     logger.info("键位配置 - move_next_punct: " .. tostring(smart_cursor_processor.move_next_punct))
     logger.info("键位配置 - move_prev_punct: " .. tostring(smart_cursor_processor.move_prev_punct))
@@ -321,7 +322,7 @@ function smart_cursor_processor.init(env)
             -- 属性存在值代表要进入自动ai对话模式
 
             logger.info("input_string: " .. context:get_property("input_string"))
-            if context:get_property("input_string") ~= "" then
+            if smart_cursor_processor.keep_input_uncommit and context:get_property("input_string") ~= "" then
                 if #input == 1 then -- and not first_segment:has_tags("ai_reply") 
                     logger.info("input: " .. input)
                     context.input = context:get_property("input_string") .. input
@@ -811,11 +812,13 @@ function smart_cursor_processor.func(key, env)
             return kNoop
         elseif key_repr == "Escape" then
             -- 记录一个属性或者是直接清空
-            logger.debug("清空属性")
-            context:set_property("input_string", "")
-            logger.debug("清空input_string, 结束输入context:clear()")
-            context:clear()
-            return kAccepted
+            if smart_cursor_processor.keep_input_uncommit then
+                logger.debug("清空属性")
+                context:set_property("input_string", "")
+                logger.debug("清空input_string, 结束输入context:clear()")
+                context:clear()
+                return kAccepted
+            end
 
         elseif key_repr == smart_cursor_processor.paste_to_input then
             -- 粘贴命令, 向服务器请求粘贴板中的文本内容get_clipboard

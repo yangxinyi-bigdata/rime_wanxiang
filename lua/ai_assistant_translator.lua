@@ -215,19 +215,35 @@ function ai_assistant_translator.func(input, segment, env)
         end
     end
 
+    -- -- 检查所有配置的AI回复标签
+    -- if not matched_reply_tag and ai_assistant_translator.chat_triggers then
+    --     for trigger_name, chat_trigger in pairs(ai_assistant_translator.chat_triggers) do
+    --         if segment:has_tag(trigger_name .. "_reply") then
+    --             matched_reply_tag = trigger_name .. "_reply"
+    --             matched_trigger = trigger_name
+    --             preedit_pre = ai_assistant_translator.reply_messages_preedits[trigger_name]
+    --             is_prefix_display = false -- 这是回复显示
+    --             -- 从配置中获取回复预编辑消息
+    --             logger.info("检测到AI回复标签: " .. matched_reply_tag .. " (触发器: " .. matched_trigger ..
+    --                             ")")
+    --             break
+    --         end
+    --     end
+    -- end
+
     -- 检查所有配置的AI回复标签
     if not matched_reply_tag and ai_assistant_translator.chat_triggers then
-        for trigger_name, chat_trigger in pairs(ai_assistant_translator.chat_triggers) do
-            if segment:has_tag(trigger_name .. "_reply") then
-                matched_reply_tag = trigger_name .. "_reply"
-                matched_trigger = trigger_name
-                preedit_pre = ai_assistant_translator.reply_messages_preedits[trigger_name]
-                is_prefix_display = false -- 这是回复显示
-                -- 从配置中获取回复预编辑消息
-                logger.info("检测到AI回复标签: " .. matched_reply_tag .. " (触发器: " .. matched_trigger ..
-                                ")")
-                break
-            end
+        if segment:has_tag("ai_reply") then
+            local matched_reply_tag_set = segment.tags - Set {"ai_reply"}
+            matched_reply_tag = next(matched_reply_tag_set)
+            logger.debug("matched_reply_tag: " .. matched_reply_tag)
+            matched_trigger = matched_reply_tag:gsub("_reply$", "")
+            logger.debug("matched_trigger: " .. matched_trigger)
+            preedit_pre = ai_assistant_translator.reply_messages_preedits[matched_trigger]
+            logger.debug("preedit_pre: " .. preedit_pre)
+            is_prefix_display = false -- 这是回复显示
+            -- 从配置中获取回复预编辑消息
+            logger.info("检测到AI回复标签: " .. matched_reply_tag .. " (触发器: " .. matched_trigger .. ")")
         end
     end
 
@@ -291,7 +307,7 @@ function ai_assistant_translator.func(input, segment, env)
         elseif stream_data.is_final then
             -- 最终数据，停止获取
             context:set_property("get_ai_stream", "stop")
-            
+
             logger.debug("intercept_select_key: 1")
             context:set_property("intercept_select_key", "1")
             logger.debug("收到最终数据(is_final=true)，停止流式获取")
@@ -345,7 +361,7 @@ function ai_assistant_translator.func(input, segment, env)
     else
         logger.error("current_content or preedit_pre: nil")
     end
-    
+
     candidate.preedit = preedit_pre
 
     yield(candidate)

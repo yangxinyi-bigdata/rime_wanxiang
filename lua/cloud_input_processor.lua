@@ -95,6 +95,8 @@ function cloud_input_processor.update_current_config(config)
         "ai_assistant/behavior/commit_question") or false
     cloud_input_processor.ai_assistant_config.behavior.strip_chat_prefix = config:get_bool(
         "ai_assistant/behavior/strip_chat_prefix") or false
+    cloud_input_processor.ai_assistant_config.behavior.add_reply_prefix = config:get_bool(
+        "ai_assistant/behavior/add_reply_prefix") or false
     cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply = config:get_bool(
         "ai_assistant/behavior/auto_commit_reply") or false
     cloud_input_processor.ai_assistant_config.behavior.clipboard_mode = config:get_bool(
@@ -983,7 +985,7 @@ function cloud_input_processor.func(key, env)
     local key_repr = key:repr()
     logger.debug("测试虚拟按键: " .. key_repr)
 
-        -- 检查Alt+F11按键的处理
+    -- 检查Alt+F11按键的处理
     if key_repr == "Alt+F11" then
         -- logger.debug("执行到Alt+F11分支")
         if context:get_property("get_ai_stream") == "start" then
@@ -1020,11 +1022,6 @@ function cloud_input_processor.func(key, env)
         end
     end
 
-    local is_composing = context:is_composing()
-    if not key or not context:is_composing() then
-        return kNoop
-    end
-    
     -- 检查并应用待更新的属性
     if next(property_update_table) ~= nil then
         logger.debug("发现待更新的属性，开始应用到context中")
@@ -1047,7 +1044,6 @@ function cloud_input_processor.func(key, env)
         end
     end
 
-
     if key_repr == "Alt+F10" then
         if context:get_property("get_cloud_stream") == "starting" then
             logger.debug("get_cloud_stream==starting, 触发重新刷新云输入候选词: ")
@@ -1059,6 +1055,11 @@ function cloud_input_processor.func(key, env)
         return kAccepted
     end
 
+    local is_composing = context:is_composing()
+    if not key or not context:is_composing() then
+        return kNoop
+    end
+
     -- AI回复上屏处理分支
     if context:get_property("intercept_select_key") == "1" then
 
@@ -1068,9 +1069,15 @@ function cloud_input_processor.func(key, env)
             logger.debug("set_property intercept_select_key: 0")
             context:set_property("intercept_select_key", "0")
 
+            if context:get_property("input_string") ~= "" then
+                context:set_property("input_string", "")
+                logger.info("清空context:set_property input_string")
+            end
+
             -- 判断是不是直接一个段落, 内容中是否存在换行符.
             local commit_text = context:get_commit_text()
             logger.debug("commit_text: " .. commit_text)
+
             -- 记录一个属性发送一个按键
             logger.debug("auto_commit_reply_send_key: " ..
                              cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply_send_key)
@@ -1083,28 +1090,68 @@ function cloud_input_processor.func(key, env)
             if commit_text and commit_text:find("\n") then
                 logger.debug("commit_text 中存在换行符")
                 -- 拦截按键, 清空当前context中的内容.
-                logger.debug("context:clear()")
                 context:clear()
-
+                logger.debug("context:clear()结束")
                 -- 使用TCP通信发送粘贴命令到Python服务端（跨平台通用）
                 if tcp_socket then
                     logger.debug("🍴 通过TCP发送粘贴命令到Python服务端 (intercept模式)")
-                    local paste_success = tcp_socket.sync_with_server(env, false, false, "button", "paste")
+                    -- 如果获取input中的文本呢? 
+                    if cloud_input_processor.ai_assistant_config.behavior.add_reply_prefix then
+                        local script_text = context:get_script_text()
+                        engine:commit_text(script_text)
+                        -- engine:commit_text(script_text .. commit_text)
+                        context:clear()
+                    end
+
+                    local paste_success
+                    logger.debug("send_key: " .. context:get_property("send_key"))
+                    if context:get_property("send_key") ~= "" then
+                        paste_success = tcp_socket.sync_with_server(env, true, true, "button", "paste_then_" .. context:get_property("send_key"))
+                        context:set_property("send_key", "")
+                    else
+                        paste_success = tcp_socket.sync_with_server(env, false, false, "button", "paste")
+                    end
 
                     if paste_success then
                         logger.debug("✅ 粘贴命令发送成功 (intercept模式)")
+                        return kAccepted
                     else
                         logger.error("❌ 粘贴命令发送失败 (intercept模式)")
+                        return kNoop
                     end
+
                 else
                     logger.warn("⚠️ TCP模块未加载，无法发送粘贴命令 (intercept模式)")
+                    return kNoop
                 end
-
                 return kAccepted
+
             else
                 logger.debug("commit_text 中不存在换行符")
-                return kNoop
+                -- 如果获取input中的文本呢? 
+                if cloud_input_processor.ai_assistant_config.behavior.add_reply_prefix then
+                    local script_text = context:get_script_text()
+                    -- engine:commit_text(script_text)
+                    engine:commit_text(script_text .. commit_text)
+                    context:clear()
+                else
+                    engine:commit_text(commit_text)
+                    context:clear()
+                end
+
+                logger.debug("send_key: " .. context:get_property("send_key"))
+                if context:get_property("send_key") ~= "" then
+                    tcp_socket.sync_with_server(env, true, true, "button", context:get_property("send_key"))
+                    context:set_property("send_key", "")
+                else
+                    tcp_socket.sync_with_server(env, true, true)
+                end
+
+                -- return kNoop
+
             end
+
+            return kAccepted
 
         end
 

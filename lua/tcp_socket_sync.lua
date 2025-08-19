@@ -308,9 +308,8 @@ function tcp_socket_sync.check_rime_connection()
         return false
     end
 
-    rime_state.client:settimeout(0) -- 非阻塞
+    -- rime_state.client:settimeout(0) -- 非阻塞
     local line, err, partial = rime_state.client:receive("*l")
-    rime_state.client:settimeout(original_timeout)
 
     if line then
         -- 若之前有半行，拼接后入队（不过 *l 返回的 line 已是不含分隔符的完整行）
@@ -378,7 +377,10 @@ function tcp_socket_sync.write_to_rime_socket(data)
     end
 
     local success, err = pcall(function()
+        
         -- 发送JSON数据，以换行符结尾
+        -- local original_timeout = rime_state.client:gettimeout()
+        -- logger.debug("original_timeout: " .. tostring(original_timeout))
         rime_state.client:send(data .. "\n")
     end)
 
