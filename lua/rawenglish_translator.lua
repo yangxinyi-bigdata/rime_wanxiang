@@ -774,7 +774,6 @@ function rawenglish_translator.func(input, seg, env)
 end
 
 function rawenglish_translator.fini(env)
-    env.notifier:disconnect()
     logger.debug("脚本反引号翻译器结束运行")
 end
 

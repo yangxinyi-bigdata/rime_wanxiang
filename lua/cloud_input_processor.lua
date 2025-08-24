@@ -985,6 +985,9 @@ function cloud_input_processor.func(key, env)
     local key_repr = key:repr()
     logger.debug("测试虚拟按键: " .. key_repr)
 
+    local client_app = context:get_property("client_app")
+    logger.debug("client_app: " .. client_app)
+
     -- 检查Alt+F11按键的处理
     if key_repr == "Alt+F11" then
         -- logger.debug("执行到Alt+F11分支")

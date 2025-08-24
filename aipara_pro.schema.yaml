@@ -423,10 +423,10 @@ key_binder:
   # Lua 配置: 超级tips上屏按键
   tips_key: "period"   #修改时候去default找
   search: ";"             # 辅码引导符，要添加到 speller/alphabet
-  search_move_cursor: "Alt+F1"  # 搜索移动光标 "Super+f"
-  move_next_punct: "Alt+F2" # 光标向后移动一个标点符号的距离: "Super+d"
-  move_prev_punct: "Alt+F3" # 光标向前移动一个标点符号的距离: "Super+s"
-  paste_to_input: "Alt+F4" # 粘贴命令 "Super+v"
+  search_move_cursor: "Alt+F16"  # 搜索移动光标 "Super+f"
+  move_next_punct: "Alt+F17" # 光标向后移动一个标点符号的距离: "Super+d"
+  move_prev_punct: "Alt+F18" # 光标向前移动一个标点符号的距离: "Super+s"
+  paste_to_input: "Alt+F19" # 粘贴命令 "Super+v"
   bindings:             # 也可以再增加方案专有的
     #- { when: composing, accept: Tab, send: '[' } ## 取消注释后：tab引导辅助码
     - {when: composing, accept: Control+w, send: Control+BackSpace}
