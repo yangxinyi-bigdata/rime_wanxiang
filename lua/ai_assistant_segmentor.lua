@@ -129,7 +129,7 @@ function ai_assistant_segmentor.func(segmentation, env)
     local context = env.engine.context
     local input = context.input
     -- 保存到属性当中
-    logger.debug("input: " .. input .. " #input: " .. tostring(#input))
+    -- logger.debug("input: " .. input .. " #input: " .. tostring(#input))
     if ai_assistant_segmentor.keep_input_uncommit then
         if #input > 8 then
             context:set_property("input_string", input)

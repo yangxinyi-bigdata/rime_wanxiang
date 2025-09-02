@@ -571,6 +571,7 @@ local function build_commit_text(script_text, candidate_text, delimiter, chat_tr
     return final_text
 end
 
+-- 已经放弃使用的函数
 local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segment)
     local engine = env.engine
     local context = engine.context
@@ -725,7 +726,7 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
     end
 end
 
--- 获取所有segment选择的候选词
+-- 获取所有segment选择的候选词, 当前使用的函数
 local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, segmentation)
     local engine = env.engine
     local context = engine.context
@@ -824,6 +825,9 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
                             if current_content ~= "" and current_content ~= "等待AI回复..." then
                                 context:set_property("ai_replay_stream", "等待AI回复...")
                             end
+
+                            -- 设置一个属性说明当前将会进入AI提问轮的标识, 在哪里关闭呢 ?
+                            context:set_property("start_ai_question", "1")
 
                             -- 如果当前不是start状态则设置为start状态
                             local get_ai_stream = context:get_property("get_ai_stream")
@@ -985,8 +989,8 @@ function cloud_input_processor.func(key, env)
     local key_repr = key:repr()
     logger.debug("测试虚拟按键: " .. key_repr)
 
-    local client_app = context:get_property("client_app")
-    logger.debug("client_app: " .. client_app)
+    -- local client_app = context:get_property("client_app")
+    -- logger.debug("client_app: " .. client_app)
 
     -- 检查Alt+F11按键的处理
     if key_repr == "Alt+F11" then
@@ -1001,15 +1005,18 @@ function cloud_input_processor.func(key, env)
             context:refresh_non_confirmed_composition()
             return kNoop
         elseif context:get_property("get_ai_stream") == "stop" then
+            logger.debug("set_property get_ai_stream=idle")
+            context:set_property("get_ai_stream", "idle")
             if cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply then
                 logger.debug("get_ai_stream==stop, 自动上屏: ")
-                logger.debug("确认当前AI回复候选词")
+                     
+                -- logger.debug("确认当前AI回复候选词")
 
                 -- 在这里忘记考虑多行的可能性了,如果多行的话,这个地方会出现bug,所以还是应该用下面的那个.
                 -- 所以用confirm_current_selection面对多行可能会出现问题
                 local key = KeyEvent("space")
                 engine:process_key(key)
-                logger.debug("发送space键自动上屏")
+                -- logger.debug("发送space键自动上屏")
 
                 -- if context:confirm_current_selection() then
                 --     -- 记录一个属性发送回车

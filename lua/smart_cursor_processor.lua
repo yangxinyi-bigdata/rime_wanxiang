@@ -224,11 +224,14 @@ function smart_cursor_processor.init(env)
             if context:get_property("get_cloud_stream") ~= "idle" then
                 context:set_property("get_cloud_stream", "idle")
             end
-
             -- (因为ai传输是跨两次输入的,所以不能在这里清空,否则会导致失效)清空ai流式传输状态
-            -- if context:get_property("get_ai_stream") ~= "idle" then
-            --     context:set_property("get_ai_stream", "idle")
-            -- end
+            -- 如果内容
+            local ai_replay_stream = context:get_property("ai_replay_stream")
+            if context:get_property("get_ai_stream") ~= "idle" and
+                (ai_replay_stream ~= "" and ai_replay_stream ~= "等待AI回复...") then
+                -- logger.debug("ai_replay_stream: " .. ai_replay_stream)
+                context:set_property("get_ai_stream", "idle")
+            end
 
         end
 
@@ -598,12 +601,25 @@ function smart_cursor_processor.func(key, env)
     local key_repr = key:repr()
     logger.info("key_repr: " .. key_repr)
 
-    local is_composing = context:is_composing()
     if not key or not context:is_composing() then
         return kNoop
     end
+    local composition = context.composition 
+    
+    -- logger.info("开始测试: ")
+    -- local user_data_dir = rime_api.get_user_data_dir()
+    -- local config = engine.schema.config
+    -- -- 载入squirrel.yaml
+    -- config:load_from_file(user_data_dir .. "/" .. "squirrel.yaml")
+    -- local color_scheme = config:get_string("style/color_scheme") 
+    
+    -- logger.debug("color_scheme: " .. tostring(color_scheme))
+    -- if key_repr == "t" then
+    --     config:set_string("style/color_scheme", "mint_light_green")
+    --     local color_scheme = config:get_string("style/color_scheme") 
+    --     logger.debug("color_scheme: " .. tostring(color_scheme))
+    -- end 
 
-    local composition = context.composition
     local search_move_prompt = " ▶ [搜索模式:] "
 
     local success, result = pcall(function()

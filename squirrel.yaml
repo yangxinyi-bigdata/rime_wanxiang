@@ -18,35 +18,34 @@ show_notifications_when: appropriate
 
 style:
   # 选择皮肤，亮色与暗色主题
-  color_scheme: mint_light_blue
-  color_scheme_dark: mint_dark_blue
+  color_scheme: "mint_light_green"
+  color_scheme_dark: "mint_dark_green"
 
   # 预设选项。如果皮肤没写，则使用这些属性；如果皮肤写了，使用皮肤的。
-  
   # 自 0.36(Squirrel 0.15) 起已弃用。覆写为横向，建议使用 candidate_list_layout
   horizontal: false
   # # stacked | linear | tabled 候选项排列方向(如果希望水平，设置linear)
-  # candidate_list_layout: stacked  # stacked | linear | tabled
-  
+  # candidate_list_layout: tabled  # stacked | linear | tabled
+
   text_orientation: horizontal  # horizontal | vertical
   # 内嵌预编辑
   inline_preedit: false
   inline_candidate: false
-  
+
   # 展示分页
-  show_paging : true
-  
+  show_paging: false
+
   # 记住面板大小后,它朝向屏幕中心扩展,而不是远离屏幕中心。
-  remember_size: false
+  remember_size: true
 
   # 外边框 圆角半径
   corner_radius: 10
   # 色彩空间： srgb | display_p3
   color_space: srgb
-  
+
   # 选中框 圆角半径
   hilited_corner_radius: 0
-  
+
   # 窗口边界高度，大于圆角半径才生效
   border_height: 0
   # 窗口边界宽度，大于圆角半径才生效
@@ -71,6 +70,19 @@ style:
   comment_font_face: 'PingFang SC'
   comment_font_point: 14
 
+  max_preedit_height: 200
+  max_candidate_height: 400
+  min_compare_length: 10  # 最小比较候选词长度, 也就是超过5个字, 才需要进行比较
+  candidate_diff_color: "0x00ECF5" # 橙色（注意：此主题解析为 0xBBGGRR 或 0xAABBGGRR）
+  candidate_diff_bold: true # 是否启用候选词差异
+  markdown_ai_response: true          # 启用AI内容Markdown渲染
+  markdown_ai_render: "webview"       # AI内容Markdown渲染方式: "webview" | "original"
+  webview_font_size: 20               # webview渲染字体大小
+  webview_frame_height: 600              # webview渲染窗口高度
+  webview_frame_width: 600              # webview渲染窗口宽度
+  webview_markdown_theme: "Things"  # resources/theme/Things
+
+
 preset_color_schemes:
   native:
     name: 系統配色
@@ -81,7 +93,7 @@ preset_color_schemes:
     translucency: true                     # 磨砂： false | true
     mutual_exclusive: false                 # 色不叠加： false | true
     shadow_size: 0                          # 阴影大小
-    line_spacing: 5                         # 行间距
+    line_spacing: 5                         # 行间距, 候选词之间的空间
     # base_offset: 0                          # 字基高(Action版本鼠须管会崩溃)
     alpha: 1                                # 透明度，0~1
     spacing: 10                             # 拼音与候选项之间的距离 （inline_preedit: false）
@@ -95,9 +107,7 @@ preset_color_schemes:
     hilited_comment_text_color: 0xefefef    # 选中注颜色
     text_color: 0x6495ed                    # 拼音颜色 （inline_preedit: false）,0x0000ff 红色 0x6495ed 橙色
     hilited_text_color: 0xed9564            # 选中拼音颜色 （inline_preedit: false）
-    max_preedit_height: 200
-    max_candidate_height: 400
-    
+
   mint_dark_blue:
     name: 黑水鸭／Mint Dark Blue
     author: Mintimate <"Mintimate's Blog">
@@ -118,7 +128,6 @@ preset_color_schemes:
     hilited_comment_text_color: 0xffffff    # 选中注颜色
     text_color: 0x6495ed                    # 拼音颜色 （inline_preedit: false）
     hilited_text_color: 0xc6c01a            # 选中拼音颜色 （inline_preedit: false）
-    
   mint_light_green:
     name: "碧皓青／Mint Light Green"
     author: Mintimate <"Mintimate's Blog">
@@ -136,7 +145,6 @@ preset_color_schemes:
     text_color: 0x7BAE4F                    # 拼音颜色 （inline_preedit: false）
     hilited_text_color: 0xed9564            # 选中拼音颜色 （inline_preedit: false）
 
-    
   mint_dark_green:
     name: "碧月青／Mint Dark Green"
     author: Mintimate <"Mintimate's Blog">
@@ -155,7 +163,6 @@ preset_color_schemes:
     hilited_text_color: 0xed9564            # 选中拼音颜色 （inline_preedit: false）
 
 
-    
 
   aqua:
     name: 碧水／Aqua
@@ -264,7 +271,7 @@ preset_color_schemes:
     author: LIANG Hai
     candidate_list_layout: linear  # 水平排列
     inline_preedit: true #单行显示，false双行显示
-    candidate_format: "%c\u2005%@\u2005"  # 编号 %c 和候选词 %@ 前后的空间
+    candidate_format: "%c %@ "            # 编号 %c 和候选词 %@ 前后的空间
     corner_radius: 5  #候选条圆角
     border_height: 0
     border_width: 0
@@ -283,7 +290,7 @@ preset_color_schemes:
     author: Superoutman <asticosmo@gmail.com>
     candidate_list_layout: linear  # 水平排列
     inline_preedit: true #单行显示，false双行显示
-    candidate_format: "%c\u2005%@\u2005"  # 用 1/6 em 空格 U+2005 来控制编号 %c 和候选词 %@ 前后的空间。
+    candidate_format: "%c %@ "            # 用 1/6 em 空格 U+2005 来控制编号 %c 和候选词 %@ 前后的空间。
     corner_radius: 2  #候选条圆角
     border_height: 3                                   # 窗口边界高度，大于圆角半径才生效
     border_width: 8                                    # 窗口边界宽度，大于圆角半径才生效
@@ -308,7 +315,7 @@ preset_color_schemes:
     author: xiehuc <xiehuc@gmail.com>
     candidate_list_layout: linear                        # 水平排列
     inline_preedit: true                    # 单行显示，false双行显示
-    candidate_format: "%c\u2005%@"    # 用 1/6 em 空格 U+2005 来控制编号 %c 和候选词 %@ 前后的空间。
+    candidate_format: "%c %@"         # 用 1/6 em 空格 U+2005 来控制编号 %c 和候选词 %@ 前后的空间。
     corner_radius: 5                        # 候选条圆角
     hilited_corner_radius: 3                # 高亮圆角
     border_height: 6                        # 窗口边界高度，大于圆角半径才生效
@@ -949,7 +956,7 @@ preset_color_schemes:
     alpha: 0.95
     candidate_list_layout: linear
     inline_preedit: true
-    candidate_format: "%c\u2005%@"
+    candidate_format: "%c %@"
     corner_radius: 5
     border_height: 0
     border_width: 0
@@ -975,7 +982,7 @@ preset_color_schemes:
     alpha: 0.95
     candidate_list_layout: linear
     inline_preedit: true
-    candidate_format: "%c\u2005%@"
+    candidate_format: "%c %@"
     corner_radius: 5
     border_height: 0
     border_width: 0
@@ -1040,8 +1047,8 @@ preset_color_schemes:
     label_font_point: 12
     label_color: 0x777777
     text_color: 0xBBBBBB
-  
-    
+
+
   phub:
     name: 'phub' # 配色取自phub
     author: phub
@@ -1083,7 +1090,13 @@ preset_color_schemes:
 
 
 
-# app_options:
+app_options:
+  com.microsoft.VSCode:
+    # ascii_mode: true
+    # in_vscode: true
+    vim_mode: true
+  md.obsidian:
+    vim_mode: true
 #   com.apple.Spotlight:
 #     ascii_mode: true
 #   com.alfredapp.Alfred:
@@ -1092,12 +1105,14 @@ preset_color_schemes:
 #     ascii_mode: true
 #   com.blacktree.Quicksilver:
 #     ascii_mode: true
-#   com.apple.Terminal:
-#     ascii_mode: true
-#     no_inline: true
-#   com.googlecode.iterm2:
-#     ascii_mode: true
-#     no_inline: true
+  com.apple.Terminal:
+    ascii_mode: true
+    # no_inline: true
+    vim_mode: true
+  com.googlecode.iterm2:
+    ascii_mode: true
+    # no_inline: true
+    vim_mode: true
 #   org.vim.MacVim:
 #     ascii_mode: true  # 初始爲西文模式
 #     no_inline: true   # 不使用行內編輯
@@ -1110,9 +1125,6 @@ preset_color_schemes:
 #     ascii_mode: true
 #   com.github.atom:
 #     ascii_mode: true
-#   com.microsoft.VSCode:
-#     ascii_mode: true
-#     in_vscode: true
 #   com.sublimetext.2:
 #     ascii_mode: true
 #   org.gnu.Aquamacs:

@@ -278,16 +278,14 @@ function rawenglish_translator.func(input, seg, env)
 
     -- 检查输入如果长度是1, 而且只有一个英文模式符号, 则单独进行处理, 如果不是英文模式符号而且只有一个字符,则直接退出
     if #input == 1 then
-        if input == rawenglish_translator.english_mode_symbol then
-            local triple_symbol =
-                rawenglish_translator.english_mode_symbol .. rawenglish_translator.english_mode_symbol ..
-                    rawenglish_translator.english_mode_symbol
-            local candidate1 = Candidate("punct", seg.start, seg._end, triple_symbol, "")
-            candidate1.preedit = rawenglish_translator.english_mode_symbol
+        if input == "`" then
+            local markdown_code_symbol = "```\n\n```"
+            local candidate1 = Candidate("punct", seg.start, seg._end, markdown_code_symbol, "")
+            candidate1.preedit = "`" 
             -- logger.debug("英文模式符号上屏: " .. input)
-            -- local candidate2 = Candidate("punct", seg.start, seg._end, rawenglish_translator.english_mode_symbol, "")
+            local candidate2 = Candidate("punct", seg.start, seg._end, "`", "")
             yield(candidate1)
-            -- yield(candidate2)
+            yield(candidate2)
             return
         else
 
