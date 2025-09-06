@@ -37,6 +37,38 @@ local tcp_socket_sync = {}
 -- 存储更新函数的引用
 tcp_socket_sync.update_all_modules_config = nil
 
+-- 全局开关状态（仅内存，不落盘）。键为 option 名，值为 boolean。
+tcp_socket_sync.global_option_state = {}
+tcp_socket_sync.update_global_option_state = false
+
+-- 记录一个全局开关值
+function tcp_socket_sync.set_global_option(name, value)
+    if type(name) ~= "string" then
+        return
+    end
+    local bool_val = not not value
+    if tcp_socket_sync.global_option_state[name] ~= bool_val then
+        tcp_socket_sync.global_option_state[name] = bool_val
+        logger.debug(string.format("记录全局开关: %s = %s", name, tostring(bool_val)))
+    end
+end
+
+-- 将已记录的全局开关应用到当前 context，返回应用的数量
+function tcp_socket_sync.apply_global_options_to_context(context)
+    if not context then
+        return 0
+    end
+    local applied = 0
+    for name, val in pairs(tcp_socket_sync.global_option_state) do
+        if context:get_option(name) ~= val then
+            context:set_option(name, val)
+            applied = applied + 1
+            logger.debug(string.format("应用全局开关到context: %s = %s", name, tostring(val)))
+        end
+    end
+    return applied
+end
+
 -- 设置配置更新处理器（由外部调用）, 可以由调用者传入一个函数handler, 将这个函数绑定到config_update_handler中.
 function tcp_socket_sync.set_config_update_handler(config_update_function, property_update_function)
     tcp_socket_sync.update_all_modules_config = config_update_function
@@ -830,9 +862,10 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
         logger.debug("command_messege.option_value: " .. tostring(command_messege.option_value))
         if context then
             if context:get_option(command_messege.option_name) ~= command_messege.option_value then
-                context:set_option(command_messege.option_name, command_messege.option_value)
-                logger.debug("已设置选项: " .. tostring(command_messege.option_name) .. " = " ..
-                                 tostring(command_messege.option_value))
+                tcp_socket_sync.update_global_option_state = true
+                -- 记录到模块级全局变量，供其他会话/模块读取与应用
+                tcp_socket_sync.set_global_option(command_messege.option_name, command_messege.option_value)
+
             end
             local response = {
                 response = "option_set",

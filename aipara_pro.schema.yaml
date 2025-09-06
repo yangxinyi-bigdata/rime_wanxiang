@@ -64,7 +64,7 @@ switches:
     reset: 0
   - name: ascii_punct                  # 中英标点
     states: [。, .]
-    reset: 1
+    reset: 0
   - name: full_shape                   #全角、半角字符输出
     states: [半角, 全角]
     reset: 0
@@ -212,6 +212,16 @@ ai_assistant:
     openai_search_ai_chat: "AI搜索:"
     summarize_ai_chat: "AI总结:"
     improve_ai_chat: "AI改进:"
+
+app_options:
+  com_1password_1password:
+    __label__: 1Password (com.1password.1password)
+
+    ascii_punct: false
+    full_shape: false
+  com_microsoft_VSCode:
+    __label__: Code (com.microsoft.VSCode)
+    ascii_punct: false
 birthday_reminder:  #日期格式：必须是4位数字，格式为MMDD（月份和日期），例如：1月27日 → 0127 ，#备注格式：在日期后添加逗号，然后添加任意文本作为备注，例如："0501,我的好朋友"，也可以无备注
 #shijian:仅仅作为提示使用，编码已经写死，引导适应性更高，如有需求lua中修改
 #时间：osj 或者 /sj
@@ -311,13 +321,13 @@ translator:
 #    - "^[a-z]{1,6}"    #基本的6码3字不调频
   enable_correction: false #是否开启自动纠错
   initial_quality: 3       # 初始质量拼音的权重应该比英文大
-  cloud_convert_symbol: "Return"  # 云输入符号转换，按下 Shift+Return 键触发
+  cloud_convert_symbol: "Shift+Return"  # 云输入符号转换，按下 Shift+Return 键触发
   # cloud_convert_symbol: "Return"  # 云输入符号转换，按下 Shift+Return 键触发
   english_mode_symbol: "`"  # 英文模式下的符号
-  rawenglish_delimiter_before: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
-  rawenglish_delimiter_after: " "  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
-  replace_punct_enabled: true  # 是否启用中文标点替换功能，true 为启用，false 为禁用
-  keep_input_uncommit: true  # 保留未上屏的input中输入内容
+  rawenglish_delimiter_before: "【"  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
+  rawenglish_delimiter_after: "】"  # 反引号分隔符，默认为反引号，空格分隔符可以使用空格替换，或者自定义其他字符
+  replace_punct_enabled: false # 是否启用中文标点替换功能，true 为启用，false 为禁用
+  keep_input_uncommit: false  # 保留未上屏的input中输入内容
   preedit_format:     #影响到输入框的显示和“Shift+回车”上屏的字符，交给super_preedit处理
     # __patch:
     #   - 自然码渲染   # 引用
@@ -417,6 +427,9 @@ punctuator:
 
 # 从 default 继承快捷键
 key_binder:
+  # Lua 配置: 以词定字（上屏当前词句的第一个或最后一个字），和中括号翻页有冲突
+  select_first_character: "bracketleft"     # 左中括号 [
+  select_last_character: "bracketright"     # 右中括号 ]
   import_preset: default  # 从 default.yaml 继承通用的
   # Lua 配置: shijian.lua 的引导符，涉及：日期、时间、节日、节气、生日、问候模板等功能
   shijian_keys: ["/"]
@@ -431,7 +444,8 @@ key_binder:
     #- { when: composing, accept: Tab, send: '[' } ## 取消注释后：tab引导辅助码
     - {when: composing, accept: Control+w, send: Control+BackSpace}
 #分号用于次选，微软、搜狗双拼不可启用
-    #- { when: has_menu, accept: semicolon, send: 2 }
+    - {when: has_menu, accept: None, send: 2}
+    - {when: has_menu, accept: None, send: 3}
 #使用Control+e进入翻译模式
     - {when: has_menu, accept: "Control+e", toggle: chinese_english}
 #通过快捷键Control+g开启字符集过滤

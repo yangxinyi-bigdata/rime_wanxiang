@@ -18,7 +18,7 @@ show_notifications_when: appropriate
 
 style:
   # 选择皮肤，亮色与暗色主题
-  color_scheme: "mint_light_green"
+  color_scheme: "mint_light_blue"
   color_scheme_dark: "mint_dark_green"
 
   # 预设选项。如果皮肤没写，则使用这些属性；如果皮肤写了，使用皮肤的。
@@ -72,16 +72,26 @@ style:
 
   max_preedit_height: 200
   max_candidate_height: 400
-  min_compare_length: 10  # 最小比较候选词长度, 也就是超过5个字, 才需要进行比较
-  candidate_diff_color: "0x00ECF5" # 橙色（注意：此主题解析为 0xBBGGRR 或 0xAABBGGRR）
-  candidate_diff_bold: true # 是否启用候选词差异
+
   markdown_ai_response: true          # 启用AI内容Markdown渲染
-  markdown_ai_render: "webview"       # AI内容Markdown渲染方式: "webview" | "original"
+  markdown_ai_render: "webview"      # AI内容Markdown渲染方式: "webview" | "original"
   webview_font_size: 20               # webview渲染字体大小
   webview_frame_height: 600              # webview渲染窗口高度
   webview_frame_width: 600              # webview渲染窗口宽度
-  webview_markdown_theme: "Things"  # resources/theme/Things
+  webview_markdown_theme: "Things"  # /Things/Minimal/Test/Topaz
 
+  candidate_diff_enable: true # 是否启用候选词差异
+  candidate_diff_color: "0x0093FF" # 橙色（注意：此主题解析为 0xBBGGRR 或 0xAABBGGRR）
+  candidate_diff_bold: true # 是否启用候选词加粗
+  min_compare_length: 5  # 最小比较候选词长度, 也就是超过5个字, 才需要进行比较
+
+webview_available_theme:
+  - "Topaz"
+  - "Minimal"
+  - "Test"
+  - "Things"
+  - "GitHub"
+  - "Typewriter"
 
 preset_color_schemes:
   native:
@@ -1097,6 +1107,7 @@ app_options:
     vim_mode: true
   md.obsidian:
     vim_mode: true
+    ascii_punct: false
 #   com.apple.Spotlight:
 #     ascii_mode: true
 #   com.alfredapp.Alfred:

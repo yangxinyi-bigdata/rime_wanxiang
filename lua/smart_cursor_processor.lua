@@ -46,6 +46,7 @@ smart_cursor_processor.paste_to_input = nil
 smart_cursor_processor.search_move_cursor = nil
 smart_cursor_processor.shuru_schema = nil
 smart_cursor_processor.chat_triggers = {}
+local previous_client_app = ""
 
 -- 读取配置的辅助函数，从config中读取并缓存到模块级变量
 function smart_cursor_processor.update_current_config(config)
@@ -100,6 +101,14 @@ function smart_cursor_processor.init(env)
 
     -- 配置更新由 cloud_input_processor 统一管理，无需在此处调用
     logger.info("等待 cloud_input_processor 统一更新配置")
+
+    -- 初始化时应用 tcp_socket_sync 记录的全局开关（实现跨会话同步）
+    if tcp_socket and tcp_socket.apply_global_options_to_context then
+        local applied = tcp_socket.apply_global_options_to_context(context)
+        if applied > 0 then
+            logger.info("初始化应用全局开关数量: " .. tostring(applied))
+        end
+    end
 
     -- 定义标点符号集合
     env.punctuation_chars = {
@@ -242,6 +251,32 @@ function smart_cursor_processor.init(env)
         --                    input, caret_pos, tostring(is_composing)))
 
     end)
+
+    env.property_update_notifier = context.property_update_notifier:connect(function(context)
+        -- 属性更新通知：当 client_app 变化时，将 tcp_socket 的全局开关应用到新会话
+        local current_app = context:get_property("client_app")
+        if current_app ~= "" then
+            logger.debug("current_app: " .. current_app)
+        end
+
+        if previous_client_app == "" and current_app ~= "" then
+            previous_client_app = current_app
+            logger.debug("第一次设置prev_app(env):  current_app: " .. current_app)
+            return
+        elseif current_app ~= "" and previous_client_app ~= "" and current_app ~= previous_client_app then
+            logger.debug("current_app ~= prev_app: previous_client_app(env): " .. previous_client_app ..
+                             " current_app: " .. current_app)
+
+            previous_client_app = current_app
+            -- 切换到新会话后，应用一次全局开关（覆盖各会话差异，保持一致）
+            if tcp_socket and tcp_socket.apply_global_options_to_context then
+                local applied = tcp_socket.apply_global_options_to_context(context)
+                if applied > 0 then
+                    logger.info("切换会话时应用全局开关数量: " .. tostring(applied))
+                end
+            end
+        end
+    end)
     -- env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
     --     -- 只要出发了上屏通知,就关闭搜索模式
     --     -- 退出搜索模式
@@ -282,11 +317,8 @@ function smart_cursor_processor.init(env)
     -- end)
 
     -- env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
-    --     if tcp_socket then
-    --         tcp_socket.sync_with_server(context)
-    --     else
-    --         logger.debug("sync_module为nil，跳过状态更新")
-    --     end
+    --     logger.debug("unhandled_key_notifier触发： sync_with_server和服务端同步信息")
+    --     tcp_socket.sync_with_server(env, true)
     -- end)
 
     env.new_update_notifier = context.update_notifier:connect(function(context)
@@ -601,18 +633,26 @@ function smart_cursor_processor.func(key, env)
     local key_repr = key:repr()
     logger.info("key_repr: " .. key_repr)
 
+    -- update_global_option_state为true，则应用一次全局开关（覆盖各会话差异，保持一致）
+    if tcp_socket and tcp_socket.update_global_option_state then
+        local applied = tcp_socket.apply_global_options_to_context(context)
+        if applied > 0 then
+            logger.info("切换应用全局开关数量: " .. tostring(applied))
+        end
+    end
+
     if not key or not context:is_composing() then
         return kNoop
     end
-    local composition = context.composition 
-    
+    local composition = context.composition
+
     -- logger.info("开始测试: ")
     -- local user_data_dir = rime_api.get_user_data_dir()
     -- local config = engine.schema.config
     -- -- 载入squirrel.yaml
     -- config:load_from_file(user_data_dir .. "/" .. "squirrel.yaml")
     -- local color_scheme = config:get_string("style/color_scheme") 
-    
+
     -- logger.debug("color_scheme: " .. tostring(color_scheme))
     -- if key_repr == "t" then
     --     config:set_string("style/color_scheme", "mint_light_green")
@@ -931,14 +971,13 @@ function smart_cursor_processor.fini(env)
         env.unhandled_key_notifier:disconnect()
     end
 
-    if env.http_server_update_notifier then
-        env.http_server_update_notifier:disconnect()
-    end
-
     if env.select_notifier then
         env.select_notifier:disconnect()
     end
 
+    if env.property_update_notifier then
+        env.property_update_notifier:disconnect()
+    end
     -- RimeTcpServer.stop()
 end
 

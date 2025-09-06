@@ -989,8 +989,11 @@ function cloud_input_processor.func(key, env)
     local key_repr = key:repr()
     logger.debug("测试虚拟按键: " .. key_repr)
 
-    -- local client_app = context:get_property("client_app")
-    -- logger.debug("client_app: " .. client_app)
+    local client_app = context:get_property("client_app")
+    logger.debug("client_app: " .. client_app)
+    
+    local ascii_punct = context:get_option("ascii_punct")
+    logger.debug("ascii_punct: " .. tostring(ascii_punct))
 
     -- 检查Alt+F11按键的处理
     if key_repr == "Alt+F11" then
@@ -1009,7 +1012,7 @@ function cloud_input_processor.func(key, env)
             context:set_property("get_ai_stream", "idle")
             if cloud_input_processor.ai_assistant_config.behavior.auto_commit_reply then
                 logger.debug("get_ai_stream==stop, 自动上屏: ")
-                     
+
                 -- logger.debug("确认当前AI回复候选词")
 
                 -- 在这里忘记考虑多行的可能性了,如果多行的话,这个地方会出现bug,所以还是应该用下面的那个.
@@ -1116,7 +1119,8 @@ function cloud_input_processor.func(key, env)
                     local paste_success
                     logger.debug("send_key: " .. context:get_property("send_key"))
                     if context:get_property("send_key") ~= "" then
-                        paste_success = tcp_socket.sync_with_server(env, true, true, "button", "paste_then_" .. context:get_property("send_key"))
+                        paste_success = tcp_socket.sync_with_server(env, true, true, "button",
+                            "paste_then_" .. context:get_property("send_key"))
                         context:set_property("send_key", "")
                     else
                         paste_success = tcp_socket.sync_with_server(env, false, false, "button", "paste")
