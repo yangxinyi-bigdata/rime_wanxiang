@@ -85,30 +85,31 @@ function cloud_ai_filter.update_current_config(config)
     cloud_ai_filter.chat_triggers = {}
     cloud_ai_filter.chat_names = {}
 
-    -- 获取 chat_triggers 配置项
-    local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
-    if chat_triggers_config then
-        -- 获取所有键名
-        local trigger_keys = chat_triggers_config:keys()
-        logger.info("找到 " .. #trigger_keys .. " 个触发器配置")
+    -- 获取 ai_prompts 配置项（新结构）
+    local ai_prompts_config = config:get_map("ai_assistant/ai_prompts")
+    if ai_prompts_config then
+        local trigger_keys = ai_prompts_config:keys()
+        logger.info("找到 " .. #trigger_keys .. " 个 ai_prompts 配置")
 
-        -- 遍历配置中的所有触发器
+        -- 遍历 ai_prompts 中的所有触发器
         for _, trigger_name in ipairs(trigger_keys) do
-            local trigger_value = config:get_string("ai_assistant/chat_triggers/" .. trigger_name)
-            local chat_name = config:get_string("ai_assistant/chat_names/" .. trigger_name)
+            local base_key = "ai_assistant/ai_prompts/" .. trigger_name
 
-            if trigger_value then
+            local trigger_value = config:get_string(base_key .. "/chat_triggers")
+            local chat_name = config:get_string(base_key .. "/chat_names")
+
+            if trigger_value and #trigger_value > 0 then
                 cloud_ai_filter.chat_triggers[trigger_name] = trigger_value
                 logger.info("AI触发器 - " .. trigger_name .. ": " .. trigger_value)
             end
 
-            if chat_name then
+            if chat_name and #chat_name > 0 then
                 cloud_ai_filter.chat_names[trigger_name] = chat_name
                 logger.info("AI聊天名称 - " .. trigger_name .. ": " .. chat_name)
             end
         end
     else
-        logger.warn("未找到 chat_triggers 配置")
+        logger.warn("未找到 ai_prompts 配置")
     end
 
     -- 读取其他配置项

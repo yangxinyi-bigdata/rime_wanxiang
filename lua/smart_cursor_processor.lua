@@ -69,24 +69,25 @@ function smart_cursor_processor.update_current_config(config)
     -- 重新初始化chat_triggers
     smart_cursor_processor.chat_triggers = {}
 
-    -- 动态读取 chat_triggers 配置
-    local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
-    if chat_triggers_config then
+    -- 动态读取 ai_prompts 配置（新结构）
+    local ai_prompts_config = config:get_map("ai_assistant/ai_prompts")
+    if ai_prompts_config then
         -- 获取所有键名
-        local trigger_keys = chat_triggers_config:keys()
-        logger.info("找到 " .. #trigger_keys .. " 个触发器配置")
+        local trigger_keys = ai_prompts_config:keys()
+        logger.info("找到 " .. #trigger_keys .. " 个 ai_prompts 配置")
 
-        -- 遍历配置中的所有触发器
+        -- 遍历 ai_prompts 中的所有触发器项
         for _, trigger_name in ipairs(trigger_keys) do
-            local trigger_value = config:get_string("ai_assistant/chat_triggers/" .. trigger_name)
+            local base_key = "ai_assistant/ai_prompts/" .. trigger_name
+            local trigger_value = config:get_string(base_key .. "/chat_triggers")
 
-            if trigger_value then
+            if trigger_value and #trigger_value > 0 then
                 smart_cursor_processor.chat_triggers[trigger_name] = trigger_value
                 logger.info("云输入触发器 - " .. trigger_name .. ": " .. trigger_value)
             end
         end
     else
-        logger.warn("未找到 chat_triggers 配置")
+        logger.warn("未找到 ai_prompts 配置")
     end
 
     logger.info("smart_cursor_processor模块配置更新完成")

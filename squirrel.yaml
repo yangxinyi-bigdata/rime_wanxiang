@@ -1107,7 +1107,6 @@ app_options:
     vim_mode: true
   md.obsidian:
     vim_mode: true
-    ascii_punct: false
 #   com.apple.Spotlight:
 #     ascii_mode: true
 #   com.alfredapp.Alfred:

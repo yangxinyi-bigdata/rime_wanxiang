@@ -62,54 +62,56 @@ function ai_assistant_segmentor.update_current_config(config)
     -- 新增：重置触发器反向查表
     ai_assistant_segmentor.chat_triggers_reverse = {}
 
-    -- 获取 chat_triggers 配置项
-    local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
-    if chat_triggers_config then
-        -- 获取所有键名
-        local trigger_keys = chat_triggers_config:keys()
-        logger.info("找到 " .. #trigger_keys .. " 个触发器配置")
+    -- 获取 ai_prompts 配置项（新结构）
+    local ai_prompts_config = config:get_map("ai_assistant/ai_prompts")
+    if ai_prompts_config then
+        local trigger_keys = ai_prompts_config:keys()
+        logger.info("找到 " .. #trigger_keys .. " 个 ai_prompts 配置")
 
-        -- 遍历配置中的所有触发器
+        -- 遍历 ai_prompts 中的每个助手条目
         for _, trigger_name in ipairs(trigger_keys) do
-            local trigger_value = config:get_string("ai_assistant/chat_triggers/" .. trigger_name)
-            local reply_messages_preedit = config:get_string("ai_assistant/reply_messages_preedits/" .. trigger_name)
-            local chat_name = config:get_string("ai_assistant/chat_names/" .. trigger_name)
+            local base_key = "ai_assistant/ai_prompts/" .. trigger_name
 
-            if trigger_value then
+            local trigger_value = config:get_string(base_key .. "/chat_triggers")
+            local reply_messages_preedit = config:get_string(base_key .. "/reply_messages_preedits")
+            local chat_name = config:get_string(base_key .. "/chat_names")
+
+            if trigger_value and #trigger_value > 0 then
+                -- 正向映射：名称 -> 触发前缀，如 normal_ai_chat -> "ai:"
                 ai_assistant_segmentor.chat_triggers[trigger_name] = trigger_value
                 logger.info("聊天触发器 - " .. trigger_name .. ": " .. trigger_value)
 
-                -- 新增：建立反向映射，便于 O(1) 查找
+                -- 反向映射：触发前缀 -> 名称，如 "ai:" -> normal_ai_chat
                 ai_assistant_segmentor.chat_triggers_reverse[trigger_value] = trigger_name
                 logger.debug("触发器反向映射 - " .. trigger_value .. " -> " .. trigger_name)
 
-                -- 预处理：去掉冒号并保存映射
+                -- 预处理：去掉末尾冒号，建立 clean_prefix -> 元信息 的映射
                 local clean_prefix = trigger_value:gsub(":$", "")
                 ai_assistant_segmentor.clean_prefix_to_trigger[clean_prefix] = {
                     trigger_name = trigger_name,
                     trigger_prefix = trigger_value,
-                    chat_name = chat_name
+                    chat_name = chat_name,
                 }
                 logger.info("预处理触发器前缀 - " .. clean_prefix .. " -> " .. trigger_name)
             end
 
-            if reply_messages_preedit then
+            if reply_messages_preedit and #reply_messages_preedit > 0 then
                 ai_assistant_segmentor.reply_messages_preedits[trigger_name] = reply_messages_preedit
                 logger.info("回复消息 - " .. trigger_name .. ": " .. reply_messages_preedit)
-                -- 同步构建：将 key 增加 "_reply:" 后作为输入快速查找表
+
+                -- 回复输入映射：例如 "normal_ai_chat_reply:" -> "normal_ai_chat"
                 local reply_input_key = trigger_name .. "_reply:"
                 ai_assistant_segmentor.reply_inputs_to_trigger[reply_input_key] = trigger_name
                 logger.info("回复输入映射 - " .. reply_input_key .. " -> " .. trigger_name)
             end
 
-            if chat_name then
+            if chat_name and #chat_name > 0 then
                 ai_assistant_segmentor.chat_names[trigger_name] = chat_name
                 logger.info("聊天名称 - " .. trigger_name .. ": " .. chat_name)
             end
-
         end
     else
-        logger.warn("未找到 chat_triggers 配置")
+        logger.warn("未找到 ai_prompts 配置")
     end
 
     -- 不进行排序：假设配置不会产生多前缀同时匹配同一输入；若出现即为配置问题。

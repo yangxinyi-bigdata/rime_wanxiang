@@ -57,37 +57,37 @@ function ai_assistant_translator.update_current_config(config)
     ai_assistant_translator.chat_names = {}
     ai_assistant_translator.reply_input_to_trigger = {}
 
-    -- 动态读取 chat_triggers 配置
-    local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
-    if chat_triggers_config then
-        -- 获取所有键名
-        local trigger_keys = chat_triggers_config:keys()
-        logger.info("找到 " .. #trigger_keys .. " 个触发器配置")
+    -- 动态读取 ai_prompts 配置（新结构）
+    local ai_prompts_config = config:get_map("ai_assistant/ai_prompts")
+    if ai_prompts_config then
+        local trigger_keys = ai_prompts_config:keys()
+        logger.info("找到 " .. #trigger_keys .. " 个 ai_prompts 项")
 
-        -- 遍历配置中的所有触发器
+        -- 遍历 ai_prompts 中的所有触发器条目
         for _, trigger_name in ipairs(trigger_keys) do
-            local trigger_value = config:get_string("ai_assistant/chat_triggers/" .. trigger_name)
-            local reply_message_preedit = config:get_string("ai_assistant/reply_messages_preedits/" .. trigger_name)
-            local chat_name = config:get_string("ai_assistant/chat_names/" .. trigger_name)
+            local base_key = "ai_assistant/ai_prompts/" .. trigger_name
 
-            if trigger_value then
+            local trigger_value = config:get_string(base_key .. "/chat_triggers")
+            local reply_message_preedit = config:get_string(base_key .. "/reply_messages_preedits")
+            local chat_name = config:get_string(base_key .. "/chat_names")
+
+            if trigger_value and #trigger_value > 0 then
                 ai_assistant_translator.chat_triggers[trigger_name] = trigger_value
                 logger.info("AI触发器 - " .. trigger_name .. ": " .. trigger_value)
             end
 
-            if reply_message_preedit then
+            if reply_message_preedit and #reply_message_preedit > 0 then
                 ai_assistant_translator.reply_messages_preedits[trigger_name] = reply_message_preedit
                 logger.info("AI回复预编辑消息 - " .. trigger_name .. ": " .. reply_message_preedit)
             end
 
-            if chat_name then
+            if chat_name and #chat_name > 0 then
                 ai_assistant_translator.chat_names[trigger_name] = chat_name
                 logger.info("AI聊天名称 - " .. trigger_name .. ": " .. chat_name)
             end
-
         end
     else
-        logger.warn("未找到 chat_triggers 配置")
+        logger.warn("未找到 ai_prompts 配置")
     end
 
     -- 创建标签到触发器的反向映射

@@ -121,36 +121,38 @@ function cloud_input_processor.update_current_config(config)
     logger.debug("行为配置 - after_question_send_key: " ..
                      tostring(cloud_input_processor.ai_assistant_config.behavior.after_question_send_key))
 
-    -- 动态读取 chat_triggers 配置
-    local chat_triggers_config = config:get_map("ai_assistant/chat_triggers")
-    if chat_triggers_config then
+    -- 动态读取 ai_prompts 配置（新结构）
+    local ai_prompts_config = config:get_map("ai_assistant/ai_prompts")
+    if ai_prompts_config then
         -- 获取所有键名
-        local trigger_keys = chat_triggers_config:keys()
-        logger.debug("找到 " .. #trigger_keys .. " 个触发器配置")
+        local trigger_keys = ai_prompts_config:keys()
+        logger.debug("找到 " .. #trigger_keys .. " 个 ai_prompts 配置")
 
-        -- 遍历配置中的所有触发器
+        -- 遍历配置中的所有触发器条目
         for _, trigger_name in ipairs(trigger_keys) do
-            local trigger_value = config:get_string("ai_assistant/chat_triggers/" .. trigger_name)
-            local reply_message = config:get_string("ai_assistant/reply_messages_preedits/" .. trigger_name)
-            local chat_name = config:get_string("ai_assistant/chat_names/" .. trigger_name)
+            local base_key = "ai_assistant/ai_prompts/" .. trigger_name
 
-            if trigger_value then
+            local trigger_value = config:get_string(base_key .. "/chat_triggers")
+            local reply_message = config:get_string(base_key .. "/reply_messages_preedits")
+            local chat_name = config:get_string(base_key .. "/chat_names")
+
+            if trigger_value and #trigger_value > 0 then
                 cloud_input_processor.ai_assistant_config.chat_triggers[trigger_name] = trigger_value
                 logger.debug("云输入触发器 - " .. trigger_name .. ": " .. trigger_value)
             end
 
-            if chat_name then
+            if chat_name and #chat_name > 0 then
                 cloud_input_processor.ai_assistant_config.chat_names[trigger_name] = chat_name
                 logger.debug("聊天名称 - " .. trigger_name .. ": " .. chat_name)
             end
 
-            if reply_message then
+            if reply_message and #reply_message > 0 then
                 cloud_input_processor.ai_assistant_config.reply_messages_preedits[trigger_name] = reply_message
                 logger.debug("云输入回复消息 - " .. trigger_name .. ": " .. reply_message)
             end
         end
     else
-        logger.warn("未找到 chat_triggers 配置")
+        logger.warn("未找到 ai_prompts 配置")
     end
 
     -- 创建触发器前缀到回复消息的映射

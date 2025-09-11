@@ -42,14 +42,13 @@ function punct_eng_chinese_filter.update_current_config(config)
     punct_eng_chinese_filter.ai_reply_tags = {}
     punct_eng_chinese_filter.ai_chat_triggers = {}
 
-    -- 读取 AI 助手触发器配置，动态生成回复标签
-    local chat_triggers_map = config:get_map("ai_assistant/chat_triggers")
-    if chat_triggers_map then
-        local trigger_keys = chat_triggers_map:keys()
+    -- 读取 AI 助手触发器配置，动态生成回复标签（新结构 ai_prompts）
+    local ai_prompts_map = config:get_map("ai_assistant/ai_prompts")
+    if ai_prompts_map then
+        local trigger_keys = ai_prompts_map:keys()
         local tag_count = 0
-        -- 使用标准的 Lua table 遍历方式
         for _, trigger_name in ipairs(trigger_keys) do
-            -- 保存原始的chat trigger标签
+            -- 保存触发器标签（使用条目名作为标签）
             punct_eng_chinese_filter.ai_chat_triggers[trigger_name] = true
             logger.info("保存AI聊天触发器标签: " .. trigger_name)
 
@@ -61,7 +60,7 @@ function punct_eng_chinese_filter.update_current_config(config)
         end
         logger.info("AI标签生成完成，共 " .. tostring(tag_count) .. " 个触发器和回复标签")
     else
-        logger.info("未找到AI触发器配置")
+        logger.info("未找到 ai_prompts 配置")
     end
 end
 
