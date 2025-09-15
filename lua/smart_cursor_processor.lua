@@ -60,6 +60,8 @@ function smart_cursor_processor.update_current_config(config)
     smart_cursor_processor.shuru_schema = config:get_string("schema/my_shuru_schema")
     smart_cursor_processor.keep_input_uncommit = config:get_bool("translator/keep_input_uncommit")
 
+    smart_cursor_processor.app_options = config:get_map("app_options")
+
     logger.info("键位配置 - move_next_punct: " .. tostring(smart_cursor_processor.move_next_punct))
     logger.info("键位配置 - move_prev_punct: " .. tostring(smart_cursor_processor.move_prev_punct))
     logger.info("键位配置 - search_move_cursor: " .. tostring(smart_cursor_processor.search_move_cursor))
@@ -256,14 +258,13 @@ function smart_cursor_processor.init(env)
     env.property_update_notifier = context.property_update_notifier:connect(function(context)
         -- 属性更新通知：当 client_app 变化时，将 tcp_socket 的全局开关应用到新会话
         local current_app = context:get_property("client_app")
-        if current_app ~= "" then
-            logger.debug("current_app: " .. current_app)
-        end
-
+        -- if current_app ~= "" then
+        --     logger.debug("current_app: " .. current_app)
+        -- end
         if previous_client_app == "" and current_app ~= "" then
             previous_client_app = current_app
             logger.debug("第一次设置prev_app(env):  current_app: " .. current_app)
-            return
+
         elseif current_app ~= "" and previous_client_app ~= "" and current_app ~= previous_client_app then
             logger.debug("current_app ~= prev_app: previous_client_app(env): " .. previous_client_app ..
                              " current_app: " .. current_app)
@@ -276,7 +277,35 @@ function smart_cursor_processor.init(env)
                     logger.info("切换会话时应用全局开关数量: " .. tostring(applied))
                 end
             end
+
+        else
+            return
         end
+
+        -- 切换到新的应用中后, 检查一次app_options当中的开关选项和当前的开关选项是否一致,如果不一致则切换成配置中设置的结果
+        -- 正常应该是检测到app变化之后再执行, 当前放在这里相当于每次都执行
+        -- 对app_options当中的每个应用选项进行检查
+        for _, app_key in ipairs(smart_cursor_processor.app_options:keys()) do
+            -- 将current_app中的"."替换成"_"
+            current_app = current_app:gsub("%.", "_")
+            if app_key == current_app then
+                -- logger.debug("current_app和app_key相同, 开始匹配开关状态")
+                local item = smart_cursor_processor.app_options:get(app_key)
+                if item and item.get_map then
+                    local app_map = item:get_map()
+                    for _, k in ipairs(app_map:keys()) do
+                        local value = config:get_bool("app_options/" .. app_key .. "/" .. k)
+                        logger.debug(" k: " .. k .. "value: " .. tostring(value))
+                        -- 这里应该是判断这个value和当前context中的开关状态是否一致,如果不一致则切换成配置中设置的结果
+                        if k ~= "__label__" and value ~= context:get_option(k) then
+                            context:set_option(k, value)
+                            logger.debug("set_option k: " .. k .. " value: " .. tostring(value))
+                        end
+                    end
+                end
+            end
+        end
+
     end)
     -- env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
     --     -- 只要出发了上屏通知,就关闭搜索模式

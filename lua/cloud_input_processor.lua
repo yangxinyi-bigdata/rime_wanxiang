@@ -991,11 +991,19 @@ function cloud_input_processor.func(key, env)
     local key_repr = key:repr()
     logger.debug("测试虚拟按键: " .. key_repr)
 
-    local client_app = context:get_property("client_app")
-    logger.debug("client_app: " .. client_app)
-    
-    local ascii_punct = context:get_option("ascii_punct")
-    logger.debug("ascii_punct: " .. tostring(ascii_punct))
+    -- -- 这里读取进来的会是什么呢? 
+    -- cloud_input_processor.app_options = config:get_map("app_options")
+    -- if cloud_input_processor.app_options then
+    --     for _, app_key in ipairs(cloud_input_processor.app_options:keys()) do
+    --         local item = cloud_input_processor.app_options:get(app_key)
+    --         if item and item.get_map then
+    --             local app_map = item:get_map()
+    --             for _, k in ipairs(app_map:keys()) do
+    --                 logger.debug("app_key: " .. app_key .. " k: " .. k .. " value: " .. config:get_string("app_options/" .. app_key .. "/" .. k) )
+    --             end
+    --         end
+    --     end
+    -- end
 
     -- 检查Alt+F11按键的处理
     if key_repr == "Alt+F11" then
