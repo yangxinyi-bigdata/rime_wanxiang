@@ -663,8 +663,8 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
 
                             -- 清理上次的候选词
                             local current_content = context:get_property("ai_replay_stream")
-                            if current_content ~= "" and current_content ~= "等待AI回复..." then
-                                context:set_property("ai_replay_stream", "等待AI回复...")
+                            if current_content ~= "" and current_content ~= "等待回复..." then
+                                context:set_property("ai_replay_stream", "等待回复...")
                             end
 
                             -- 如果当前不是start状态则设置为start状态
@@ -824,8 +824,8 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
 
                             -- 清理上次的候选词
                             local current_content = context:get_property("ai_replay_stream")
-                            if current_content ~= "" and current_content ~= "等待AI回复..." then
-                                context:set_property("ai_replay_stream", "等待AI回复...")
+                            if current_content ~= "" and current_content ~= "等待回复..." then
+                                context:set_property("ai_replay_stream", "等待回复...")
                             end
 
                             -- 设置一个属性说明当前将会进入AI提问轮的标识, 在哪里关闭呢 ?
@@ -1006,7 +1006,7 @@ function cloud_input_processor.func(key, env)
     -- end
 
     -- 检查Alt+F11按键的处理
-    if key_repr == "Alt+F11" then
+    if key_repr == "Alt+F14" then
         -- logger.debug("执行到Alt+F11分支")
         if context:get_property("get_ai_stream") == "start" then
             logger.debug("get_ai_stream==start, 触发重新刷新候选词: ")
@@ -1067,7 +1067,7 @@ function cloud_input_processor.func(key, env)
         end
     end
 
-    if key_repr == "Alt+F10" then
+    if key_repr == "Alt+F13" then
         if context:get_property("get_cloud_stream") == "starting" then
             logger.debug("get_cloud_stream==starting, 触发重新刷新云输入候选词: ")
             context:refresh_non_confirmed_composition()

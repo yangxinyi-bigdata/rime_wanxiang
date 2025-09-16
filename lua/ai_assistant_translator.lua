@@ -165,8 +165,8 @@ function ai_assistant_translator.init(env)
 
     --             -- 清理上次的候选词
     --             local current_content = context:get_property("ai_replay_stream")
-    --             if current_content ~= "" and current_content ~= "等待AI回复..." then
-    --                 context:set_property("ai_replay_stream", "等待AI回复...")
+    --             if current_content ~= "" and current_content ~= "等待回复..." then
+    --                 context:set_property("ai_replay_stream", "等待回复...")
     --             end
 
     --             -- 发送聊天消息，包含对话类型信息
@@ -276,7 +276,7 @@ function ai_assistant_translator.func(input, segment, env)
 
         local current_content = context:get_property("ai_replay_stream")
         if not current_content or current_content == "" then
-            current_content = "等待AI回复..."
+            current_content = "等待回复..."
         end
 
         local candidate = Candidate(matched_reply_tag, segment.start, segment._end, current_content, "")
@@ -349,8 +349,8 @@ function ai_assistant_translator.func(input, segment, env)
     local current_content = context:get_property("ai_replay_stream")
     logger.debug("current_content: " .. current_content)
     if current_content == "" then
-        current_content = "等待AI回复..."
-        logger.info("等待AI回复: " .. current_content)
+        current_content = "等待回复..."
+        logger.info("等待回复: " .. current_content)
     end
 
     -- 生成候选词

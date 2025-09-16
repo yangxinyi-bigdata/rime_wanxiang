@@ -232,7 +232,7 @@ function smart_cursor_processor.init(env)
             -- 如果内容
             local ai_replay_stream = context:get_property("ai_replay_stream")
             if context:get_property("get_ai_stream") ~= "idle" and
-                (ai_replay_stream ~= "" and ai_replay_stream ~= "等待AI回复...") then
+                (ai_replay_stream ~= "" and ai_replay_stream ~= "等待回复...") then
                 -- logger.debug("ai_replay_stream: " .. ai_replay_stream)
                 context:set_property("get_ai_stream", "idle")
             end
