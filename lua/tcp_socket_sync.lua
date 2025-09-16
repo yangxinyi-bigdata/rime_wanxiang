@@ -905,7 +905,6 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
 
         -- 实际更新配置
         
-
         -- 将点分隔的路径转换为Rime配置路径（用斜杠分隔）
         local rime_config_path = string.gsub(config_path, "%.", "/")
         logger.debug("转换后的配置路径: " .. rime_config_path)
@@ -945,6 +944,8 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
         if success then
             tcp_socket_sync.update_configs(config)
             logger.info("✅ update_all_modules_config配置更新成功")
+            -- 更新一个上下文属性
+            tcp_socket_sync.update_property("config_update_flag", "1")
         else
             logger.error("❌ 配置更新失败: " .. rime_config_path)
         end

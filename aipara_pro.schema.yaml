@@ -64,7 +64,7 @@ switches:
     reset: 0
   - name: ascii_punct                  # 中英标点
     states: [。, .]
-    reset: 0
+    reset: 1
   - name: full_shape                   #全角、半角字符输出
     states: [半角, 全角]
     reset: 0
@@ -268,8 +268,12 @@ app_options:
     __label__: Obsidian (md.obsidian)
     ascii_punct: true
   com_openai_chat:
-    __label__: Chatgpt (com.openai.chat)
+    __label__: ChatGPT (com.openai.chat)
     ascii_punct: true
+  com_apple_MobileSMS:
+    __label__: Messages (com.apple.MobileSMS)
+    ascii_punct: true
+    full_shape: false
 birthday_reminder:  #日期格式：必须是4位数字，格式为MMDD（月份和日期），例如：1月27日 → 0127 ，#备注格式：在日期后添加逗号，然后添加任意文本作为备注，例如："0501,我的好朋友"，也可以无备注
 #shijian:仅仅作为提示使用，编码已经写死，引导适应性更高，如有需求lua中修改
 #时间：osj 或者 /sj

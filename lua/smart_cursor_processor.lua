@@ -62,6 +62,19 @@ function smart_cursor_processor.update_current_config(config)
 
     smart_cursor_processor.app_options = config:get_map("app_options")
 
+    if smart_cursor_processor.app_options then
+        for _, app_key in ipairs(smart_cursor_processor.app_options:keys()) do
+            local item = smart_cursor_processor.app_options:get(app_key)
+            if item and item.get_map then
+                local app_map = item:get_map()
+                for _, k in ipairs(app_map:keys()) do
+                    logger.debug("app_key: " .. app_key .. " k: " .. k .. " value: " ..
+                                     config:get_string("app_options/" .. app_key .. "/" .. k))
+                end
+            end
+        end
+    end
+
     logger.info("键位配置 - move_next_punct: " .. tostring(smart_cursor_processor.move_next_punct))
     logger.info("键位配置 - move_prev_punct: " .. tostring(smart_cursor_processor.move_prev_punct))
     logger.info("键位配置 - search_move_cursor: " .. tostring(smart_cursor_processor.search_move_cursor))
@@ -144,27 +157,6 @@ function smart_cursor_processor.init(env)
         ["'"] = true,
         ['"'] = true
     }
-
-    -- -- 初始化同步系统
-    -- if not context:get_option("tcp_socket") and tcp_socket then
-    --     local ok_init, err = pcall(function()
-    --         tcp_socket.init()
-    --     end)
-    --     if not ok_init then
-    --         logger.error("sync_module.init() 执行失败: " .. tostring(err))
-    --     else
-    --         logger.info("sync_module.init() 执行成功")
-    --     end
-    --     context:set_option("tcp_socket", true)
-    -- else
-    --     logger.error("sync_module为nil，跳过初始化")
-    -- end
-    -- if not context:get_option("http_server") then
-
-    --     RimeTcpServer.init(env)
-    --     logger.info("HttpServer服务器初始化完成")
-    --     context:set_option("http_server", true)
-    -- end
 
     -- env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
     --     logger.debug("unhandled_key_notifier")
@@ -261,6 +253,7 @@ function smart_cursor_processor.init(env)
         -- if current_app ~= "" then
         --     logger.debug("current_app: " .. current_app)
         -- end
+
         if previous_client_app == "" and current_app ~= "" then
             previous_client_app = current_app
             logger.debug("第一次设置prev_app(env):  current_app: " .. current_app)
@@ -277,6 +270,16 @@ function smart_cursor_processor.init(env)
                     logger.info("切换会话时应用全局开关数量: " .. tostring(applied))
                 end
             end
+        elseif context:get_property("config_update_flag") == "1" then
+            logger.debug("config_update_flag: " .. context:get_property("config_update_flag"))
+            if tcp_socket and tcp_socket.apply_global_options_to_context then
+                local applied = tcp_socket.apply_global_options_to_context(context)
+                if applied > 0 then
+                    logger.info("切换会话时应用全局开关数量: " .. tostring(applied))
+                end
+            end
+            -- 配置更新了, 清空config_update_flag
+            context:set_property("config_update_flag", "0")
 
         else
             return
@@ -346,10 +349,10 @@ function smart_cursor_processor.init(env)
     --     end
     -- end)
 
-    -- env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
-    --     logger.debug("unhandled_key_notifier触发： sync_with_server和服务端同步信息")
-    --     tcp_socket.sync_with_server(env, true)
-    -- end)
+    env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
+        logger.debug("unhandled_key_notifier触发： sync_with_server和服务端同步信息")
+        tcp_socket.sync_with_server(env, true)
+    end)
 
     env.new_update_notifier = context.update_notifier:connect(function(context)
         -- 每次上下文更新都和服务端同步
