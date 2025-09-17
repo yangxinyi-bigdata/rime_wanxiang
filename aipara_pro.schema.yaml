@@ -13,15 +13,15 @@ schema:
   dependencies:
     - aipara_en        #英文输入
     - aipara_charset   #字符集过滤器
-  my_shuru_schema: 自然码  #输入方案，必须与 set_shuru_schema 一致
+  my_shuru_schema: "自然码" #输入方案，必须与 set_shuru_schema 一致
 
 #############DIY你想要的方案组合,试试搭配一个自然码+墨奇辅助的方案吧！###########################
 set_shuru_schema:              #配置此项就是选择什么输入法,同时拆分反查和中英文混输也将匹配该输入方案
-  __include: 自然码            #可选解码规则有   全拼,自然码, 小鹤双拼, 搜狗双拼, 微软双拼, 智能ABC双拼, 紫光双拼, 国标双拼, 自然龙, 汉心龙, 龙三 选择一个填入
+  __include: "自然码"        #可选解码规则有   全拼,自然码, 小鹤双拼, 搜狗双拼, 微软双拼, 智能ABC双拼, 紫光双拼, 国标双拼, 自然龙, 汉心龙, 龙三 选择一个填入
 set_fuzhu_schema:              #配置此项就是选择什么输入法,同时拆分反查和中英文混输也将匹配该输入方案
   __include: 间接辅助           #可选解码规则有:  直接辅助, 间接辅助  选择一个填入
 aux_code:
-  single_fuzhu: true      # 单字母辅助码开关，true开启，false关闭
+  single_fuzhu: true       # 单字母辅助码开关，true开启，false关闭
   fuzhu_mode: "all"      # 辅助模式有三种:0. all 匹配候选词中的所有字 1.single只当input中有三个字符的时候进行匹配 2.before,最后一个辅助码和最前边两个 input 字母进行匹配 3. after,最后一个辅助码和最后两个 input 字母进行匹配
   shuangpin_zrm_txt: "20250612_phrases_shuangpin_org.txt"
 cloud_ai_filter:
@@ -171,7 +171,7 @@ ai_assistant:
       4. 当遇到用反引号包围的内容（如 `word`）时, 请保持反引号和其中的内容完全不变.
       5. 只返回转换后的中文文本,分隔符不用返回,注意中文文本不用添加空格,应该是连续的文本,不要包含任何解释或额外内容.
     description: "使用AI猜测拼音对应的是什么中文"
-    model_profile_id: "gpt-4.1_default"
+    model_profile_id: "deepseek-chat_default"
 
   ai_prompts:
     simple_ai_chat:
@@ -264,9 +264,11 @@ app_options:
   com_microsoft_VSCode:
     __label__: Code (com.microsoft.VSCode)
     ascii_punct: true
+    vim_mode: true
   md_obsidian:
     __label__: Obsidian (md.obsidian)
     ascii_punct: true
+    vim_mode: true
   com_openai_chat:
     __label__: ChatGPT (com.openai.chat)
     ascii_punct: true
