@@ -46,7 +46,8 @@ smart_cursor_processor.paste_to_input = nil
 smart_cursor_processor.search_move_cursor = nil
 smart_cursor_processor.shuru_schema = nil
 smart_cursor_processor.chat_triggers = {}
-local previous_client_app = ""
+smart_cursor_processor.previous_client_app = ""
+smart_cursor_processor.app_vim_mode_state = {}
 
 -- 读取配置的辅助函数，从config中读取并缓存到模块级变量
 function smart_cursor_processor.update_current_config(config)
@@ -315,12 +316,6 @@ function smart_cursor_processor.init(env)
     --     -- 退出搜索模式
     --     logger.debug("触发unhandled_key_notifier更新通知")
 
-    -- end)
-
-    -- env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function()
-    --     -- logger.debug("触发unhandled_key_notifier更新通知")
-    --     RimeTcpServer:process()
-    --     logger.debug("unhandled_key_notifier更新通知HTTP消息处理成功")
     -- end)
 
     -- env.custom_update_notifier = context.update_notifier:connect(function(context)
@@ -665,6 +660,60 @@ function smart_cursor_processor.func(key, env)
 
     local key_repr = key:repr()
     logger.info("key_repr: " .. key_repr)
+
+    -- 根据当前应用与 app_options 中的 vim_mode 配置，同步 ascii_mode 状态（按应用独立文件）
+    local current_app = context:get_property("client_app")
+    if current_app ~= "" and smart_cursor_processor.app_options then
+        -- 将 client_app 中的 . 替换为 _，以匹配 app_options 的键
+        local app_key = current_app:gsub("%.", "_")
+
+        -- 读取该 app 的 vim_mode 开关
+        local config = engine.schema.config
+        -- 获取这个app的配置
+        local item = smart_cursor_processor.app_options:get(app_key)
+        local vim_mode_enabled = false
+        if item then
+            vim_mode_enabled = config:get_bool("app_options/" .. app_key .. "/vim_mode")
+            logger.debug("app: " .. app_key .. " vim_mode 状态: " .. tostring(vim_mode_enabled))
+        end
+
+        if vim_mode_enabled then
+            -- 读取用户目录下 /Users/.../Library/Rime/.{app_key}_vim_mode 文件
+            local user_data_dir = rime_api.get_user_data_dir()
+            local vim_mode_path = user_data_dir .. "/log" .. "/." .. app_key .. "_vim_mode"
+            -- logger.debug("vim_mode_path: " .. vim_mode_path)
+
+            local mode_file, open_err = io.open(vim_mode_path, "r")
+            if not mode_file then
+                logger.debug("无法打开 vim_mode 文件: " .. vim_mode_path .. " 错误: " .. tostring(open_err))
+            else
+                local current_vim_mode = mode_file:read("*l")
+                mode_file:close()
+                -- 记录下来当前应用的vim模式
+
+                local previous_mode = smart_cursor_processor.app_vim_mode_state[app_key]
+                if previous_mode ~= current_vim_mode then
+                    smart_cursor_processor.app_vim_mode_state[app_key] = current_vim_mode
+                    logger.debug("app: " .. app_key .. " 模式变化: " .. tostring(previous_mode) .. " -> " .. tostring(current_vim_mode))
+                    if current_vim_mode == "normal_mode" then
+                        -- normal 模式默认切换到 ascii 输入
+                        local ascii_mode = context:get_option("ascii_mode")
+                        if ascii_mode == false then
+                            context:set_option("ascii_mode", true)
+                            -- logger.debug("检测到 normal_mode, 切换 ascii_mode 为 true")
+                        end
+                    elseif current_vim_mode == "insert_mode" then
+                        -- insert 模式保持中文输入
+                        local ascii_mode = context:get_option("ascii_mode")
+                        if ascii_mode == true then
+                            context:set_option("ascii_mode", false)
+                            -- logger.debug("检测到 insert_mode, 切换 ascii_mode 为 false")
+                        end
+                    end
+                end
+            end
+        end
+    end
 
     -- update_global_option_state为true，则应用一次全局开关（覆盖各会话差异，保持一致）
     -- if tcp_socket and tcp_socket.update_global_option_state then

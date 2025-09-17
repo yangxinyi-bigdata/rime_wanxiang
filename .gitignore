@@ -7,7 +7,7 @@ zc.userdb/
 
 # Log files
 *.log
-
+log/
 # Temporary files
 *.tmp
 *.bak
