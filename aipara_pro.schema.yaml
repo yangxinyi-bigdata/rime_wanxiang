@@ -9,15 +9,15 @@ schema:
   author:
     - yangxinyi
   description: |
-    AI段落输入法 支持常见双拼方案和全拼输入，辅助码同时支持 全拼拼音；墨奇码;鹤形;自然码;简单鹤;仓颉;虎码首末;五笔前2;汉心码; 采用万象归一的词库，换方案不换词库，不丢失用户词！
+    AI段落输入法 支持常见双拼方案和全拼输入，辅助码同时支持 全拼拼音；墨奇码;鹤形;自然码双拼;简单鹤;仓颉;虎码首末;五笔前2;汉心码; 采用万象归一的词库，换方案不换词库，不丢失用户词！
   dependencies:
     - aipara_en        #英文输入
     - aipara_charset   #字符集过滤器
-  my_shuru_schema: "自然码" #输入方案，必须与 set_shuru_schema 一致
+  my_shuru_schema: "小鹤双拼" #输入方案，必须与 set_shuru_schema 一致
 
-#############DIY你想要的方案组合,试试搭配一个自然码+墨奇辅助的方案吧！###########################
+#############DIY你想要的方案组合,试试搭配一个自然码双拼+墨奇辅助的方案吧！###########################
 set_shuru_schema:              #配置此项就是选择什么输入法,同时拆分反查和中英文混输也将匹配该输入方案
-  __include: "自然码"        #可选解码规则有   全拼,自然码, 小鹤双拼, 搜狗双拼, 微软双拼, 智能ABC双拼, 紫光双拼, 国标双拼, 自然龙, 汉心龙, 龙三 选择一个填入
+  __include: "小鹤双拼"       #可选解码规则有   全拼,自然码双拼, 小鹤双拼, 搜狗双拼, 微软双拼, 智能ABC双拼, 紫光双拼, 国标双拼, 自然龙, 汉心龙, 龙三 选择一个填入
 set_fuzhu_schema:              #配置此项就是选择什么输入法,同时拆分反查和中英文混输也将匹配该输入方案
   __include: 间接辅助           #可选解码规则有:  直接辅助, 间接辅助  选择一个填入
 aux_code:
@@ -351,7 +351,7 @@ speller:
   # initials 定义仅作为始码的按键，排除 ` 让单个的 ` 可以直接上屏
   initials: zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA`
   delimiter: " '"  # 第一位<空格>是拼音之间的分隔符；第二位<'>表示可以手动输入单引号来分割拼音。
-  # 引入自然码映射表
+  # 引入自然码双拼映射表
   ziranma_to_quanpin:
     __include: shangpin_dicts/ziranma_mapping:/ziranma_to_quanpin
   algebra:
@@ -383,8 +383,9 @@ translator:
   replace_punct_enabled: false # 是否启用中文标点替换功能，true 为启用，false 为禁用
   keep_input_uncommit: false  # 保留未上屏的input中输入内容
   preedit_format:     #影响到输入框的显示和“Shift+回车”上屏的字符，交给super_preedit处理
-    # __patch:
-    #   - 自然码渲染   # 引用
+    __patch:
+      - 小鹤双拼渲染
+      # - 自然码双拼渲染   # 引用
 
 
 # 自定义短语
@@ -606,7 +607,7 @@ key_binder:
     - derive/^ng(\d)(;.*)$/eng$1$2/
     - xform/^n(\d)(;.*)/en$1$2/
 
-自然码:
+自然码双拼:
   __append:
     - xform/^([a-z]+)(;.*)$/$1④$2/
     - xform/^(.*)ā(.*)(;.*)$/$1a$2①$3/
@@ -671,12 +672,8 @@ key_binder:
     - xform/^zh/Ⓥ/
     - xlit/ⓆⓌⓇⓉⓎⓊⒾⓄⓅⓈⒹⒻⒼⒽⓂⒿⒸⓀⓁⓏⓍⓋⒷⓃ/qwrtyuiopsdfghmjcklzxvbn/
 
-自然码渲染:
+自然码双拼渲染:
   __append:
-    - xform/7/1/
-    - xform/8/2/
-    - xform/9/3/
-    - xform/0/4/
     - xform/([bpmnljqxy])n/$1in/
     - xform/(\w)g/$1eng/
     - xform/(\w)q/$1iu/
@@ -711,205 +708,6 @@ key_binder:
     - xform/([nl])v/$1ü/
     - xform/ü/v/  # ü 显示为 v
 
-自然龙:    #原作者项目地址： https://github.com/rimeinn/rime-zrlong
-  __append:
-    - xform/^ēr/eQ/
-    - xform/^ér/eK/
-    - xform/^ěr/eU/
-    - xform/^èr/eH/
-    - xform/^er/eQ/
-    - xform/^(ā|á|ǎ|à)([ioun])/a$1$2/
-    - xform/^(ō|ó|ǒ|ò)([ioun])/o$1$2/
-    - xform/^(ē|é|ě|è)([ioun])/e$1$2/
-    - xform/^(ā|á|ǎ|à)(ng)/a$1$2/
-    - xform/^(ō|ó|ǒ|ò)(ng)/o$1$2/
-    - xform/^(ē|é|ě|è)(ng)/e$1$2/
-    - xform/^(ā|á|ǎ|à)/a$1/
-    - xform/^(ō|ó|ǒ|ò)/o$1/
-    - xform/^(ē|é|ě|è)/e$1/
-    - xform/^([jqxy])u(;.*)/$1ü$2/
-    - xform/^([jqxy])ū(;.*)/$1ǖ$2/
-    - xform/^([jqxy])ú(;.*)/$1ǘ$2/
-    - xform/^([jqxy])ǔ(;.*)/$1ǚ$2/
-    - xform/^([jqxy])ù(;.*)/$1ǜ$2/
-    - xform/^a(;.*)$/aā$1/
-    - xform/^o(;.*)$/oō$1/
-    - xform/^e(;.*)$/eē$1/
-    - xform/^ǹg/eèng/
-    - xform/^ňg/eěng/
-    - xform/^ńg/eéng/
-    - xform/^ng/eeng/
-    - xform/^ǹ/eèn/
-    - xform/^ň/eěn/
-    - xform/^ń/eén/
-    - xform/^n(;.*)/een$1/
-    - xform/^sh/U/
-    - xform/^ch/I/
-    - xform/^zh/V/
-    - xform/^(.)(iáo|iǎng|uǎng|ang|āng|ue|uē|üe|ǖe|ǎi|á)(;.*)$/$1U$3/
-    - xform/^(.)(iàng|iǒng|uàng|ēn|en|īng|ing|é|ó)(;.*)$/$1E$3/
-    - xform/^(.)(iǎn|iōng|iong|uǎi|uò|ǎng|ō|o)(;.*)$/$1P$3/
-    - xform/^(.)(uāng|uang|ǐng|ìng|uí|áng)(;.*)$/$1W$3/
-    - xform/^(.)(uǎn|uái||uā|ua|én|uō|uo|ié|ǚ)(;.*)$/$1S$3/
-    - xform/^(.)(uán|ài|ěn|èn|uě|ǚe|ǎn|ǔn|iù)(;.*)$/$1O$3/
-    - xform/^(.)(uān|uan|àng|ái|iā|ia|uè|üè)(;.*)$/$1D$3/
-    - xform/^(.)(iáng|áo|ué|üé|ēi|ei|à|è|ǒ)(;.*)$/$1I$3/
-    - xform/^(.)(uāi|uai|uà|uǎ|ūn|un|ò|ǐ)(;.*)$/$1G$3/
-    - xform/^(.)(éng|èng|uài|èi|uì|ǜ|ún)(;.*)$/$1F$3/
-    - xform/^(.)(ióng|ōng|ong|án|iē|ie)(;.*)$/$1K$3/
-    - xform/^(.)(iào|iǎo|uǒ|uó|a|ā|ě|ú)(;.*)$/$1L$3/
-    - xform/^(.)(uàn|ēng|eng|iá|ín|iě)(;.*)$/$1C$3/
-    - xform/^(.)(iān|ian|òu|éi|ùn|ē|e)(;.*)$/$1R$3/
-    - xform/^(.)(iāng|iang|ěng|òng)(;.*)$/$1Y$3/
-    - xform/^(.)(iao|iāo|ǔ|ǎ|iú|ǘ)(;.*)$/$1M$3/
-    - xform/^(.)(iǎ|íng|ān|an|ǒng)(;.*)$/$1N$3/
-    - xform/^(.)(iòng|īn|in|ǖ|ü|ù)(;.*)$/$1H$3/
-    - xform/^(.)(ǎo|ià|ǐn|ōu|ou)(;.*)$/$1X$3/
-    - xform/^(.)(óng|àn|ěi|ī|i)(;.*)$/$1J$3/
-    - xform/^(.)(ián|ào|ìn|uǐ)(;.*)$/$1V$3/
-    - xform/^(.)(uáng|āi|ai|í)(;.*)$/$1B$3/
-    - xform/^(.)(ǒu|iū|iu|iǔ)(;.*)$/$1Z$3/
-    - xform/^(.)(uá|uī|ui|ì)(;.*)$/$1T$3/
-    - xform/^(.)(ū|u|óu|iàn)(;.*)$/$1A$3/
-    - xform/^(.)(āo|ao|iè)(;.*)$/$1Q$3/
-    - xlit/QWERTYUIOPASDFGHMJCKLZXVBN/qwertyuiopasdfghmjcklzxvbn/
-汉心龙:    #原作者项目地址： https://hanxinma.gitlab.io/longma/
-  __append:
-    - xform/^(a|ā|á|ǎ|à)/Q$1/
-    - xform/^(o|ō|ó|ǒ|ò)/R$1/
-    - xform/^(e|ē|é|ě|è)/B$1/
-    - xform/^([jqxy])u(;.*)/$1ü$2/
-    - xform/^([jqxy])ū(;.*)/$1ǖ$2/
-    - xform/^([jqxy])ú(;.*)/$1ǘ$2/
-    - xform/^([jqxy])ǔ(;.*)/$1ǚ$2/
-    - xform/^([jqxy])ù(;.*)/$1ǜ$2/
-    - xform/^ǹg/Bèng/
-    - xform/^ňg/Běng/
-    - xform/^ńg/Béng/
-    - xform/^ng/beng/
-    - xform/^ǹ/Bèn/
-    - xform/^ň/Běn/
-    - xform/^ń/Bén/
-    - xform/^n(;.*)/Ben$1/
-    - xform/^sh/T/
-    - xform/^ch/S/
-    - xform/^zh/K/
-    - xform/^a/Q/
-    - xform/^p/W/
-    - xform/^j/E/
-    - xform/^o/R/
-    - xform/^n/Y/
-    - xform/^k/U/
-    - xform/^b/I/
-    - xform/^t/O/
-    - xform/^m/P/
-    - xform/^q/A/
-    - xform/^l/D/
-    - xform/^r/F/
-    - xform/^w/G/
-    - xform/^d/H/
-    - xform/^y/J/
-    - xform/^g/L/
-    - xform/^s/Z/
-    - xform/^c/X/
-    - xform/^x/C/
-    - xform/^f/V/
-    - xform/^e/B/
-    - xform/^z/N/
-    - xform/^h/M/
-    - xform/^(.)(ēn|en|iǎn|ǒng|iáng|uá|ó|án|ǐng)(;.*)$/$1Q$3/
-    - xform/^(.)(ào|èn|èng|iě|iàng)(;.*)$/$1W$3/
-    - xform/^(.)(ü|ǖ|iù|ā|a|uì|uǎng)(;.*)$/$1E$3/
-    - xform/^(.)(ìn|è|à|ě|ǎi|áo)(;.*)$/$1R$3/
-    - xform/^(.)(ō|o|ìòng|ǎo|óu)(;.*)$/$1T$3/
-    - xform/^(.)(én|ià|ang|āng|iú|ǐn|üē|uē|üe|ue)(;.*)$/$1Y$3/
-    - xform/^(.)(àng|iàn|ao|āo)(;.*)$/$1U$3/
-    - xform/^(.)(ù|uán|ué|üé)(;.*)$/$1I$3/
-    - xform/^(.)(éng|iā|ia|ān|an|èr|uè|üè|iu|iū|uài|iáo)(;.*)$/$1O$3/
-    - xform/^(.)(uǒ|iè|iào|ěr|ǎng)(;.*)$/$1P$3/
-    - xform/^(.)(āi|ai|óng|ìng|uāng|uang|á|ēr|er|iǎ)(;.*)$/$1A$3/
-    - xform/^(.)(uō|uo|ǚ|uó|àn|ín|ūn|un|iōng|iong)(;.*)$/$1S$3/
-    - xform/^(.)(ǒu|èi|é|iāo|iao|iá)(;.*)$/$1D$3/
-    - xform/^(.)(ǐ|uān|uan|uà|ò|uǎ)(;.*)$/$1F$3/
-    - xform/^(.)(ī|i|ěn|ěi|uáng)(;.*)$/$1G$3/
-    - xform/^(.)(ǜ|ēng|eng|iē|ie|éi|ún|uāi|uai)(;.*)$/$1H$3/
-    - xform/^(.)(ái|ǒ|ū|u|ér|īng|ing|uǎi)(;.*)$/$1J$3/
-    - xform/^(.)(ē|e|íng|òu|ié)(;.*)$/$1K$3/
-    - xform/^(.)(ì|uī|ui)(;.*)$/$1L$3/
-    - xform/^(.)(uā|ua|òng|uǐ|áng|iǔ|iǎo)(;.*)$/$1Z$3/
-    - xform/^(.)(uò|ōu|ou|iān|ian|ēi|ei|ùn)(;.*)$/$1X$3/
-    - xform/^(.)(ǔ|uàn)(;.*)$/$1C$3/
-    - xform/^(.)(ǎ|uái|ōng|ong|īn|in|ióng|iǒng)(;.*)$/$1V$3/
-    - xform/^(.)(ài|ián|üě|uě|uí|uǎn|uàng|ǘ)(;.*)$/$1B$3/
-    - xform/^(.)(í|iǎng|ǎn)(;.*)$/$1N$3/
-    - xform/^(.)(ú|iāng|iang|ěng|ǔn)(;.*)$/$1M$3/
-    - xlit/QWERTYUIOPASDFGHMJCKLZXVBN/qwertyuiopasdfghmjcklzxvbn/
-
-龙三:
-  __append:
-    - xform/^ēr/e¥/
-    - xform/^ér/e¥/
-    - xform/^ěr/e¥/
-    - xform/^èr/e&/
-    - xform/^er/e&/
-    - xform/^(ā|á|ǎ|à)([ioun])/a$1$2/
-    - xform/^(ō|ó|ǒ|ò)([ioun])/o$1$2/
-    - xform/^(ē|é|ě|è)([ioun])/e$1$2/
-    - xform/^(ā|á|ǎ|à)(ng)/a$1$2/
-    - xform/^(ō|ó|ǒ|ò)(ng)/o$1$2/
-    - xform/^(ē|é|ě|è)(ng)/e$1$2/
-    - xform/^(ā|á|ǎ|à)/a$1/
-    - xform/^(ō|ó|ǒ|ò)/o$1/
-    - xform/^(ē|é|ě|è)/e$1/
-    - xform/^([jqxy])u(;.*)/$1ü$2/
-    - xform/^([jqxy])ū(;.*)/$1ǖ$2/
-    - xform/^([jqxy])ú(;.*)/$1ǘ$2/
-    - xform/^([jqxy])ǔ(;.*)/$1ǚ$2/
-    - xform/^([jqxy])ù(;.*)/$1ǜ$2/
-    - xform/^a(;.*)$/aā$1/
-    - xform/^o(;.*)$/oō$1/
-    - xform/^e(;.*)$/eē$1/
-    - xform/^ǹg/nèng/
-    - xform/^ňg/něng/
-    - xform/^ńg/néng/
-    - xform/^ng/neng/
-    - xform/^ǹ/eèn/
-    - xform/^ň/eěn/
-    - xform/^ń/eén/
-    - xform/^n(;.*)/een$1/
-    - xform/^sh/U/
-    - xform/^ch/I/
-    - xform/^zh/V/
-    - xform/^y/E/
-    - xform/^p/Y/
-    - xform/^e/P/
-    - xform/^(.)(āo|àng|ang|ióng|iǒng|iú|iǔ|iù|iu|uǎ|uá)(;.*)$/$1Q$3/
-    - xform/^(.)(iā|uàng|uang|ó|ǒ|òu|ou|ún|ǔn)(;.*)$/$1W$3/
-    - xform/^(.)(iān|é|ě)(;.*)$/$1E$3/
-    - xform/^(.)(|án|ǎn|iào|iao)(;.*)$/$1R$3/
-    - xform/^(.)(áng|ǎng|ián|iǎn|uài|uai)(;.*)$/$1T$3/
-    - xform/^(.)(ìng|ing|ú|ǔ)(;.*)$/$1Y$3/
-    - xform/^(.)(è|e|ēi|iē|iū)(;.*)$/$1U$3/
-    - xform/^(.)(ā|ào|uī|ǖ|iàng|iang)(;.*)$/$1I$3/
-    - xform/^(.)(í|ǐ|uó|uǒ)(;.*)$/$1O$3/
-    - xform/^(.)(iāng|ù|u|ǘ|ǚ)(;.*)$/$1P$3/
-    - xform/^(.)(ì|i|uà|ua)(;.*)$/$1A$3/
-    - xform/^(.)(àn|an|iáng|iǎng|iòng|iong|uǐ|uí|ūn)(;.*)$/$1S$3/
-    - xform/^(.)(éng|ěng|īng|uā|ùn|un)(;.*)$/$1D$3/
-    - xform/^(.)(āi|ēng|iá|iǎ|ín|ǐn|iōng|uàn|uan|ér|ěr)(;.*)$/$1F$3/
-    - xform/^(.)(íng|ǐng|ū)(;.*)$/$1G$3/
-    - xform/^(.)(ài|ai|iāo|uán|uǎn)(;.*)$/$1H$3/
-    - xform/^(.)(én|ěn|òng|ong|uò|uo|üé|ǚe|ué|uě)(;.*)$/$1J$3/
-    - xform/^(.)(èi|ei|ōng|in|ìn|uō|üè|üe|uè|ue)(;.*)$/$1K$3/
-    - xform/^(.)(éi|ěi|ī|uáng|uǎng)(;.*)$/$1L$3/
-    - xform/^(.)(áo|ǎo|ié|iě|uāng|ǖe|uē)(;.*)$/$1Z$3/
-    - xform/^(.)(āng|iáo|iǎo|ò|o|uái|uǎi)(;.*)$/$1X$3/
-    - xform/^(.)(á|ǎ|ái|ǎi|ià|ia|ōu|uāi|èr|er)(;.*)$/$1C$3/
-    - xform/^(.)(èng|eng|ō|ǜ|ü|uì|ui)(;.*)$/$1V$3/
-    - xform/^(.)(ān|ē|iè|ie)(;.*)$/$1B$3/
-    - xform/^(.)(èn|en|iàn|ian|óu|ǒu|uān)(;.*)$/$1N$3/
-    - xform/^(.)(à|a|ēn|īn|óng|ǒng)(;.*)$/$1M$3/
-    - xlit/QWERTYUIOPASDFGHMJCKLZXVBN¥&/qwertyuiopasdfghmjcklzxvbnfc/
 小鹤双拼:
   __append:
     - xform/^([a-z]+)(;.*)$/$1④$2/
@@ -974,6 +772,42 @@ key_binder:
     - xform/^ch/Ⓘ/
     - xform/^zh/Ⓥ/
     - xlit/ⓆⓌⓇⓉⓎⓊⒾⓄⓅⓈⒹⒻⒼⒽⒿⓀⓁⓏⓍⒸⓋⒷⓃⓂ/qwrtyuiopsdfghjklzxcvbnm/
+
+小鹤双拼渲染:
+  __append:
+    - xform/([bpmfdtnljqx])n/$1iao/
+    - xform/(\w)g/$1eng/
+    - xform/(\w)q/$1iu/
+    - xform/(\w)w/$1ei/
+    - xform/([dtnlgkhjqxyvuirzcs])r/$1uan/
+    - xform/(\w)t/$1ve/
+    - xform/(\w)y/$1un/
+    - xform/([dtnlgkhvuirzcs])o/$1uo/
+    - xform/(\w)p/$1ie/
+    - xform/([jqx])s/$1iong/
+    - xform/(\w)s/$1ong/
+    - xform/(\w)d/$1ai/
+    - xform/(\w)f/$1en/
+    - xform/(\w)h/$1ang/
+    - xform/(\w)j/$1an/
+    - xform/([gkhvuirzcs])k/$1uai/
+    - xform/(\w)k/$1ing/
+    - xform/([jqxnl])l/$1iang/
+    - xform/(\w)l/$1uang/
+    - xform/(\w)z/$1ou/
+    - xform/([gkhvuirzcs])x/$1ua/
+    - xform/(\w)x/$1ia/
+    - xform/(\w)c/$1ao/
+    - xform/([dtgkhvuirzcs])v/$1ui/
+    - xform/(\w)b/$1in/
+    - xform/(\w)m/$1ian/
+    - xform/([aoe])\1(\w)/$1$2/
+    - "xform/(^|[ '])v/$1zh/"
+    - "xform/(^|[ '])i/$1ch/"
+    - "xform/(^|[ '])u/$1sh/"
+    - xform/([jqxy])v/$1u/
+    - xform/([nl])v/$1ü/
+    - xform/ü/v/  # ü 显示为 v
 
 微软双拼:
   __append:
@@ -1042,6 +876,47 @@ key_binder:
     - xform/^ch/Ⓘ/
     - xform/^zh/Ⓥ/
     - xlit/ⓆⓌⓇⓉⓎⓊⒾⓄⓅⓈⒹⒻⒼⒽⓂⒿⒸⓀⓁⓏⓍⓋⒷⓃ/qwrtyuiopsdfghmjcklzxvbn/
+
+微软双拼渲染:
+  __append:
+    - xform/o(\w)/0$1/
+    - xform/(\w)q/$1ei/
+    - xform/(\w)n/$1un/
+    - xform/(\w)g/$1eng/
+    - xform/(\w)w/$1ian/
+    - xform/([dtnljqx])r/$1iu/
+    - xform/0r/0er/
+    - xform/([nljqxb])t/$1iang/
+    - xform/(\w)t/$1uang/
+    - xform/(\w)y/$1ing/
+    - xform/([dtnlgkhaevrzcs])o/$1uo/
+    - xform/(\w)p/$1uan/
+    - xform/([jqx])s/$1iong/
+    - xform/(\w)s/$1ong/
+    - xform/([gkhaevrzcs])d/$1ua/
+    - xform/(\w)d/$1ia/
+    - xform/(\w)f/$1en/
+    - xform/(\w)h/$1ang/
+    - xform/(\w)j/$1an/
+    - xform/(\w)k/$1ao/
+    - xform/(\w)l/$1ai/
+    - xform/(\w)z/$1iao/
+    - xform/(\w)x/$1ie/
+    - xform/([gkhaev])c/$1uai/
+    - xform/(\w)c/$1in/
+    - xform/(\w)b/$1ou/
+    - xform/([nl])m/$1ve/
+    - xform/([jqxy])m/$1ue/
+    - xform/(\w)m/$1ui/
+    - "xform/(^|[ '])a/$1zh/"
+    - "xform/(^|[ '])e/$1ch/"
+    - "xform/(^|[ '])v/$1sh/"
+    - xform/0(\w)/$1/
+    - xform/([nl])v/$1ü/
+    - xform/([jqxy])v/$1u/
+    - xform/ü/v/  # ü 显示为 v
+
+
 搜狗双拼:
   __append:
     - xform/^([a-z]+)(;.*)$/$1④$2/
@@ -1109,6 +984,46 @@ key_binder:
     - xform/^zh/Ⓥ/
     - xlit/ⓆⓌⓇⓉⓎⓊⒾⓄⓅⓈⒹⒻⒼⒽⓂⒿⒸⓀⓁⓏⓍⓋⒷⓃ/qwrtyuiopsdfghmjcklzxvbn/
 
+搜狗双拼渲染:
+  __append:
+    - xform/([aoe])(\w)/0$2/
+    - xform/([bpmnljqxy])n/$1in/
+    - xform/(\w)g/$1eng/
+    - xform/(\w)q/$1iu/
+    - xform/([gkhvuirzcs])w/$1ua/
+    - xform/(\w)w/$1ia/
+    - xform/([dtnlgkhjqxyvuirzcs])r/$1uan/
+    - xform/0r/er/
+    - xform/([dtgkhvuirzcs])v/$1ui/
+    - xform/(\w)v/$1ve/
+    - xform/(\w)t/$1ve/
+    - xform/([gkhvuirzcs])y/$1uai/
+    - xform/(\w)y/$1v/
+    - xform/([dtnlgkhvuirzcs])o/$1uo/
+    - xform/(\w)p/$1un/
+    - xform/([jqx])s/$1iong/
+    - xform/(\w)s/$1ong/
+    - xform/([jqxnlb])d/$1iang/
+    - xform/(\w)d/$1uang/
+    - xform/(\w)f/$1en/
+    - xform/(\w)h/$1ang/
+    - xform/(\w)j/$1an/
+    - xform/(\w)k/$1ao/
+    - xform/(\w)l/$1ai/
+    - xform/(\w)z/$1ei/
+    - xform/(\w)x/$1ie/
+    - xform/(\w)c/$1iao/
+    - xform/(\w)b/$1ou/
+    - xform/(\w)m/$1ian/
+    - xform/(\w);/$1ing/
+    - xform/0(\w)/$1/
+    - "xform/(^|[ '])v/$1zh/"
+    - "xform/(^|[ '])i/$1ch/"
+    - "xform/(^|[ '])u/$1sh/"
+    - xform/([jqxy])v/$1u/
+    - xform/([nl])v/$1ü/
+    - xform/ü/v/  # ü 显示为 v
+
 紫光双拼:
   __append:
     - xform/^([a-z]+)(;.*)$/$1④$2/
@@ -1175,6 +1090,44 @@ key_binder:
     - xform/^ch/Ⓐ/
     - xlit/ⓌⓉⓎⓊⒾⓄⓅⒶⒼⓈⒹⒻⒽⒿⓀⓁⓏⓍⒷⓃⓂⓆⓇ/wtyuiopagsdfhjklzxbnmqr/
 
+紫光双拼渲染:
+  __append:
+    - xform/o(\w)/0$1/              # 零聲母先改爲0，以方便後面的轉換
+    - xform/([jqxy])n/$1ue/         # 提前轉換雙拼碼 n 和 g，因爲轉換後的拼音裏就快要出現這兩個字母了，那時將難以分辨出雙拼碼
+    - xform/([nl])n/$1ve/
+    - xform/([dtgkhzcsuai])n/$1ui/
+    - xform/([nljqxb])g/$1iang/
+    - xform/([gkhuai])g/$1uang/
+    - xform/(\w)w/$1en/
+    - xform/(\w)r/$1an/
+    - xform/(\w)t/$1eng/
+    - xform/([jqxylmnbp])y/$1in/
+    - xform/([zcsuaigkh])y/$1uai/
+    - xform/([dtnlgkhrzcsuai])o/$1uo/
+    - xform/(\w)q/$1ao/
+    - xform/(\w)p/$1ai/
+    - xform/(\w)s/$1ang/
+    - xform/(\w)d/$1ie/
+    - xform/(\w)f/$1ian/
+    - xform/([jqx])h/$1iong/
+    - xform/([dtnlgkhrzcsuai])h/$1ong/
+    - xform/0j/0er/
+    - xform/([dnlmjqx])j/$1iu/
+    - xform/(\w)k/$1ei/
+    - xform/(\w)l/$1uan/
+    - xform/(\w)z/$1ou/
+    - xform/([jqxl])x/$1ia/
+    - xform/([gkhuai])x/$1ua/
+    - xform/(\w);/$1ing/
+    - xform/(\w)b/$1iao/
+    - xform/(\w)m/$1un/
+    - "xform/(^|[ '])u/$1zh/"  # 復原聲母，音節開始處的雙拼字母a改寫爲zh；其他位置的才真正是a
+    - "xform/(^|[ '])a/$1ch/"
+    - "xform/(^|[ '])i/$1sh/"
+    - xform/0(\w)/$1/          # 好了，現在可以把零聲母拿掉啦
+    - xform/([nljqxy])v/$1ü/   # 這樣纔是漢語拼音 :-)
+    - xform/ü/v/  # ü 显示为 v
+
 智能ABC双拼:
   __append:
     - xform/^([a-z]+)(;.*)$/$1④$2/
@@ -1239,71 +1192,44 @@ key_binder:
     - xform/^sh/Ⓥ/
     - xlit/ⓆⓌⒺⓇⓉⓎⓄⓅⒶⓈⒹⒻⒼⒽⒿⓀⓁⓏⓍⒸⓋⒷⓃⓂ/qwertyopasdfghjklzxcvbnm/
 
-
-国标双拼:
+智能ABC双拼渲染:
   __append:
-    - xform/^([a-z]+)(;.*)$/$1④$2/
-    - xform/^(.*)ā(.*)(;.*)$/$1a$2①$3/
-    - xform/^(.*)á(.*)(;.*)$/$1a$2②$3/
-    - xform/^(.*)ǎ(.*)(;.*)$/$1a$2③$3/
-    - xform/^(.*)à(.*)(;.*)$/$1a$2④$3/
-    - xform/^(.*)ō(.*)(;.*)$/$1o$2①$3/
-    - xform/^(.*)ó(.*)(;.*)$/$1o$2②$3/
-    - xform/^(.*)ǒ(.*)(;.*)$/$1o$2③$3/
-    - xform/^(.*)ò(.*)(;.*)$/$1o$2④$3/
-    - xform/^(.*)ē(.*)(;.*)$/$1e$2①$3/
-    - xform/^(.*)é(.*)(;.*)$/$1e$2②$3/
-    - xform/^(.*)ě(.*)(;.*)$/$1e$2③$3/
-    - xform/^(.*)è(.*)(;.*)$/$1e$2④$3/
-    - xform/^(.*)ī(.*)(;.*)$/$1i$2①$3/
-    - xform/^(.*)í(.*)(;.*)$/$1i$2②$3/
-    - xform/^(.*)ǐ(.*)(;.*)$/$1i$2③$3/
-    - xform/^(.*)ì(.*)(;.*)$/$1i$2④$3/
-    - xform/^(.*)ū(.*)(;.*)$/$1u$2①$3/
-    - xform/^(.*)ú(.*)(;.*)$/$1u$2②$3/
-    - xform/^(.*)ǔ(.*)(;.*)$/$1u$2③$3/
-    - xform/^(.*)ù(.*)(;.*)$/$1u$2④$3/
-    - xform/^(.*)ǖ(.*)(;.*)$/$1v$2①$3/
-    - xform/^(.*)ǘ(.*)(;.*)$/$1v$2②$3/
-    - xform/^(.*)ǚ(.*)(;.*)$/$1v$2③$3/
-    - xform/^(.*)ǜ(.*)(;.*)$/$1v$2④$3/
-    - xform/^(.*)ü(.*)$/$1v$2/
-    - xform/^(.*)ń(.*)(;.*)$/$1n$2②$3/
-    - xform/^(.*)ň(.*)(;.*)$/$1n$2③$3/
-    - xform/^(.*)ǹ(.*)(;.*)$/$1n$2④$3/
-    - xlit/①②③④/7890
-    - derive/^ng(\d)(;.*)$/eng$1$2/
-    - xform/^n(\d)(;.*)/en$1$2/
-    - derive/^([jqxy])u(\d)(;.*)$/$1v$2$3/
-    - derive/^([aoe])([ioun])(\d)(;.*)$/$1$1$2$3$4/
-    - xform/^([aoe])(ng)?(\d)(;.*)$/$1$1$2$3$4/
-    - xform/^(\w+?)[iu]a(\d)(;.*)$/$1Ⓠ$2$3/
-    - xform/^(\w+?)[vu]an(\d)(;.*)$/$1Ⓦ$2$3/
-    - xform/^(\w+?)en(\d)(;.*)$/$1Ⓡ$2$3/
-    - xform/^(\w+?)ie(\d)(;.*)$/$1Ⓣ$2$3/
-    - xform/^(\w+?)(iu|uai)(\d)(;.*)$/$1Ⓨ$3$4/
-    - xform/^(\w+?)uo(\d)(;.*)$/$1Ⓞ$2$3/
-    - xform/^(\w+?)ou(\d)(;.*)$/$1Ⓟ$2$3/
-    - xform/^(\w+?)i?ong(\d)(;.*)$/$1Ⓢ$2$3/
-    - xform/^(\w+?)ian(\d)(;.*)$/$1Ⓓ$2$3/
-    - xform/^(\w+?)an(\d)(;.*)$/$1Ⓕ$2$3/
-    - xform/^(\w+?)(iang|uang)(\d)(;.*)$/$1Ⓝ$3$4/
-    - xform/^(\w+?)iao(\d)(;.*)$/$1Ⓜ$2$3/
-    - xform/^(\w+?)ang(\d)(;.*)$/$1Ⓖ$2$3/
-    - xform/^(\w+?)eng(\d)(;.*)$/$1Ⓗ$2$3/
-    - xform/^(\w+?)ing(\d)(;.*)$/$1Ⓙ$2$3/
-    - xform/^(\w+?)ai(\d)(;.*)$/$1Ⓚ$2$3/
-    - xform/^(\w+?)(in|er)(\d)(;.*)$/$1Ⓛ$3$4/
-    - xform/^(\w+?)[vu]n(\d)(;.*)$/$1Ⓩ$2$3/
-    - xform/^(\w+?)[vu]e(\d)(;.*)$/$1Ⓧ$2$3/
-    - xform/^(\w+?)ao(\d)(;.*)$/$1Ⓒ$2$3/
-    - xform/^(\w+?)(v|ui)(\d)(;.*)$/$1Ⓥ$3$4/
-    - xform/^(\w+?)ei(\d)(;.*)$/$1Ⓑ$2$3/
-    - xform/^zh/Ⓥ/
-    - xform/^ch/Ⓘ/
-    - xform/^sh/Ⓤ/
-    - xlit/ⓆⓌⓇⓉⓎⓊⒾⓄⓅⓈⒹⒻⒼⒽⒿⓀⓁⓏⓍⒸⓋⒷⓃⓂ/qwrtyuiopsdfghjklzxcvbnm/
-
+    - xform/o(\w)/0$1/
+    - xform/(\w)q/$1ei/
+    - xform/(\w)n/$1un/
+    - xform/(\w)g/$1eng/
+    - xform/(\w)w/$1ian/
+    - xform/([dtnljqx])r/$1iu/
+    - xform/0r/0er/
+    - xform/([nljqxb])t/$1iang/
+    - xform/(\w)t/$1uang/
+    - xform/(\w)y/$1ing/
+    - xform/([dtnlgkhaevrzcs])o/$1uo/
+    - xform/(\w)p/$1uan/
+    - xform/([jqx])s/$1iong/
+    - xform/(\w)s/$1ong/
+    - xform/([gkhaevrzcs])d/$1ua/
+    - xform/(\w)d/$1ia/
+    - xform/(\w)f/$1en/
+    - xform/(\w)h/$1ang/
+    - xform/(\w)j/$1an/
+    - xform/(\w)k/$1ao/
+    - xform/(\w)l/$1ai/
+    - xform/(\w)z/$1iao/
+    - xform/(\w)x/$1ie/
+    - xform/([gkhaev])c/$1uai/
+    - xform/(\w)c/$1in/
+    - xform/(\w)b/$1ou/
+    - xform/([nl])m/$1ve/
+    - xform/([jqxy])m/$1ue/
+    - xform/(\w)m/$1ui/
+    - "xform/(^|[ '])a/$1zh/"
+    - "xform/(^|[ '])e/$1ch/"
+    - "xform/(^|[ '])v/$1sh/"
+    - xform/0(\w)/$1/
+    - xform/([nl])v/$1ü/
+    - xform/([jqxy])v/$1u/
+    - xform/ü/v/  # ü 显示为 v
 
 直接辅助:  ########################################位于词库第三个分号后
   __append:

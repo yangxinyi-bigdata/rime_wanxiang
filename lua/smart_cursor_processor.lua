@@ -714,7 +714,6 @@ function smart_cursor_processor.func(key, env)
             end
         end
     end
-
     -- update_global_option_state为true，则应用一次全局开关（覆盖各会话差异，保持一致）
     -- if tcp_socket and tcp_socket.update_global_option_state then
     --     local applied = tcp_socket.apply_global_options_to_context(context)
