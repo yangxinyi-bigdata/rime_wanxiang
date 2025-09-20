@@ -382,265 +382,6 @@ function aux_code_filter.func(translation, env)
         local insert_second = {} -- 没有辅助码的优先字
         local insert_last = {}
 
-        -- 无论哪种模式，只要是三个 input 都走这个分支，这个分支结束后直接退出
-        -- 如果是存在标点符号, wo,d, 变成 wo,d 那么就会把wo也进行辅助码匹配. 所以这里添加判断, 最后三位字母没有标点情况下.
-        -- if #segmente_input == 3 then
-        --     -- 标记使用了辅助码
-        --     -- logger.info("set_fuzhuma 设置为true")
-        --     aux_code_filter.set_fuzhuma = true
-        --     -- 开始对所有候选项进行遍历
-        --     local has_match_flag = false
-        --     for cand in translation:iter() do
-
-        --         -- 只对候选词字符为1个汉字的时候进行匹配
-        --         if utf8.len(cand.text) == 1 then
-        --             -- logger.info("候选项为单个字: " .. cand.text)
-        --             -- 可能返回1,2,nil
-        --             if fuzhuma_match(cand.text, last_code) == 1 then
-        --                 -- 向后扩展一位,将辅助码也包含进来
-        --                 cand._end = cand._end + 1
-        --                 cand.preedit = cand.preedit .. last_code
-        --                 has_match_flag = true
-        --                 yield(cand)
-        --             elseif fuzhuma_match(cand.text, last_code) == 2 then
-        --                 -- wow进入这个分支, 我 握 两个字会排在前边, 但是我不想让辅助码蓝
-        --                 table.insert(insert_second, cand)
-        --             else
-        --                 table.insert(insert_last, cand)
-        --             end
-
-        --         end
-        --     end
-
-        --     -- 没有辅助码的字
-        --     for _, cand in ipairs(insert_second) do
-        --         yield(cand)
-        --     end
-
-        --     -- 把沒有匹配上的待選給添加上
-        --     for _, cand in ipairs(insert_last) do
-        --         yield(cand)
-        --     end
-
-        --     -- 返回true, 说明处理过了,不用再输出候选词
-        --     return true
-
-        -- else
-        --     -- #segmente_input > 3 并且为奇数的分支
-        --     logger.info("env.fuzhu_mode: " .. env.fuzhu_mode)
-        --     if env.fuzhu_mode == "single" then
-        --         logger.info("进入只匹配前三个分支, 直接返回true")
-        --         return true
-        --     end
-
-        --     -- 标记使用了辅助码, 标记这个就是在选词之后删除辅助码, 如果辅助码已经包含进去了,就不用标记了.
-        --     logger.info("set_fuzhuma 设置为true")
-        --     aux_code_filter.set_fuzhuma = true
-
-        --     -- all模式, 对候选词中的所有字都进行匹配,只要匹配上了就输出,问题是从第一个开始,还是最后一个开始
-        --     if env.fuzhu_mode == "all" then
-
-        --         logger.info("当前输入是奇数个, 开始辅助码匹配候选词中所有字模式模式")
-        --         -- 开始对所有候选项进行遍历
-        --         local count = 0
-
-        --         -- 创建按匹配位置分组的候选词列表
-        --         local matched_by_position = {} -- matched_by_position[1] 存储第一个字符匹配的候选词
-
-        --         -- 最后一个辅助码替换完成, 只替换一个选项
-        --         local last_replace_flag = false
-        --         for cand in translation:iter() do
-        --             count = count + 1
-
-        --             -- 改成计算segment的覆盖范围有没有到最后一个字符
-        --             -- debug_utils.print_candidate_info(cand, count, logger)
-        --             -- current_end_position: 5 segment._end : 4 寻找这两个相差一个的,就是没有添加最后这个字母的候选项
-
-        --             logger.info("cand_text: " .. cand.text)
-        --             local left_position = current_end - cand._end
-        --             logger.info("left_position = current_end - cand._end: " .. left_position)
-
-        --             if left_position == 0 then
-        --                 -- 这些就是最后一个字母参与到组词的数据
-        --             elseif left_position == 1 then
-        --                 -- 这些就是最后一个字母没有参与到组词的, 但是其他字母全部匹配的数据
-        --                 -- 但是这个可能有很多个, 所以不能全部处理, 处理一个就可以了, 所以本分支无论如何只进入一次.
-        --                 -- 当处理的时候有几种可能？有可能找到辅助码替换,有可能没有找到辅助码替换, 找到的,剩余再找到的就直接放到later里面.
-        --                 -- 没找到的呢? 就将所有都放到later里面
-
-        --                 -- 1. 对于第一个候选项直接放弃
-        --                 -- 对于第2个候选项,直接进行替换最后一个字符
-        --                 -- 1. 第一个候选词不对，这个候选词已经包含了最后一个字，并且进行了组合，我们要得是第二个候选项
-        --                 -- 1. 首先获取当前候选词内容，切片提取最后一个字对应的字母
-        --                 -- 2. 这两个字母,拼接上最后一个字母,合并成三个字母,到字典当中查找出对应的汉字
-        --                 -- 2. 将这个汉字替换到候选词的最后一个字上面
-        --                 -- 4. 如果没有找到这个汉字的话, 则保留最后一个汉字
-
-        --                 if not last_replace_flag then
-        --                     -- 只替换第一个, 然后last_replace_flag改成true,这个分支后面的就不处理了
-        --                     last_replace_flag = true
-
-        --                     -- 提取最后三个字符 
-        --                     local cand_text = cand.text
-        --                     logger.info("cand_text: " .. cand_text)
-        --                     local last_three_code = input:sub(-3)
-        --                     logger.info("last_three_code: " .. last_three_code)
-        --                     -- 从字典中查找对应的文字
-        --                     local chinese_char_list = aux_code_filter.aux_code_hanzi[last_three_code]
-
-        --                     if chinese_char_list and #chinese_char_list > 0 then
-        --                         logger.info("set_fuzhuma 设置为false")
-        --                         -- 获取最后一个字符的位置
-        --                         local last_char_index = utf8.offset(cand_text, -1)
-
-        --                         -- 获取除了最后一个字符之外的部分
-        --                         local text_without_last = cand_text:sub(1, last_char_index - 1)
-
-        --                         -- 对每个匹配的汉字都生成一个候选项
-        --                         for i, chinese_char in ipairs(chinese_char_list) do
-        --                             logger.info("第" .. i .. "个匹配的汉字: " .. chinese_char)
-        --                             -- 拼接新的文本
-        --                             local new_text = text_without_last .. chinese_char
-        --                             -- 创建新的候选词
-        --                             local new_cand = Candidate(cand.type, cand.start, cand._end, new_text, cand.comment)
-        --                             -- 向后扩展一位,将辅助码也包含进来
-        --                             new_cand.preedit = cand.preedit
-
-        --                             yield(new_cand)
-        --                         end
-
-        --                     else
-        --                         logger.info("最后三个字符未查找到匹配的汉字")
-        --                         yield(cand)
-        --                         -- table.insert(insert_last, cand)
-        --                     end
-
-        --                 else
-        --                     table.insert(insert_last, cand)
-        --                 end
-
-        --             else
-        --                 -- 剩余的长度不足以覆盖全部输入的候选项, 从匹配到字符的顺序进行依次排列
-        --                 local cand_text = cand.text
-        --                 local matched_position = 0
-        --                 local count_char = 0
-        --                 local match_flag = false
-        --                 -- 遍历候选词中的每个字符
-        --                 for pos, code in utf8.codes(cand_text) do
-        --                     count_char = count_char + 1
-        --                     local char = utf8.char(code)
-
-        --                     -- 这个地方忘记改了, 有可能返回1,返回2,1就是匹配成功,2是匹配到常用字上面了
-        --                     if fuzhuma_match(char, last_code) == 1 then
-        --                         matched_position = count_char
-        --                         break -- 只要有一个字符匹配就可以了
-        --                         -- elseif fuzhuma_match(char, last_code) == 2 then
-        --                         --     -- 要不要匹配常用字呢？不用了把
-        --                     end
-        --                 end
-
-        --                 if matched_position == 0 then
-        --                     -- 没有匹配
-        --                     table.insert(insert_last, cand)
-        --                 else
-        --                     -- 有匹配，按位置存储
-        --                     if not matched_by_position[matched_position] then
-        --                         matched_by_position[matched_position] = {}
-        --                     end
-        --                     table.insert(matched_by_position[matched_position], cand)
-        --                 end
-        --             end
-        --         end
-
-        --         -- 按照匹配位置从前到后输出候选词
-        --         -- 获取所有匹配位置并排序
-        --         local positions = {}
-        --         for pos, _ in pairs(matched_by_position) do
-        --             table.insert(positions, pos)
-        --         end
-        --         table.sort(positions)
-        --         logger.info("匹配候选词并排序成功,现在开始输出候选词")
-        --         -- 按位置顺序输出（第1个字符匹配的、第2个字符匹配的、第3个字符匹配的...）
-        --         for _, pos in ipairs(positions) do
-        --             logger.info("输出第" .. pos .. "个字符匹配的候选词")
-        --             for _, cand in ipairs(matched_by_position[pos]) do
-        --                 logger.info("匹配成功的候选词" .. cand.text .. " 匹配位置: " .. tostring(pos))
-        --                 yield(cand)
-        --             end
-        --         end
-
-        --         -- 把沒有匹配上的候选项添加上
-        --         for _, cand in ipairs(insert_last) do
-        --             yield(cand)
-        --         end
-
-        --         return true
-        --     elseif env.fuzhu_mode == "before" then
-        --         logger.info("当前输入是奇数个, 开始辅助码匹配第一个字模式模式")
-        --         -- 开始对所有候选项进行遍历
-        --         local count = 0
-        --         for cand in translation:iter() do
-        --             count = count + 1
-
-        --             -- 提取第一个字符
-        --             local the_char = ""
-        --             local cand_text = cand.text
-        --             the_char = utf8.char(utf8.codepoint(cand_text, 1))
-
-        --             if count == 1 then
-        --                 -- 第一个候选项直接输出，不进行辅助码匹配
-        --                 yield(cand)
-        --             elseif fuzhuma_match(the_char, last_code) then
-        --                 cand._end = cand._end + 1
-        --                 cand.preedit = cand.preedit .. last_code
-        --                 yield(cand)
-        --             else
-        --                 table.insert(insert_last, cand)
-        --             end
-
-        --         end
-        --         -- 把沒有匹配上的待選給添加上
-        --         for _, cand in ipairs(insert_last) do
-        --             yield(cand)
-        --         end
-
-        --         return true
-        --     elseif env.fuzhu_mode == "after" then
-        --         logger.info("当前输入是奇数个, 开始辅助码匹配最后一个字模式模式")
-        --         -- 开始对所有候选项进行遍历
-        --         local count = 0
-        --         for cand in translation:iter() do
-        --             count = count + 1
-
-        --             -- 提取第一个字符
-        --             local the_char = ""
-        --             local cand_text = cand.text
-
-        --             -- 提取最后一个字符
-        --             -- logger.info("cand_text: " .. cand_text)
-        --             local index = utf8.offset(cand_text, -1)
-        --             the_char = cand_text:sub(index)
-
-        --             if count == 1 then
-        --                 -- 第一个候选项直接输出，不进行辅助码匹配
-        --                 yield(cand)
-        --             elseif fuzhuma_match(the_char, last_code) then
-        --                 yield(cand)
-        --             else
-        --                 table.insert(insert_last, cand)
-        --             end
-
-        --         end
-        --         -- 把沒有匹配上的待選給添加上
-        --         for _, cand in ipairs(insert_last) do
-        --             yield(cand)
-        --         end
-
-        --         return true
-        --     end
-
-        -- end
-
         -- 20250730 修改不再单独处理#segmente_input == 3的情况,全部统一处理.
         logger.info("aux_code_filter.fuzhu_mode: " .. aux_code_filter.fuzhu_mode)
         if aux_code_filter.fuzhu_mode == "single" then
@@ -664,26 +405,39 @@ function aux_code_filter.func(translation, env)
 
             -- 最后一个辅助码替换完成, 只替换一个选项
             local last_replace_flag = false
+            local first_preedit
+            -- 对所有候选词进行遍历
             for cand in translation:iter() do
                 count = count + 1
 
                 -- 改成计算segment的覆盖范围有没有到最后一个字符
                 -- debug_utils.print_candidate_info(cand, count, logger)
-                -- current_end_position: 5 segment._end : 4 寻找这两个相差一个的,就是没有添加最后这个字母的候选项
 
                 -- logger.info("cand_text: " .. cand.text)
+                -- current_end 当前片段结束位置, cand._end 候选词结束位置, left_position剩余没有匹配到的input字符的位置
                 local left_position = current_end - cand._end
                 -- logger.info("left_position = current_end - cand._end: " .. left_position)
 
                 if left_position == 0 then
-                    -- 这些就是最后一个字母参与到组词的数据
+                    -- 这些就是最后一个字母参与到组词的数据, 在这里应该有原生的preedit,我直接获取到就可以了
+                    -- 直接获取到preedit, 然后将preedit中的最后一个音节替换为last_code, 然后将替换后的内容作为新的preedit
+                    if not first_preedit then
+                        first_preedit = cand.preedit or ""
+                        -- logger.debug("first_preedit: " .. first_preedit)
+                        -- 去掉收尾空格并删除最后一个音节（以空格分隔）
+                        local trimmed = first_preedit:gsub("%s+$", "")
+                        local without_last = trimmed:match("^(.*)%s+[^%s]+$")
+                        first_preedit = without_last or ""
+                        logger.debug("first_preedit去除最后一个音节: " .. first_preedit)
+                    end
+
                 elseif left_position == 1 then
                     -- 这些就是最后一个字母没有参与到组词的, 但是其他字母全部匹配的数据
                     -- 但是这个可能有很多个, 所以不能全部处理, 处理一个就可以了, 所以本分支无论如何只进入一次.
                     -- 当处理的时候有几种可能？有可能找到辅助码替换,有可能没有找到辅助码替换, 找到的,剩余再找到的就直接放到later里面.
                     -- 没找到的呢? 就将所有都放到later里面
 
-                    -- 1. 对于第一个候选项直接放弃
+                    -- 1. 对于第一个候选项直接放弃,因为这个候选词会带有最后一个字的长度出来的,但是也可能出来多个啊
                     -- 对于第2个候选项,直接进行替换最后一个字符
                     -- 1. 第一个候选词不对，这个候选词已经包含了最后一个字，并且进行了组合，我们要得是第二个候选项
                     -- 1. 首先获取当前候选词内容，切片提取最后一个字对应的字母
@@ -720,13 +474,19 @@ function aux_code_filter.func(translation, env)
                                 -- 创建新的候选词
                                 local new_cand = Candidate(cand.type, cand.start, cand._end, new_text, cand.comment)
                                 -- 向后扩展一位,将辅助码也包含进来
-                                new_cand.preedit = cand.preedit
+                                logger.info("cand.start: " .. cand.start)
+                                logger.info("cand._end: " .. cand._end)
+                                logger.info("new_text: " .. new_text)
+                                logger.info("cand.preedit: " .. cand.preedit)
+                                -- new_cand.preedit = cand.preedit
+                                new_cand.preedit = first_preedit
 
                                 yield(new_cand)
                             end
 
                         else
                             logger.info("最后三个字符未查找到匹配的汉字")
+                            cand.preedit = first_preedit
                             yield(cand)
                             -- table.insert(insert_last, cand)
                         end
@@ -873,7 +633,7 @@ function aux_code_filter.func(translation, env)
         logger.info("直接返回了false")
         -- 没有进入到辅助码合适的字符, 直接输出原来的候选词
         for cand in translation:iter() do
-             logger.info("cand.text: " .. cand.text )
+            logger.info("cand.text: " .. cand.text)
             yield(cand)
             -- -- 过滤掉长度匹配到最后一个辅助码的
             -- local left_position = current_end - cand._end
