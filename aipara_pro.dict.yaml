@@ -22,4 +22,5 @@ import_tables:
   - dicts/poetry          #诗词
   - dicts/place           #地名
   - dicts/punch           #标点符号
+  - dicts/test
 ...

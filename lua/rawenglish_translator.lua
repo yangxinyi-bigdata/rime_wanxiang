@@ -493,6 +493,7 @@ function rawenglish_translator.func(input, seg, env)
             local allow_fallback = true -- 只有最后一个允许fallback
 
             local segment_content = segment.content
+            -- 等于说在这个脚本里面对辅助码进行了单独的处理, 看看能不能放到那个脚本当中, 而不是放到这里
             if rawenglish_translator.single_fuzhu and rawenglish_translator.fuzhu_mode == "all" then
                 
                 if is_last_segment then

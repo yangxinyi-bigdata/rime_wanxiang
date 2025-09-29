@@ -991,14 +991,14 @@ function cloud_input_processor.func(key, env)
     local key_repr = key:repr()
     logger.debug("测试虚拟按键: " .. key_repr)
 
-    local set_shuru_schema = config:get_map("set_shuru_schema")
-    local keys = set_shuru_schema:keys()
-    for _, k in ipairs(keys) do
-        logger.debug("k: " .. k)
-    end
-    local set_shuru_schema_append = config:get_list("set_shuru_schema/__append")
-    logger.debug("set_shuru_schema_append size: " .. set_shuru_schema_append.size)
-    logger.debug("set_shuru_schema_append type: " .. tostring(set_shuru_schema_append.type) )
+    -- local set_shuru_schema = config:get_map("set_shuru_schema")
+    -- local keys = set_shuru_schema:keys()
+    -- for _, k in ipairs(keys) do
+    --     logger.debug("k: " .. k)
+    -- end
+    -- local set_shuru_schema_append = config:get_list("set_shuru_schema/__append")
+    -- logger.debug("set_shuru_schema_append size: " .. set_shuru_schema_append.size)
+    -- logger.debug("set_shuru_schema_append type: " .. tostring(set_shuru_schema_append.type) )
 
     -- -- 这里读取进来的会是什么呢? 
     -- cloud_input_processor.app_options = config:get_map("app_options")

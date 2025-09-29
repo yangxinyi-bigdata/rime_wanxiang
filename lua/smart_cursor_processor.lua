@@ -255,15 +255,15 @@ function smart_cursor_processor.init(env)
         --     logger.debug("current_app: " .. current_app)
         -- end
 
-        if previous_client_app == "" and current_app ~= "" then
-            previous_client_app = current_app
-            logger.debug("第一次设置prev_app(env):  current_app: " .. current_app)
+        if smart_cursor_processor.previous_client_app == "" and current_app ~= "" then
+            smart_cursor_processor.previous_client_app = current_app
+            logger.debug("第一次设置previous_client_app:  " .. smart_cursor_processor.previous_client_app)
 
-        elseif current_app ~= "" and previous_client_app ~= "" and current_app ~= previous_client_app then
-            logger.debug("current_app ~= prev_app: previous_client_app(env): " .. previous_client_app ..
+        elseif current_app ~= "" and smart_cursor_processor.previous_client_app ~= "" and current_app ~= smart_cursor_processor.previous_client_app then
+            logger.debug("current_app ~= prev_app: previous_client_app(env): " .. smart_cursor_processor.previous_client_app ..
                              " current_app: " .. current_app)
 
-            previous_client_app = current_app
+            smart_cursor_processor.previous_client_app = current_app
             -- 切换到新会话后，应用一次全局开关（覆盖各会话差异，保持一致）
             if tcp_socket and tcp_socket.apply_global_options_to_context then
                 local applied = tcp_socket.apply_global_options_to_context(context)

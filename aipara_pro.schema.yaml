@@ -25,6 +25,9 @@ aux_code:
 cloud_ai_filter:
   max_cloud_candidates: 3
   max_ai_candidates: 1
+remember_shuangpin_state:
+  single_fuzhu: true
+  preedit_format: true
 
 ########################以下是方案配置######################################################
 
