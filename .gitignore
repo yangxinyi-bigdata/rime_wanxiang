@@ -8,10 +8,13 @@ zc.userdb/
 # Log files
 *.log
 log/
+
 # Temporary files
 *.tmp
 *.bak
 *~
+
+UpdateCache/
 
 # System files
 .DS_Store
