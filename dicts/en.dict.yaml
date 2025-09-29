@@ -191,6 +191,13 @@ cg	Cg
 re	Re
 os	Os
 I'd	Id
+YY	YY
+Vimeo	Vimeo
+HLS	HLS
+SRE	SRE
+Mux	Mux
+Wistia	Wistia
+CRT	CRT
 mAh	MAh
 PTT	PTT
 IEN	IEN
@@ -338,6 +345,7 @@ CBA	CBA
 CDC	CDC
 CDN	CDN
 CEF	CEF
+CDR	CDR
 Cen	Cen
 CEO	CEO
 CFO	CFO
@@ -677,6 +685,7 @@ Mag	Mag
 man	Man
 map	Map
 mar	Mar
+MCP	MCP
 mat	Mat
 max	Max
 may	May
@@ -1023,6 +1032,7 @@ WAV	WAV
 wax	Wax
 way	Way
 web	Web
+Web	Web
 wed	Wed
 wee	Wee
 wen	Wen
@@ -1965,6 +1975,7 @@ dyer	Dyer
 dyes	Dyes
 dyke	Dyke
 DYOR	DYOR
+Dify	Dify
 each	Each
 earl	Earl
 earn	Earn
@@ -3171,6 +3182,7 @@ sung	Sung
 Suns	Suns
 sure	Sure
 surf	Surf
+SVIP	SVIP
 suse	Suse
 SUVs	SUVs
 Sven	Sven
@@ -3616,6 +3628,7 @@ liny	Liny
 lett	Lett
 tyro	Tyro
 epos	Epos
+Yonex	Yonex
 goad	Goad
 wend	Wend
 pare	Pare
@@ -11403,6 +11416,7 @@ opener	Opener
 OpenGL	OpenGL
 OpenID	OpenID
 openly	Openly
+OpenClash	OpenClash
 oppose	Oppose
 optics	Optics
 option	Option
@@ -43368,6 +43382,7 @@ bookbinder	Bookbinder
 bellhanger	Bellhanger
 crumbcloth	Crumbcloth
 crinolette	Crinolette
+AdguardHome	AdguardHome
 gymnosperm	Gymnosperm
 bernardine	Bernardine
 occidental	Occidental

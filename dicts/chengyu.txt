@@ -29,6 +29,7 @@
 哀兵必胜	abbu
 安邦定国	abdg
 安步当车	abdi
+牛羊猪狗	nyvg
 阿鼻地狱	abdy
 熬不过去	abgq
 阿布哈兹	abhz
@@ -252,6 +253,7 @@
 百辞莫辩	bcmb
 抱残守缺	bcuq
 辩才无碍	bcwa
+大大小小	ddxx
 博茨瓦纳	bcwn
 饱餐一顿	bcyd
 不得安宁	bdan
@@ -1383,6 +1385,9 @@
 大错特错	dctc
 多财善贾	dcug
 到此为止	dcwv
+大吃一惊	dcyj
+大吃一惊	diyj
+无精打采	wjdc
 大材小用	dcxy
 到此一游	dcyy
 点灯熬油	dday
@@ -1434,6 +1439,8 @@
 单刀直入	ddvr
 兜兜转转	ddvv
 独断专行	ddvx
+整整齐齐	vvqq
+整整齐齐	zzqq
 地大物博	ddwb
 点到为止	ddwv
 当代文学	ddwx
@@ -1727,6 +1734,9 @@
 动如脱兔	drtt
 代人受过	drug
 断人生死	drus
+融会贯通	rhgt
+融汇贯通	rhgt
+寸步不让	cbbr
 达人知命	drvm
 荡然无存	drwc
 吊人胃口	drwk
