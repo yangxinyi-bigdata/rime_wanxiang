@@ -24,7 +24,7 @@ aux_code:
   shuangpin_zrm_txt: "20250612_phrases_shuangpin_org.txt"
 cloud_ai_filter:
   max_cloud_candidates: 3
-  max_ai_candidates: 1
+  max_ai_candidates: 3
 remember_shuangpin_state:
   single_fuzhu: true
   preedit_format: true
@@ -161,19 +161,75 @@ ai_assistant:
     auto_commit_reply_send_key: "enter"
     ai_reply_send_key: "enter"
     after_question_send_key: "enter"
-  ai_pinyin_convert:
-    chat_names: "AI拼音转换"
-    prompt: |
-      你是一个中文云输入法,功能是将中文拼音转换为最合理的中文.
-      重要规则：
-      1. 空格分隔的拼音必须对应不同的汉字,每个被空格分隔的拼音段必须单独转换为一个汉字
-      2. 请将其中的拼音部分转换为对应的中文,将英文标点符号转换成中文标点
-      3. 根据上下文语义,在不破坏空格边界的前提下选择最合理的汉字
-      4. 当遇到用反引号包围的内容（如 `word`）时, 请保持反引号和其中的内容完全不变.
-      5. 只返回转换后的中文文本,分隔符不用返回,注意中文文本不用添加空格,应该是连续的文本,不要包含任何解释或额外内容.
-    description: "使用AI猜测拼音对应的是什么中文"
-    model_profile_id: "deepseek-chat_default"
+  ai_pinyin_convert_assistants:
+    assistant1: "ai_pinyin_basic_convert"
+    assistant2: "ai_pinyin_emoji_convert"
+    assistant3: "ai_pinyin_english_convert"
 
+  ai_pinyin_convert_mode:
+    ai_pinyin_basic_convert:
+      chat_names: AI拼音转换
+      comment_name: 基本转换
+      description: 使用AI猜测拼音对应的是什么中文
+      model_profile_id: gpt-4.1_default
+      prompt: "你是一个中文云输入法,功能是将中文拼音转换为最合理的中文.\n重要规则：\n1. 空格分隔的拼音必须对应不同的汉字,每个被空格分隔的拼音段必须单独转换为一个汉字\n2. 请将其中的拼音部分转换为对应的中文,将英文标点符号转换成中文标点\n3. 根据上下文语义,在不破坏空格边界的前提下选择最合理的汉字\n4. 当遇到用反引号包围的内容（如 `word`）时, 请保持反引号和其中的内容完全不变.\n5. 只返回转换后的中文文本,分隔符不用返回,注意中文文本不用添加空格,应该是连续的文本,不要包含任何解释或额外内容."
+    ai_pinyin_polish_convert:
+      chat_names: "AI拼音转换后润色"
+      comment_name: "润色"
+      prompt: |
+        你是一个中文云输入法, 功能是将中文拼音转换为最合理的中文, 并在转换完成后对结果进行适度润色, 让句子更流畅自然。
+        重要规则：
+        1. 空格分隔的拼音必须对应不同的汉字, 每个被空格分隔的拼音段必须单独转换为一个汉字。
+        2. 请将其中的拼音部分转换为对应的中文, 将英文标点符号转换成中文标点。
+        3. 根据上下文语义, 在不破坏空格边界的前提下选择最合理的汉字。
+        4. 当遇到用反引号包围的内容（如 `word`）时, 请保持反引号和其中的内容完全不变。
+        5. 转换完成后, 对中文文本进行润色：在不改变原意的前提下, 调整语序、用词和衔接, 使句子更自然、更符合中文表达习惯。
+        6. 只返回最终润色后的中文文本, 不要返回任何解释、额外说明或空格分隔符。
+      description: "使用AI猜测拼音对应的是什么中文,然后再进行润色"
+      model_profile_id: "gpt-4.1_default"
+
+    ai_pinyin_simplify_convert:
+      chat_names: "AI拼音转换后简化"
+      comment_name: "简化"
+      prompt: |
+        你是一个中文云输入法, 功能是将中文拼音转换为最合理的中文, 并在转换完成后对结果进行简化表达, 让句子更短、更直接, 更容易理解。
+        重要规则：
+        1. 空格分隔的拼音必须对应不同的汉字, 每个被空格分隔的拼音段必须单独转换为一个汉字。
+        2. 请将其中的拼音部分转换为对应的中文, 将英文标点符号转换成中文标点。
+        3. 根据上下文语义, 在不破坏空格边界的前提下选择最合理的汉字。
+        4. 当遇到用反引号包围的内容（如 `word`）时, 请保持反引号和其中的内容完全不变。
+        5. 转换完成后, 对中文文本进行简化：在不改变原意的前提下, 删除冗余修饰, 使用简洁直接的句式。
+        6. 只返回最终简化后的中文文本, 不要返回任何解释、额外说明或空格分隔符。
+      description: "使用AI猜测拼音对应的中文, 然后进行简化表达, 让句子更短更直白"
+      model_profile_id: "gpt-4.1_default"
+
+    ai_pinyin_emoji_convert:
+      chat_names: AI拼音转换后Emoji风格
+      comment_name: Emoji
+      description: 使用AI猜测拼音对应的中文, 然后添加合适的emoji, 让表达更生动
+      model_profile_id: gpt-4.1_default
+      prompt: "你是一个中文云输入法, 功能是将中文拼音转换为最合理的中文, 并在转换完成后为句子中加入合适的emoji, 让表达更生动有趣。不仅仅是在句子末尾, 可以在句子当中添加.\n重要规则：\n1. 空格分隔的拼音必须对应不同的汉字, 每个被空格分隔的拼音段必须单独转换为一个汉字。\n2. 请将其中的拼音部分转换为对应的中文, 将英文标点符号转换成中文标点。\n3. 根据上下文语义, 在不破坏空格边界的前提下选择最合理的汉字。\n4. 当遇到用反引号包围的内容（如 `word`）时, 请保持反引号和其中的内容完全不变。\n5. 转换完成后, 为中文文本添加适合语境的emoji。\n6. 只返回最终带emoji的中文文本, 不要返回任何解释、额外说明或空格分隔符。\n"
+    ai_pinyin_japanese_convert:
+      chat_names: "AI拼音转换为日文"
+      comment_name: "日文"
+      prompt: |
+        你是一个中文云输入法, 功能是将中文拼音转换为最合理的中文, 并在转换完成后将结果翻译成日文。
+        重要规则：
+        1. 空格分隔的拼音必须对应不同的汉字, 每个被空格分隔的拼音段必须单独转换为一个汉字。
+        2. 请将其中的拼音部分转换为对应的中文, 将英文标点符号转换成中文标点。
+        3. 根据上下文语义, 在不破坏空格边界的前提下选择最合理的汉字。
+        4. 当遇到用反引号包围的内容（如 `word`）时, 请保持反引号和其中的内容完全不变。
+        5. 转换完成后, 将得到的中文文本翻译成自然、通顺的日文表达。
+        6. 只返回最终的日文文本, 不要返回任何解释、额外说明或空格分隔符。
+      description: "使用AI猜测拼音对应的中文, 然后翻译成日文"
+      model_profile_id: "gpt-4.1_default"
+
+    ai_pinyin_english_convert:
+      chat_names: AI拼音转换为英文
+      comment_name: 英语
+      description: 将拼音识别为汉字之后再翻译成英文
+      model_profile_id: gpt-4.1_default
+      prompt: "你是一个中文云输入法, 功能是将中文拼音转换为最合理的中文, 并在转换完成后将结果翻译成英文。\n重要规则：\n1. 空格分隔的拼音必须对应不同的汉字, 每个被空格分隔的拼音段必须单独转换为一个汉字。\n2. 请将其中的拼音部分转换为对应的中文, 将英文标点符号转换成中文标点。\n3. 根据上下文语义, 在不破坏空格边界的前提下选择最合理的汉字。\n4. 当遇到用反引号包围的内容（如 `word`）时, 请保持反引号和其中的内容完全不变。\n5. 转换完成后, 将得到的中文文本翻译成自然、通顺的英文表达。\n6. 只返回最终的英文文本, 不要返回任何解释、额外说明或空格分隔符。"
   ai_prompts:
     simple_ai_chat:
       chat_triggers: 'a:'
@@ -261,6 +317,14 @@ ai_assistant:
       reply_messages_preedits: "AI改进:"
       prompt: "你是一个内容改进工具。请帮助用户改进和优化他们的文本内容，包括语言表达、结构组织、逻辑清晰度等方面。"
       description: "内容改进助手"
+    polish_text:
+      chat_triggers: "ar:"
+      chat_triggers_name: 文本润色
+      chat_names: '润色文本:'
+      reply_messages_preedits: '润色结果:'
+      prompt: "请对以下文本进行润色处理：\n\t•\t保持原文语义不变，不能删改关键信息。\n\t•\t主要目标是让句子更流畅、自然，读起来更像成熟的书面表达。\n\t•\t适当优化用词，使其更准确、生动。\n\t•\t避免生硬或重复的语序，保证语感顺畅。\n\t•\t输出时直接返回润色后的完整文本，不要附加解释或评论。"
+      description: 用于对中文文本进行润色
+      model_profile_id: gpt-4.1_default
 app_options:
   com_microsoft_VSCode:
     __label__: Code (com.microsoft.VSCode)

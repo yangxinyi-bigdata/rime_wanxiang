@@ -490,7 +490,9 @@ function cloud_ai_filter.func(translation, env)
                 if parsed_data.ai_candidates then
                     for i, ai_cand in ipairs(parsed_data.ai_candidates) do
                         if i <= cloud_ai_filter.max_ai_candidates then
-                            local candidate = Candidate("ai_cloud", segment._start, segment._end,
+                            -- local candidate = Candidate("ai_cloud", segment._start, segment._end,
+                            --     ai_cand.value or ai_cand, "")
+                            local candidate = Candidate("ai_cloud/" .. ai_cand.comment_name, segment._start, segment._end,
                                 ai_cand.value or ai_cand, "")
                             candidate.quality = 950 + (cloud_ai_filter.max_ai_candidates - i + 1) * 10
                             candidate.preedit = first_original_cand.preedit -- 保持原始预编辑文本
@@ -535,7 +537,7 @@ function cloud_ai_filter.func(translation, env)
                     if cached_data.cloud_candidates then
                         for i, cloud_cand in ipairs(cached_data.cloud_candidates) do
                             if i <= cloud_ai_filter.max_cloud_candidates then
-                                local candidate = Candidate("cloud", segment._start, segment._end,
+                                local candidate = Candidate("baidu_cloud", segment._start, segment._end,
                                     cloud_cand.value or cloud_cand, "")
                                 candidate.quality = 900 + (cloud_ai_filter.max_cloud_candidates - i + 1) * 10
                                 candidate.comment = "☁📦" -- 添加缓存标识
@@ -550,7 +552,7 @@ function cloud_ai_filter.func(translation, env)
                     if cached_data.ai_candidates then
                         for i, ai_cand in ipairs(cached_data.ai_candidates) do
                             if i <= cloud_ai_filter.max_ai_candidates then
-                                local candidate = Candidate("ai", segment._start, segment._end,
+                                local candidate = Candidate("ai_cloud/" .. ai_cand.comment_name, segment._start, segment._end,
                                     ai_cand.value or ai_cand, "")
                                 candidate.quality = 950 + (cloud_ai_filter.max_ai_candidates - i + 1) * 10
                                 candidate.comment = "🤖📦" -- 添加缓存标识

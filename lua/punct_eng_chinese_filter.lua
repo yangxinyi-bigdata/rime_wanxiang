@@ -263,6 +263,9 @@ function punct_eng_chinese_filter.func(translation, env)
                     cand_comment = "   [云输入]"
                 elseif cand_type == "ai_cloud" then
                     cand_comment = "   [AI识别]"
+                elseif cand_type:sub(1, #"ai_cloud") == "ai_cloud" then
+                    local suffix = cand_type:match("([^/]+)$")
+                    cand_comment = "   [" .. suffix .. "]"
                 elseif cand_type == "rawenglish_combo" then
                     cand_comment = ""
                 end
@@ -289,6 +292,9 @@ function punct_eng_chinese_filter.func(translation, env)
                     cand.comment = "   [云输入]"
                 elseif cand_type == "ai_cloud" then
                     cand.comment = "   [AI识别]"
+                elseif cand_type:sub(1, #"ai_cloud") == "ai_cloud" then
+                    local suffix = cand_type:match("([^/]+)$")
+                    cand.comment = "   [" .. suffix .. "]"
                 elseif cand_type == "rawenglish_combo" then
                     cand.comment = ""
                 end
