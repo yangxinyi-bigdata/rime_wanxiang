@@ -318,7 +318,7 @@ ai_assistant:
       prompt: "你是一个内容改进工具。请帮助用户改进和优化他们的文本内容，包括语言表达、结构组织、逻辑清晰度等方面。"
       description: "内容改进助手"
     polish_text:
-      chat_triggers: "ar:"
+      chat_triggers: 'ap:'
       chat_triggers_name: 文本润色
       chat_names: '润色文本:'
       reply_messages_preedits: '润色结果:'

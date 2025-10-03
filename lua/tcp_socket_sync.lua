@@ -89,6 +89,65 @@ function tcp_socket_sync.update_property(property_name, property_value)
     end
 end
 
+-- 遍历表字段并根据类型更新配置，仅在值发生变化时写入
+local function update_config_field(config, field_path, field_value)
+    -- 根据不同类型调用对应的getter与setter
+    local value_type = type(field_value)
+    if value_type == "boolean" then
+        local current = config:get_bool(field_path)
+        if current ~= field_value then
+            config:set_bool(field_path, field_value)
+            logger.debug("表字段更新布尔值: " .. field_path .. " = " .. tostring(field_value))
+            return true
+        end
+    elseif value_type == "number" then
+        if field_value == math.floor(field_value) then
+            local current = config:get_int(field_path)
+            if current ~= field_value then
+                config:set_int(field_path, field_value)
+                logger.debug("表字段更新整数: " .. field_path .. " = " .. tostring(field_value))
+                return true
+            end
+        else
+            local current = config:get_double(field_path)
+            if current ~= field_value then
+                config:set_double(field_path, field_value)
+                logger.debug("表字段更新浮点数: " .. field_path .. " = " .. tostring(field_value))
+                return true
+            end
+        end
+    elseif value_type == "string" then
+        local current = config:get_string(field_path)
+        if current ~= field_value then
+            config:set_string(field_path, field_value)
+            logger.debug("表字段更新字符串: " .. field_path .. " = " .. tostring(field_value))
+            return true
+        end
+    else
+        logger.warn("表字段类型暂不支持自动更新: " .. field_path .. " 类型: " .. value_type)
+    end
+    return false
+end
+
+-- 递归遍历table并更新有变化的配置项
+local function update_config_table(config, base_path, value_table)
+    -- 逐个字段检查差异，只有变化才写入
+    local changed = false
+    for key, field_value in pairs(value_table) do
+        local child_path = base_path .. "/" .. tostring(key)
+        if type(field_value) == "table" then
+            if update_config_table(config, child_path, field_value) then
+                changed = true
+            end
+        else
+            if update_config_field(config, child_path, field_value) then
+                changed = true
+            end
+        end
+    end
+    return changed
+end
+
 -- 获取当前时间戳（毫秒）
 local function get_current_time_ms()
     return os.time() * 1000 + math.floor((os.clock() % 1) * 1000)
@@ -910,12 +969,14 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
         logger.debug("转换后的配置路径: " .. rime_config_path)
 
         local success = false
+        local need_refresh = false
         if config_value ~= nil then
             local value_type = type(config_value)
 
             if value_type == "boolean" then
                 config:set_bool(rime_config_path, config_value)
                 success = true
+                need_refresh = true
                 logger.debug("设置布尔配置: " .. rime_config_path .. " = " .. tostring(config_value))
             elseif value_type == "number" then
                 -- 尝试判断是整数还是浮点数
@@ -927,10 +988,22 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
                     logger.debug("设置浮点数配置: " .. rime_config_path .. " = " .. tostring(config_value))
                 end
                 success = true
+                need_refresh = true
             elseif value_type == "string" then
                 config:set_string(rime_config_path, config_value)
                 success = true
+                need_refresh = true
                 logger.debug("设置字符串配置: " .. rime_config_path .. " = " .. tostring(config_value))
+            elseif value_type == "table" then
+                -- 表配置按字段比对后再更新
+                local changed = update_config_table(config, rime_config_path, config_value)
+                success = true
+                need_refresh = changed
+                if changed then
+                    logger.debug("表配置更新完成: " .. rime_config_path)
+                else
+                    logger.debug("表配置未发生变化: " .. rime_config_path)
+                end
             else
                 logger.warn("不支持的配置值类型: " .. value_type)
             end
@@ -938,14 +1011,19 @@ function tcp_socket_sync.handle_socket_command(command_messege, env)
         else
             success = true
             config:set_string(rime_config_path, "__DELETED__")
+            need_refresh = true
             logger.debug("设置配置删除标记: " .. rime_config_path .. " = __DELETED__")
             -- logger.warn("配置值为空，跳过更新")
         end
         if success then
-            tcp_socket_sync.update_configs(config)
-            logger.info("✅ update_all_modules_config配置更新成功")
-            -- 更新一个上下文属性
-            tcp_socket_sync.update_property("config_update_flag", "1")
+            if need_refresh then
+                tcp_socket_sync.update_configs(config)
+                logger.info("✅ update_all_modules_config配置更新成功")
+                -- 更新一个上下文属性
+                tcp_socket_sync.update_property("config_update_flag", "1")
+            else
+                logger.debug("表配置无变化，跳过模块刷新: " .. rime_config_path)
+            end
         else
             logger.error("❌ 配置更新失败: " .. rime_config_path)
         end
