@@ -975,6 +975,7 @@ function cloud_input_processor.init(env)
     -- context:set_property只能设置字符串类型
     env.engine.context:set_property("cloud_convert_flag", "0")
     env.engine.context:set_property("rawenglish_prompt", "0")
+    cloud_input_processor.handle_keys = text_splitter.handle_keys
 
     logger.debug("云输入处理器初始化完成")
 end
@@ -1285,106 +1286,9 @@ function cloud_input_processor.func(key, env)
                 return kAccepted
             end
 
-            -- 定义需要转换为普通字符的按键
-            local handle_keys = {
-                ["space"] = " ", -- 空格转为空格字符
-                -- 数字键
-                ["1"] = "1",
-                ["2"] = "2",
-                ["3"] = "3",
-                ["4"] = "4",
-                ["5"] = "5",
-                ["6"] = "6",
-                ["7"] = "7",
-                ["8"] = "8",
-                ["9"] = "9",
-                ["0"] = "0",
-                -- 数字键的Shift版本（符号）
-                ["Shift+1"] = "!", -- !
-                ["Shift+2"] = "@", -- @
-                ["Shift+3"] = "#", -- #
-                ["Shift+4"] = "$", -- $
-                ["Shift+5"] = "%", -- %
-                ["Shift+6"] = "^", -- ^
-                ["Shift+7"] = "&", -- &
-                ["Shift+8"] = "*", -- *
-                ["Shift+9"] = "(", -- (
-                ["Shift+0"] = ")", -- )
 
-                -- 标点符号（不需要Shift）
-                ["period"] = ".", -- 句号
-                ["comma"] = ",", -- 逗号
-                ["semicolon"] = ";", -- 分号
-                ["apostrophe"] = "'", -- 单引号/撇号
-                ["bracketleft"] = "[", -- 左方括号
-                ["bracketright"] = "]", -- 右方括号
-                ["hyphen"] = "-", -- 连字符
-                ["equal"] = "=", -- 等号
-                ["slash"] = "/", -- 斜杠
-                ["backslash"] = "\\", -- 反斜杠
-                ["grave"] = "`", -- 反引号
-
-                -- 标点符号的Shift版本
-                ["Shift+semicolon"] = ":", -- :
-                ["Shift+apostrophe"] = "\"", -- "
-                ["Shift+bracketleft"] = "{", -- {
-                ["Shift+bracketright"] = "}", -- }
-                ["Shift+hyphen"] = "_", -- _
-                ["Shift+equal"] = "+", -- +
-                ["Shift+slash"] = "?", -- ?
-                ["Shift+backslash"] = "|", -- |
-                ["Shift+grave"] = "~", -- ~
-
-                -- 直接映射的符号键
-                ["minus"] = "-", -- 冒号
-                ["colon"] = ":", -- 冒号
-                ["question"] = "?", -- 问号
-                ["exclam"] = "!", -- 感叹号
-                ["quotedbl"] = "\"", -- 双引号
-                ["parenleft"] = "(", -- 左圆括号
-                ["parenright"] = ")", -- 右圆括号
-                ["braceleft"] = "{", -- 左花括号
-                ["braceright"] = "}", -- 右花括号
-                ["underscore"] = "_", -- 下划线
-                ["plus"] = "+", -- 加号
-                ["asterisk"] = "*", -- 星号
-                ["at"] = "@", -- @ 符号
-                ["numbersign"] = "#", -- # 号
-                ["dollar"] = "$", -- 美元符号
-                ["percent"] = "%", -- 百分号
-                ["ampersand"] = "&", -- & 符号
-                ["less"] = "<", -- 小于号
-                ["greater"] = ">", -- 大于号
-                ["asciitilde"] = "~", -- 波浪号
-                ["asciicircum"] = "^", -- 插入符号
-                ["bar"] = "|", -- 竖线
-
-                -- 为这些符号键也添加Shift版本（以防万一）
-                ["Shift+colon"] = ":",
-                ["Shift+question"] = "?",
-                ["Shift+exclam"] = "!",
-                ["Shift+quotedbl"] = "\"",
-                ["Shift+parenleft"] = "(",
-                ["Shift+parenright"] = ")",
-                ["Shift+braceleft"] = "{",
-                ["Shift+braceright"] = "}",
-                ["Shift+underscore"] = "_",
-                ["Shift+plus"] = "+",
-                ["Shift+asterisk"] = "*",
-                ["Shift+at"] = "@",
-                ["Shift+numbersign"] = "#",
-                ["Shift+dollar"] = "$",
-                ["Shift+percent"] = "%",
-                ["Shift+ampersand"] = "&",
-                ["Shift+less"] = "<",
-                ["Shift+greater"] = ">",
-                ["Shift+asciitilde"] = "~",
-                ["Shift+asciicircum"] = "^",
-                ["Shift+bar"] = "|"
-
-            }
             logger.debug("key_repr: " .. key_repr)
-            if handle_keys[key_repr] then
+            if cloud_input_processor.handle_keys[key_repr] then
                 logger.debug("处于反引号状态，将按键转为普通字符: " .. key_repr)
 
                 -- 如果是Shift+XXX按键，设置属性用于拦截后续的Release+Shift_L
@@ -1394,7 +1298,7 @@ function cloud_input_processor.func(key, env)
                 end
 
                 -- 将按键对应的字符添加到输入中
-                local char_to_add = handle_keys[key_repr]
+                local char_to_add = cloud_input_processor.handle_keys[key_repr]
                 -- 如果添加英文字母没有影响,但是
                 context:push_input(char_to_add)
 

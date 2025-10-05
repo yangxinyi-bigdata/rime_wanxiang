@@ -1148,7 +1148,8 @@ function tcp_socket_sync.process_rime_socket_data(env, timeout)
 end
 
 -- 和Rime状态服务进行数据交换
-function tcp_socket_sync.sync_with_server(env, option_info, send_commit_text, command_key, command_value, timeout)
+function tcp_socket_sync.sync_with_server(env, option_info, send_commit_text, command_key, command_value, timeout, position, char)
+    -- position 代表调用这个函数的位置, 用于标识
     send_commit_text = send_commit_text or false
     local success, error_msg = pcall(function()
         local current_time = get_current_time_ms()
@@ -1162,6 +1163,7 @@ function tcp_socket_sync.sync_with_server(env, option_info, send_commit_text, co
             switches_option = {}, -- 初始化为空表
             properties = {} -- 初始化属性表
         }
+        
         if command_key then
             -- 发送字符串命令,例如"enter",代表对端将会接收到之后发送一个回车按键
             -- 构建粘贴命令数据
@@ -1174,10 +1176,19 @@ function tcp_socket_sync.sync_with_server(env, option_info, send_commit_text, co
             }
             state_data.command_message = command_message
         end
-
         if send_commit_text then
+            state_data.messege_type = "commit"
+            state_data.current_app = context:get_property("client_app")
             -- 发送上屏内容
+            state_data.commit_pinyin = context.input
             state_data.commit_text = context:get_commit_text()
+        end
+
+        if position == "unhandled_key_notifier" then
+            state_data.messege_type = "commit"
+            state_data.current_app = context:get_property("client_app")
+            state_data.commit_pinyin = char
+            state_data.commit_text = char
         end
 
         if option_info then

@@ -3,7 +3,7 @@
 local text_splitter = {}
 
 -- 模块级别的配置变量
-text_splitter.english_mode_symbol = "`"  -- 默认值为反引号
+text_splitter.english_mode_symbol = "`" -- 默认值为反引号
 
 -- 配置更新函数
 function text_splitter.update_current_config(config)
@@ -30,6 +30,231 @@ local punct_map = {
     ["}"] = "｝", -- 右花括号
     ["<"] = "《", -- 左书名号
     [">"] = "》" -- 右书名号
+}
+
+-- 定义需要转换为普通字符的按键
+text_splitter.handle_keys = {
+    ["space"] = " ", -- 空格转为空格字符
+    -- 数字键
+    ["1"] = "1",
+    ["2"] = "2",
+    ["3"] = "3",
+    ["4"] = "4",
+    ["5"] = "5",
+    ["6"] = "6",
+    ["7"] = "7",
+    ["8"] = "8",
+    ["9"] = "9",
+    ["0"] = "0",
+    -- 数字键的Shift版本（符号）
+    ["Shift+1"] = "!", -- !
+    ["Shift+2"] = "@", -- @
+    ["Shift+3"] = "#", -- #
+    ["Shift+4"] = "$", -- $
+    ["Shift+5"] = "%", -- %
+    ["Shift+6"] = "^", -- ^
+    ["Shift+7"] = "&", -- &
+    ["Shift+8"] = "*", -- *
+    ["Shift+9"] = "(", -- (
+    ["Shift+0"] = ")", -- )
+
+    -- 标点符号（不需要Shift）
+    ["period"] = ".", -- 句号
+    ["comma"] = ",", -- 逗号
+    ["semicolon"] = ";", -- 分号
+    ["apostrophe"] = "'", -- 单引号/撇号
+    ["bracketleft"] = "[", -- 左方括号
+    ["bracketright"] = "]", -- 右方括号
+    ["hyphen"] = "-", -- 连字符
+    ["equal"] = "=", -- 等号
+    ["slash"] = "/", -- 斜杠
+    ["backslash"] = "\\", -- 反斜杠
+    ["grave"] = "`", -- 反引号
+
+    -- 标点符号的Shift版本
+    ["Shift+semicolon"] = ":", -- :
+    ["Shift+apostrophe"] = "\"", -- "
+    ["Shift+bracketleft"] = "{", -- {
+    ["Shift+bracketright"] = "}", -- }
+    ["Shift+hyphen"] = "_", -- _
+    ["Shift+equal"] = "+", -- +
+    ["Shift+slash"] = "?", -- ?
+    ["Shift+backslash"] = "|", -- |
+    ["Shift+grave"] = "~", -- ~
+
+    -- 直接映射的符号键
+    ["minus"] = "-", -- 冒号
+    ["colon"] = ":", -- 冒号
+    ["question"] = "?", -- 问号
+    ["exclam"] = "!", -- 感叹号
+    ["quotedbl"] = "\"", -- 双引号
+    ["parenleft"] = "(", -- 左圆括号
+    ["parenright"] = ")", -- 右圆括号
+    ["braceleft"] = "{", -- 左花括号
+    ["braceright"] = "}", -- 右花括号
+    ["underscore"] = "_", -- 下划线
+    ["plus"] = "+", -- 加号
+    ["asterisk"] = "*", -- 星号
+    ["at"] = "@", -- @ 符号
+    ["numbersign"] = "#", -- # 号
+    ["dollar"] = "$", -- 美元符号
+    ["percent"] = "%", -- 百分号
+    ["ampersand"] = "&", -- & 符号
+    ["less"] = "<", -- 小于号
+    ["greater"] = ">", -- 大于号
+    ["asciitilde"] = "~", -- 波浪号
+    ["asciicircum"] = "^", -- 插入符号
+    ["bar"] = "|", -- 竖线
+
+    -- 为这些符号键也添加Shift版本（以防万一）
+    ["Shift+colon"] = ":",
+    ["Shift+question"] = "?",
+    ["Shift+exclam"] = "!",
+    ["Shift+quotedbl"] = "\"",
+    ["Shift+parenleft"] = "(",
+    ["Shift+parenright"] = ")",
+    ["Shift+braceleft"] = "{",
+    ["Shift+braceright"] = "}",
+    ["Shift+underscore"] = "_",
+    ["Shift+plus"] = "+",
+    ["Shift+asterisk"] = "*",
+    ["Shift+at"] = "@",
+    ["Shift+numbersign"] = "#",
+    ["Shift+dollar"] = "$",
+    ["Shift+percent"] = "%",
+    ["Shift+ampersand"] = "&",
+    ["Shift+less"] = "<",
+    ["Shift+greater"] = ">",
+    ["Shift+asciitilde"] = "~",
+    ["Shift+asciicircum"] = "^",
+    ["Shift+bar"] = "|"
+
+}
+
+-- 定义需要转换为普通字符的按键
+text_splitter.send_chars = {
+    ["space"] = " ", -- 空格转为空格字符
+    -- 字母键
+    ["a"] = "a",
+    ["b"] = "b",
+    ["c"] = "c",
+    ["d"] = "d",
+    ["e"] = "e",
+    ["f"] = "f",
+    ["g"] = "g",
+    ["h"] = "h",
+    ["i"] = "i",
+    ["j"] = "j",
+    ["k"] = "k",
+    ["l"] = "l",
+    ["m"] = "m",
+    ["n"] = "n",
+    ["o"] = "o",
+    ["p"] = "p",
+    ["q"] = "q",
+    ["r"] = "r",
+    ["s"] = "s",
+    ["t"] = "t",
+    ["u"] = "u",
+    ["v"] = "v",
+    ["w"] = "w",
+    ["x"] = "x",
+    ["y"] = "y",
+    ["z"] = "z",
+    -- 数字键
+    ["1"] = "1",
+    ["2"] = "2",
+    ["3"] = "3",
+    ["4"] = "4",
+    ["5"] = "5",
+    ["6"] = "6",
+    ["7"] = "7",
+    ["8"] = "8",
+    ["9"] = "9",
+    ["0"] = "0",
+    -- 数字键的Shift版本（符号）
+    ["Shift+1"] = "!", -- !
+    ["Shift+2"] = "@", -- @
+    ["Shift+3"] = "#", -- #
+    ["Shift+4"] = "$", -- $
+    ["Shift+5"] = "%", -- %
+    ["Shift+6"] = "^", -- ^
+    ["Shift+7"] = "&", -- &
+    ["Shift+8"] = "*", -- *
+    ["Shift+9"] = "(", -- (
+    ["Shift+0"] = ")", -- )
+
+    -- 标点符号（不需要Shift）
+    ["period"] = ".", -- 句号
+    ["comma"] = ",", -- 逗号
+    ["semicolon"] = ";", -- 分号
+    ["apostrophe"] = "'", -- 单引号/撇号
+    ["bracketleft"] = "[", -- 左方括号
+    ["bracketright"] = "]", -- 右方括号
+    ["hyphen"] = "-", -- 连字符
+    ["equal"] = "=", -- 等号
+    ["slash"] = "/", -- 斜杠
+    ["backslash"] = "\\", -- 反斜杠
+    ["grave"] = "`", -- 反引号
+
+    -- 标点符号的Shift版本
+    ["Shift+semicolon"] = ":", -- :
+    ["Shift+apostrophe"] = "\"", -- "
+    ["Shift+bracketleft"] = "{", -- {
+    ["Shift+bracketright"] = "}", -- }
+    ["Shift+hyphen"] = "_", -- _
+    ["Shift+equal"] = "+", -- +
+    ["Shift+slash"] = "?", -- ?
+    ["Shift+backslash"] = "|", -- |
+    ["Shift+grave"] = "~", -- ~
+
+    -- 直接映射的符号键
+    ["minus"] = "-", -- 冒号
+    ["colon"] = ":", -- 冒号
+    ["question"] = "?", -- 问号
+    ["exclam"] = "!", -- 感叹号
+    ["quotedbl"] = "\"", -- 双引号
+    ["parenleft"] = "(", -- 左圆括号
+    ["parenright"] = ")", -- 右圆括号
+    ["braceleft"] = "{", -- 左花括号
+    ["braceright"] = "}", -- 右花括号
+    ["underscore"] = "_", -- 下划线
+    ["plus"] = "+", -- 加号
+    ["asterisk"] = "*", -- 星号
+    ["at"] = "@", -- @ 符号
+    ["numbersign"] = "#", -- # 号
+    ["dollar"] = "$", -- 美元符号
+    ["percent"] = "%", -- 百分号
+    ["ampersand"] = "&", -- & 符号
+    ["less"] = "<", -- 小于号
+    ["greater"] = ">", -- 大于号
+    ["asciitilde"] = "~", -- 波浪号
+    ["asciicircum"] = "^", -- 插入符号
+    ["bar"] = "|", -- 竖线
+
+    -- 为这些符号键也添加Shift版本（以防万一）
+    ["Shift+colon"] = ":",
+    ["Shift+question"] = "?",
+    ["Shift+exclam"] = "!",
+    ["Shift+quotedbl"] = "\"",
+    ["Shift+parenleft"] = "(",
+    ["Shift+parenright"] = ")",
+    ["Shift+braceleft"] = "{",
+    ["Shift+braceright"] = "}",
+    ["Shift+underscore"] = "_",
+    ["Shift+plus"] = "+",
+    ["Shift+asterisk"] = "*",
+    ["Shift+at"] = "@",
+    ["Shift+numbersign"] = "#",
+    ["Shift+dollar"] = "$",
+    ["Shift+percent"] = "%",
+    ["Shift+ampersand"] = "&",
+    ["Shift+less"] = "<",
+    ["Shift+greater"] = ">",
+    ["Shift+asciitilde"] = "~",
+    ["Shift+asciicircum"] = "^",
+    ["Shift+bar"] = "|"
+
 }
 
 -- 成对引号的映射表
@@ -158,7 +383,6 @@ function text_splitter.replace_punct(text)
 
     return result
 end
-
 
 -- 标点符号替换函数, 对于传递进来的坐标范围进行替换
 function text_splitter.replace_punct_skip_pos(text, chinese_pos_str, logger)
@@ -491,7 +715,8 @@ function text_splitter.split_and_convert_input_with_delimiter(input, rawenglish_
         local char = input:sub(i, i) -- 当前字符
 
         -- 检查是否到达未配对的最后一个英文模式符号
-        if has_unpaired_rawenglish and rawenglish_pair_index == rawenglish_count - 1 and char == text_splitter.english_mode_symbol then
+        if has_unpaired_rawenglish and rawenglish_pair_index == rawenglish_count - 1 and char ==
+            text_splitter.english_mode_symbol then
             -- 最后一个未配对的英文模式符号，从这里开始到末尾都不处理
             if current_segment ~= "" then
                 local segment_start = i - #current_segment - 1 -- 转换为0基索引
@@ -539,12 +764,14 @@ function text_splitter.split_and_convert_input_with_delimiter(input, rawenglish_
                 rawenglish_content = ""
             else
                 -- 结束英文模式符号内容，添加分隔符
-                local processed_content = rawenglish_delimiter_before .. rawenglish_content .. rawenglish_delimiter_after
+                local processed_content = rawenglish_delimiter_before .. rawenglish_content ..
+                                              rawenglish_delimiter_after
                 local rawenglish_start = i - #rawenglish_content - 2 -- 转换为0基索引，包含开始英文模式符号
                 table.insert(segments, {
                     type = "rawenglish_combo",
                     content = processed_content,
-                    original = text_splitter.english_mode_symbol .. rawenglish_content .. text_splitter.english_mode_symbol,
+                    original = text_splitter.english_mode_symbol .. rawenglish_content ..
+                        text_splitter.english_mode_symbol,
                     start = rawenglish_start,
                     _end = i, -- 开区间，不包含结束英文模式符号后的位置
                     length = #rawenglish_content + 2
@@ -641,7 +868,8 @@ function text_splitter.split_by_rawenglish(input, seg_start, seg_end, delimiter_
         local char = input:sub(i, i) -- 当前字符
 
         -- 检查是否到达未配对的最后一个英文模式符号
-        if has_unpaired_rawenglish and rawenglish_pair_index == rawenglish_count - 1 and char == text_splitter.english_mode_symbol then
+        if has_unpaired_rawenglish and rawenglish_pair_index == rawenglish_count - 1 and char ==
+            text_splitter.english_mode_symbol then
             -- 最后一个未配对的英文模式符号，从这里开始到末尾都不处理
             if current_segment ~= "" then
                 local segment_start = seg_start + i - #current_segment - 1 -- 添加seg_start偏移
@@ -696,7 +924,8 @@ function text_splitter.split_by_rawenglish(input, seg_start, seg_end, delimiter_
                 table.insert(segments, {
                     type = "rawenglish_combo",
                     content = processed_content,
-                    original = text_splitter.english_mode_symbol .. rawenglish_content .. text_splitter.english_mode_symbol,
+                    original = text_splitter.english_mode_symbol .. rawenglish_content ..
+                        text_splitter.english_mode_symbol,
                     start = rawenglish_start,
                     _end = seg_start + i, -- 添加seg_start偏移，开区间，不包含结束英文模式符号后的位置
                     length = #rawenglish_content + 2
@@ -760,8 +989,8 @@ end
 -- 带日志记录和分隔符的版本
 function text_splitter.split_and_convert_input_with_log_and_delimiter(input, logger, rawenglish_delimiter_before,
     rawenglish_delimiter_after, replace_punct_enabled)
-    logger.info("开始处理输入: " .. input .. "，英文模式符号分隔符: '" .. (rawenglish_delimiter_before or "") ..
-                    "' '" .. (rawenglish_delimiter_after or "") .. "'")
+    logger.info("开始处理输入: " .. input .. "，英文模式符号分隔符: '" ..
+                    (rawenglish_delimiter_before or "") .. "' '" .. (rawenglish_delimiter_after or "") .. "'")
     logger.info("标点符号替换开关: " .. tostring(replace_punct_enabled or false))
 
     local segments = text_splitter.split_and_convert_input_with_delimiter(input, rawenglish_delimiter_before,
@@ -777,9 +1006,8 @@ end
 
 -- 带日志记录的split_by_rawenglish函数
 function text_splitter.split_by_rawenglish_with_log(input, seg_start, seg_end, delimiter_before, delimiter_after, logger)
-    logger.info(
-        "开始使用split_by_rawenglish处理输入: " .. input .. "，分隔符: '" .. (delimiter_before or "") .. "' '" ..
-            (delimiter_after or "") .. "'")
+    logger.info("开始使用split_by_rawenglish处理输入: " .. input .. "，分隔符: '" ..
+                    (delimiter_before or "") .. "' '" .. (delimiter_after or "") .. "'")
 
     local segments = text_splitter.split_by_rawenglish(input, seg_start, seg_end, delimiter_before, delimiter_after)
 

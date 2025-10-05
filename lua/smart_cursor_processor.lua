@@ -159,6 +159,9 @@ function smart_cursor_processor.init(env)
         ['"'] = true
     }
 
+
+    smart_cursor_processor.send_chars = text_splitter.send_chars 
+
     -- env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
     --     logger.debug("unhandled_key_notifier")
     -- end)
@@ -346,7 +349,22 @@ function smart_cursor_processor.init(env)
 
     env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
         logger.debug("unhandled_key_notifier触发： sync_with_server和服务端同步信息")
-        tcp_socket.sync_with_server(env, true)
+        -- tcp_socket.sync_with_server("unhandled_key_notifier", env, true)
+        -- 首先判断输入的字符是不是符号要求的字符
+        local char
+        if env.key_repr then
+            logger.debug("进入env.key_repr: " .. env.key_repr)
+            char = smart_cursor_processor.send_chars[env.key_repr]            
+            if char then
+                logger.debug("unhandled_key_notifier捕获字符: " .. char)
+                tcp_socket.sync_with_server(env, true, nil, nil, nil, nil, "unhandled_key_notifier", char)
+            else
+                tcp_socket.sync_with_server(env, true)
+            end
+        else
+            tcp_socket.sync_with_server(env, true)
+        end
+        
     end)
 
     env.new_update_notifier = context.update_notifier:connect(function(context)
@@ -659,6 +677,7 @@ function smart_cursor_processor.func(key, env)
     local kNoop = 2 -- 表示按键未被处理,继续传递给下一个处理器
 
     local key_repr = key:repr()
+    env.key_repr = key_repr
     logger.info("key_repr: " .. key_repr)
 
     -- 根据当前应用与 app_options 中的 vim_mode 配置，同步 ascii_mode 状态（按应用独立文件）
