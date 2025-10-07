@@ -603,7 +603,40 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
             -- 检查menu是否为空以及选词索引是否在有效范围内
             if not menu:empty() and select_key_index <= menu:candidate_count() then
                 -- 获取即将上屏的候选词
-                local candidate = last_segment:get_candidate_at(select_key_index - 1) -- 0-based索引
+                -- Calculate candidate index across pages
+                local candidate_count = menu:candidate_count()
+                local page_size = cloud_input_processor.ai_assistant_config.page_size
+                local candidate_index = select_key_index - 1
+
+                local page_index = math.floor((candidate_count - 1) / page_size)
+                local candidates_before_current_page = page_index * page_size
+                local current_page_count = candidate_count - candidates_before_current_page
+                if current_page_count <= 0 then
+                    current_page_count = page_size
+                end
+
+                if select_key_index > current_page_count then
+                    logger.debug("选词索引超出当前页可用候选数: " .. select_key_index .. " > " ..
+                                     current_page_count)
+                    return kNoop
+                end
+
+                candidate_index = candidates_before_current_page + (select_key_index - 1)
+
+                if page_size > 0 and candidate_count > 0 then
+
+                else
+                    logger.debug(
+                        "无法计算翻页信息, 使用默认候选索引: page_size=" .. tostring(page_size) ..
+                            ", candidate_count=" .. tostring(candidate_count))
+                end
+
+                if candidate_index >= candidate_count then
+                    logger.debug("候选索引超出范围: " .. candidate_index .. " >= " .. candidate_count)
+                    return kNoop
+                end
+
+                local candidate = last_segment:get_candidate_at(candidate_index)
                 if candidate then
 
                     -- 检查选词后是否会完成完整输入（上屏）
@@ -762,10 +795,34 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
         if last_segment and menu then
             -- 检查menu是否为空以及选词索引是否在有效范围内
             if not menu:empty() and select_key_index <= cloud_input_processor.ai_assistant_config.page_size then
-                
-                -- 获取即将上屏的候选词: menu:candidate_count()
-                -- 随着翻页,这个数量会累加,需要知道翻到了第几页然后用乘法计算选择的候选词.
-                local candidate = last_segment:get_candidate_at(select_key_index - 1) -- 0-based索引
+
+                -- 获取即将上屏的候选词
+                -- Calculate candidate index across pages
+                local candidate_count = menu:candidate_count()
+                local page_size = cloud_input_processor.ai_assistant_config.page_size
+                local candidate_index = select_key_index - 1
+
+                local page_index = math.floor((candidate_count - 1) / page_size)
+                local candidates_before_current_page = page_index * page_size
+                local current_page_count = candidate_count - candidates_before_current_page
+                if current_page_count <= 0 then
+                    current_page_count = page_size
+                end
+
+                if select_key_index > current_page_count then
+                    logger.debug("选词索引超出当前页可用候选数: " .. select_key_index .. " > " ..
+                                     current_page_count)
+                    return kNoop
+                end
+
+                candidate_index = candidates_before_current_page + (select_key_index - 1)
+
+                if candidate_index >= candidate_count then
+                    logger.debug("候选索引超出范围: " .. candidate_index .. " >= " .. candidate_count)
+                    return kNoop
+                end
+
+                local candidate = last_segment:get_candidate_at(candidate_index)
                 if candidate then
 
                     -- 检查选词后是否会完成完整输入（上屏）
@@ -776,13 +833,13 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
                     if is_last_candidate then
                         -- 在这里添加一个分支: 判断候选词的类型是不是我自己设置的: "clear_chat_history", 如果是: 则直接取消上屏, 并发送socket消息.
                         if candidate.type == "clear_chat_history" then
-                                -- 发送聊天消息，包含对话类型信息, command_value应该是assitant_id, assitant_id也就是chat_trigger
-                                tcp_socket.sync_with_server(env, false, nil, "clear_chat_history", chat_trigger)
+                            -- 发送聊天消息，包含对话类型信息, command_value应该是assitant_id, assitant_id也就是chat_trigger
+                            tcp_socket.sync_with_server(env, false, nil, "clear_chat_history", chat_trigger)
 
-                                -- 拦截按键, 清空当前context中的内容. 应该根据配置清空控制是否清空,或者正常上屏. 如果上屏则应该发送回车.
-                                logger.debug("clear_chat_history: 清空候选词不上屏, context:clear()")
-                                context:clear()
-                                return kAccepted
+                            -- 拦截按键, 清空当前context中的内容. 应该根据配置清空控制是否清空,或者正常上屏. 如果上屏则应该发送回车.
+                            logger.debug("clear_chat_history: 清空候选词不上屏, context:clear()")
+                            context:clear()
+                            return kAccepted
                         end
 
                         logger.debug("选词将完成上屏操作，拦截按键并发送AI消息")
@@ -1300,7 +1357,6 @@ function cloud_input_processor.func(key, env)
                 logger.debug("反引号状态下跳过按键事件: " .. key_repr)
                 return kAccepted
             end
-
 
             logger.debug("key_repr: " .. key_repr)
             if cloud_input_processor.handle_keys[key_repr] then
