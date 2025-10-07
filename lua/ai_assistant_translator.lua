@@ -196,12 +196,15 @@ function ai_assistant_translator.func(input, segment, env)
     local preedit_pre = nil
     local is_prefix_display = false
 
+    debug_utils.print_segment_info(segment, logger)
     -- 检查所有配置的AI触发器标签（无需遍历 chat_triggers，依赖 segment 的标签与上下文）
     if ai_assistant_translator.chat_triggers then
+        local context = env.engine.context
+        local trigger_name = context:get_property("current_ai_context")
         -- 仅当该分词段带有 ai_talk 标签时才认为是触发器前缀段
+
         if segment:has_tag("ai_talk") then
-            local context = env.engine.context
-            local trigger_name = context and context:get_property("current_ai_context") or nil
+
             -- 确认该 trigger 存在于配置表中
             if trigger_name and ai_assistant_translator.chat_triggers[trigger_name] then
                 matched_reply_tag = trigger_name
@@ -212,6 +215,12 @@ function ai_assistant_translator.func(input, segment, env)
                 reply_message = ai_assistant_translator.chat_names[trigger_name] or (trigger_prefix .. " AI助手")
                 logger.info("检测到AI触发器标签: " .. trigger_name .. " (前缀显示)")
             end
+        elseif segment:has_tag("clear_chat_history") then
+            -- 生成一个指定候选词,然后返回
+            local candidate = Candidate("clear_chat_history", segment.start, segment._end, "清空对话记录", "")
+            yield(candidate)
+            logger.info("清空对话记录: " .. trigger_name)
+            return
         end
     end
 

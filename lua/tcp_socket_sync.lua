@@ -1507,7 +1507,7 @@ function tcp_socket_sync.send_paste_command(env)
 end
 
 -- 公开接口：发送对话消息到AI服务（仅发送）
-function tcp_socket_sync.send_chat_message(commit_text, chat_type, response_key)
+function tcp_socket_sync.send_chat_message(commit_text, assistant_id, response_key)
     local success, error_msg = pcall(function()
         local current_time = get_current_time_ms()
 
@@ -1515,7 +1515,7 @@ function tcp_socket_sync.send_chat_message(commit_text, chat_type, response_key)
         local chat_data = {
             messege_type = "chat",
             commit_text = commit_text, -- 对话内容
-            chat_type = chat_type, -- AI对话类型
+            assistant_id = assistant_id, -- AI对话类型
             -- response_key = response_key,
             timestamp = current_time
         }
@@ -1531,7 +1531,7 @@ function tcp_socket_sync.send_chat_message(commit_text, chat_type, response_key)
         if json_data then
             -- 写入AI转换服务TCP套接字
             tcp_socket_sync.write_to_ai_socket(json_data)
-            logger.debug("对话消息发送成功，类型: " .. tostring(chat_type))
+            logger.debug("对话消息发送成功，类型: " .. tostring(assistant_id))
         else
             logger.error("对话消息序列化失败: " .. tostring(chat_data))
             return false

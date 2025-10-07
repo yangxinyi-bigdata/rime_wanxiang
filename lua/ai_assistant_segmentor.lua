@@ -90,7 +90,7 @@ function ai_assistant_segmentor.update_current_config(config)
                 ai_assistant_segmentor.clean_prefix_to_trigger[clean_prefix] = {
                     trigger_name = trigger_name,
                     trigger_prefix = trigger_value,
-                    chat_name = chat_name,
+                    chat_name = chat_name
                 }
                 logger.info("预处理触发器前缀 - " .. clean_prefix .. " -> " .. trigger_name)
             end
@@ -140,10 +140,10 @@ function ai_assistant_segmentor.func(segmentation, env)
             -- logger.debug("input_string: " .. input_string .. " #input_string" .. tostring(#input_string))
             if #context:get_property("input_string") == 9 then
                 context:set_property("input_string", "")
-            end 
+            end
         end
     end
-    
+
     -- 检查AI助手是否启用
     if not ai_assistant_segmentor.enabled then
         return true -- AI助手未启用，不处理
@@ -159,6 +159,19 @@ function ai_assistant_segmentor.func(segmentation, env)
     logger.info("current_start_input: " .. current_start_input)
 
     -- 清空前面的分词,从这里开始进行分词
+    debug_utils.print_segmentation_info(segmentation, logger)
+    local trigger_name = context:get_property("current_ai_context")
+    if segmentation.size == 2 and trigger_name then
+        if current_start == 3 and current_end == 3 and segmentation.input:sub(-2) == ":c" then
+            -- debug_utils.print_segmentation_info(segmentation, logger)
+            logger.debug("进入清空历史聊天记录位置")
+            local last_segment = segmentation:back()
+            last_segment.tags = Set {"clear_chat_history"}
+            last_segment._end = last_segment._end + 1
+            return false
+            -- debug_utils.print_segmentation_info(segmentation, logger)
+        end
+    end
 
     if confirmed_pos ~= 0 or current_start ~= 0 then
         -- 如果不是从头开始是分段处理,而是已经进行过一切选词了,则不再进本脚本的分词处理
@@ -208,7 +221,9 @@ function ai_assistant_segmentor.func(segmentation, env)
             local matched_prefix, matched_trigger_name, full_matched_prefix
             for prefix, t_name in pairs(ai_assistant_segmentor.chat_triggers_reverse) do
                 if #segmentation_input >= #prefix and segmentation_input:sub(1, #prefix) == prefix then
+
                     if #segmentation_input == #prefix then
+                        -- 如果进入这个分支则是完全匹配 ac: 后面没有其他内容,否则是后面还有内容.
                         full_matched_prefix = true
                     end
                     matched_prefix = prefix
@@ -232,17 +247,27 @@ function ai_assistant_segmentor.func(segmentation, env)
                         return false
                     else
                         segmentation:forward()
+                        -- 首先打印segmentation里面的数据看看
+                        debug_utils.print_segmentation_info(segmentation, logger)
+                        if segmentation:get_current_start_position() == 3 and segmentation:get_current_end_position() ==
+                            3 and segmentation.input:sub(-2) == ":c" then
+                            logger.debug("进入清空历史聊天记录位置")
+                            local last_segment = segmentation:back()
+                            last_segment._end = last_segment._end + 1
+                            last_segment.tags = Set {"clear_chat_history"}
+                            return false
+                        end
                     end
-                    
+
                 else
                     logger.debug("添加ai_talk分段失败")
                 end
 
             end
         end
+
     end
 
-    -- debug_utils.print_segmentation_info(segmentation, logger)
     return true -- 不能false啊,应该继续让后面的分词器继续处理呢!
 end
 

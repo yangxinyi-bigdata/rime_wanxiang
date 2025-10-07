@@ -738,6 +738,8 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
     -- 如果是ai_talk标签的segment, 则需要判断是不是将要上屏, 如果要上屏,则进行拦截后处理
     local first_segment = segmentation:get_at(0)
     local last_segment = segmentation:back()
+    -- local menu = last_segment.menu
+    -- logger.debug("menu:candidate_count(): " .. tostring(menu:candidate_count()))
 
     if key_repr == "space" then
         -- 空格键按照选词键1处理
@@ -745,7 +747,7 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
         select_key_index = 1
         logger.debug("检测到空格键，按选词键1处理 (索引: " .. select_key_index .. ")")
     else
-        -- 直接查找字符在选词键字符串中的位置
+        -- 直接查找字符在选词键字符串中的位置,这里就是如果第一个选词键是1,则这里面按下1就是select_key_index为1
         select_key_index = string.find(cloud_input_processor.ai_assistant_config.alternative_select_keys, key_repr, 1,
             true)
         if select_key_index then
@@ -759,8 +761,10 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
         local menu = last_segment.menu
         if last_segment and menu then
             -- 检查menu是否为空以及选词索引是否在有效范围内
-            if not menu:empty() and select_key_index <= menu:candidate_count() then
-                -- 获取即将上屏的候选词
+            if not menu:empty() and select_key_index <= cloud_input_processor.ai_assistant_config.page_size then
+                
+                -- 获取即将上屏的候选词: menu:candidate_count()
+                -- 随着翻页,这个数量会累加,需要知道翻到了第几页然后用乘法计算选择的候选词.
                 local candidate = last_segment:get_candidate_at(select_key_index - 1) -- 0-based索引
                 if candidate then
 
@@ -770,6 +774,17 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
                     -- 判断是否为最后一个未确认的segment，且选择后会导致上屏
                     local is_last_candidate = (candidate._end == #context.input)
                     if is_last_candidate then
+                        -- 在这里添加一个分支: 判断候选词的类型是不是我自己设置的: "clear_chat_history", 如果是: 则直接取消上屏, 并发送socket消息.
+                        if candidate.type == "clear_chat_history" then
+                                -- 发送聊天消息，包含对话类型信息, command_value应该是assitant_id, assitant_id也就是chat_trigger
+                                tcp_socket.sync_with_server(env, false, nil, "clear_chat_history", chat_trigger)
+
+                                -- 拦截按键, 清空当前context中的内容. 应该根据配置清空控制是否清空,或者正常上屏. 如果上屏则应该发送回车.
+                                logger.debug("clear_chat_history: 清空候选词不上屏, context:clear()")
+                                context:clear()
+                                return kAccepted
+                        end
+
                         logger.debug("选词将完成上屏操作，拦截按键并发送AI消息")
                         local candidate_text = candidate.text
                         logger.info("候选词文本: " .. candidate_text)

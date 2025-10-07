@@ -225,7 +225,6 @@ function debug_utils.print_segmentation_info(segmentation, logger)
     -- 获取已确认位置
     local confirmed_pos = segmentation:get_confirmed_position()
     logger.debug("confirmed_position: " .. tostring(confirmed_pos))
-    local confirmed_pos = segmentation:get_confirmed_position()
     local confirmed_pos_input = segmentation.input:sub(confirmed_pos + 1)
     logger.debug("confirmed_pos_input: " .. confirmed_pos_input)
 
