@@ -159,7 +159,7 @@ function ai_assistant_segmentor.func(segmentation, env)
     logger.info("current_start_input: " .. current_start_input)
 
     -- 清空前面的分词,从这里开始进行分词
-    debug_utils.print_segmentation_info(segmentation, logger)
+    -- debug_utils.print_segmentation_info(segmentation, logger)
     local trigger_name = context:get_property("current_ai_context")
     if segmentation.size == 2 and trigger_name then
         if current_start == 3 and current_end == 3 and segmentation.input:sub(-2) == ":c" then
@@ -184,7 +184,7 @@ function ai_assistant_segmentor.func(segmentation, env)
     local reply_trigger = ai_assistant_segmentor.reply_inputs_to_trigger[segmentation_input]
     if reply_trigger then
         logger.debug("检测到AI回复输入: " .. segmentation_input .. " (触发器: " .. reply_trigger .. ")")
-        debug_utils.print_segmentation_info(segmentation, logger)
+        -- debug_utils.print_segmentation_info(segmentation, logger)
         local ai_reply_segment = Segment(0, #segmentation_input)
         ai_reply_segment.tags = Set {reply_trigger .. "_reply", "ai_reply"}
         if segmentation.size > 0 then
@@ -248,7 +248,7 @@ function ai_assistant_segmentor.func(segmentation, env)
                     else
                         segmentation:forward()
                         -- 首先打印segmentation里面的数据看看
-                        debug_utils.print_segmentation_info(segmentation, logger)
+                        -- debug_utils.print_segmentation_info(segmentation, logger)
                         if segmentation:get_current_start_position() == 3 and segmentation:get_current_end_position() ==
                             3 and segmentation.input:sub(-2) == ":c" then
                             logger.debug("进入清空历史聊天记录位置")

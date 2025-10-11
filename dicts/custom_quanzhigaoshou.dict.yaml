@@ -1,0 +1,15 @@
+# rime dictionary
+# encoding: utf-8
+#https://github.com/amzxyz/RIME-LMDG
+# ------- 测试添加词库词汇-------
+---
+name: test
+version: "20250928"
+sort: by_weight
+...
+
+叶秋	ye qiu	3580
+叶丘	ye qiu	4580
+叶修	yè xiū	460
+千机伞	qiān jī sǎn	82
+苏沐橙	sū mù chéng	133

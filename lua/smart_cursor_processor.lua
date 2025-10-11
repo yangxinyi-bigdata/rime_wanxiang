@@ -350,6 +350,7 @@ function smart_cursor_processor.init(env)
     env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
         logger.debug("unhandled_key_notifier触发： sync_with_server和服务端同步信息")
         -- tcp_socket.sync_with_server("unhandled_key_notifier", env, true)
+        tcp_socket.sync_with_server(env, true)
         -- 首先判断输入的字符是不是符号要求的字符
         local char
         if env.key_repr then

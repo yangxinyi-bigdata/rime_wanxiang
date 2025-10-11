@@ -133,7 +133,9 @@ text_splitter.handle_keys = {
 
 -- 定义需要转换为普通字符的按键
 text_splitter.send_chars = {
-    ["space"] = " ", -- 空格转为空格字符
+    ["BackSpace"] = "<BACKSPACE>",
+    ["Return"] = "<Enter>",
+    ["space"] = "<space>",
     -- 字母键
     ["a"] = "a",
     ["b"] = "b",

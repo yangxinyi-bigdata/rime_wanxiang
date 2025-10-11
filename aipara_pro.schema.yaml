@@ -291,15 +291,6 @@ ai_assistant:
       enable_context: false
       context_rounds: 5
 
-    code_ai_chat:
-      chat_triggers: 'cod:'
-      chat_triggers_name: 编程助手
-      chat_names: 'AI编程:'
-      reply_messages_preedits: 'AI编程:'
-      prompt: "你是一个专业的编程助手，精通多种编程语言和开发技术。请帮助用户解决编程问题，提供代码示例，解释技术概念，并给出最佳实践建议。\n或许你会编程哈哈."
-      description: AI编程助手
-      enable_context: true
-      context_rounds: 10
     search_ai_chat:
       chat_triggers: "as:"
       chat_triggers_name: "搜索助手"
@@ -339,17 +330,16 @@ ai_assistant:
       description: "内容改进助手"
       enable_context: false
       context_rounds: 3
-    polish_text:
-      chat_triggers: 'ap:'
-      chat_triggers_name: 文本润色
-      chat_names: '润色文本:'
-      reply_messages_preedits: '润色结果:'
-      prompt: "请对以下文本进行润色处理：\n\t•\t保持原文语义不变，不能删改关键信息。\n\t•\t主要目标是让句子更流畅、自然，读起来更像成熟的书面表达。\n\t•\t适当优化用词，使其更准确、生动。\n\t•\t避免生硬或重复的语序，保证语感顺畅。\n\t•\t输出时直接返回润色后的完整文本，不要附加解释或评论。"
-      description: 用于对中文文本进行润色
+    codea_ai_chat:
+      chat_triggers: 'cod:'
+      chat_triggers_name: 编程助手
+      chat_names: 'AI编程:'
+      reply_messages_preedits: 'AI编程:'
+      prompt: "你是一个专业的编程助手，精通多种编程语言和开发技术。请帮助用户解决编程问题，提供代码示例，解释技术概念，并给出最佳实践建议。\n或许你会编程哈哈."
+      description: AI编程助手
       model_profile_id: gpt-4.1_default
-      enable_context: false
-      context_rounds: 3
-    copy_cat_ai_chat:
+      enable_context: true
+      context_rounds: 10
 app_options:
   com_microsoft_VSCode:
     __label__: Code (com.microsoft.VSCode)
@@ -471,8 +461,7 @@ translator:
   replace_punct_enabled: false # 是否启用中文标点替换功能，true 为启用，false 为禁用
   keep_input_uncommit: false  # 保留未上屏的input中输入内容
   preedit_format:     #影响到输入框的显示和“Shift+回车”上屏的字符，交给super_preedit处理
-    __patch:
-      - 自然码双拼渲染
+    __patch: []
 custom_phrase:
   dictionary: ""
   user_dict: custom_phrase  # 需要手动创建 custom_phrase.txt 文件

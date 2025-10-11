@@ -15,7 +15,7 @@ local spans_manager = require("spans_manager")
 local logger = logger_module.create("cloud_ai_filter_v2", {
     enabled = true, -- 启用日志以便测试
     unique_file_log = false, -- 启用日志以便测试
-    log_level = "INFO"
+    log_level = "DEBUG"
 })
 -- 清空日志文件
 logger.clear()
@@ -278,11 +278,12 @@ function cloud_ai_filter.func(translation, env)
 
     --  判断segment:has_tag("ai_prompt") , 给前x个候选词添加comment, x的数量和lua/ai_assistant_segmentor.lua中trigger_prefix:sub(1, 1) == prompt_chat 的数量相同, 
     -- 将每一个匹配上的prompt_triggers, 添加到候选词的comment当中去
+    -- 所有ai_prompt就是当前的a字符，所以这里不用分析
 
     -- 检查是否是AI提示段落
     local is_ai_prompt = segment:has_tag("ai_prompt")
     if is_ai_prompt then
-        logger.info("检测到ai_prompt标签，开始处理AI提示候选词")
+        logger.debug("检测到ai_prompt标签，开始处理AI提示候选词")
 
         -- 生成prompt_triggers列表，与ai_assistant_segmentor.lua中的逻辑一致
         local prompt_triggers = {}
@@ -373,6 +374,8 @@ function cloud_ai_filter.func(translation, env)
         break
     end
 
+    -- 前边是只记录下来第一个候选词,然后这里提取第一个候选词的类型, 是标点符号, 或者是以"ai_chat"结尾的, 就输出第一个候选词, 
+    -- 对剩余的候选词进行遍历, 输出候选词信息, 输出候选词, 然后返回
     if cand_type == "punct" or cand_type:sub(-7) == "ai_chat" then
         logger.debug("cand_type: punct or ai_chat cand_text: " .. cand_text)
         -- 输出原始候选词

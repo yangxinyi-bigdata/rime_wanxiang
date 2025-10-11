@@ -196,7 +196,7 @@ function ai_assistant_translator.func(input, segment, env)
     local preedit_pre = nil
     local is_prefix_display = false
 
-    debug_utils.print_segment_info(segment, logger)
+    -- debug_utils.print_segment_info(segment, logger)
     -- 检查所有配置的AI触发器标签（无需遍历 chat_triggers，依赖 segment 的标签与上下文）
     if ai_assistant_translator.chat_triggers then
         local context = env.engine.context
