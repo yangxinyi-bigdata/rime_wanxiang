@@ -258,60 +258,60 @@ function smart_cursor_processor.init(env)
         --     logger.debug("current_app: " .. current_app)
         -- end
 
-        if smart_cursor_processor.previous_client_app == "" and current_app ~= "" then
-            smart_cursor_processor.previous_client_app = current_app
-            logger.debug("第一次设置previous_client_app:  " .. smart_cursor_processor.previous_client_app)
+        -- if smart_cursor_processor.previous_client_app == "" and current_app ~= "" then
+        --     smart_cursor_processor.previous_client_app = current_app
+        --     logger.debug("第一次设置previous_client_app:  " .. smart_cursor_processor.previous_client_app)
 
-        elseif current_app ~= "" and smart_cursor_processor.previous_client_app ~= "" and current_app ~= smart_cursor_processor.previous_client_app then
-            logger.debug("current_app ~= prev_app: previous_client_app(env): " .. smart_cursor_processor.previous_client_app ..
-                             " current_app: " .. current_app)
+        -- elseif current_app ~= "" and smart_cursor_processor.previous_client_app ~= "" and current_app ~= smart_cursor_processor.previous_client_app then
+        --     logger.debug("current_app ~= prev_app: previous_client_app(env): " .. smart_cursor_processor.previous_client_app ..
+        --                      " current_app: " .. current_app)
 
-            smart_cursor_processor.previous_client_app = current_app
-            -- 切换到新会话后，应用一次全局开关（覆盖各会话差异，保持一致）
-            if tcp_socket and tcp_socket.apply_global_options_to_context then
-                local applied = tcp_socket.apply_global_options_to_context(context)
-                if applied > 0 then
-                    logger.info("切换会话时应用全局开关数量: " .. tostring(applied))
-                end
-            end
-        elseif context:get_property("config_update_flag") == "1" then
-            logger.debug("config_update_flag: " .. context:get_property("config_update_flag"))
-            if tcp_socket and tcp_socket.apply_global_options_to_context then
-                local applied = tcp_socket.apply_global_options_to_context(context)
-                if applied > 0 then
-                    logger.info("切换会话时应用全局开关数量: " .. tostring(applied))
-                end
-            end
-            -- 配置更新了, 清空config_update_flag
-            context:set_property("config_update_flag", "0")
+        --     smart_cursor_processor.previous_client_app = current_app
+        --     -- 切换到新会话后，应用一次全局开关（覆盖各会话差异，保持一致）
+        --     if tcp_socket and tcp_socket.apply_global_options_to_context then
+        --         local applied = tcp_socket.apply_global_options_to_context(context)
+        --         if applied > 0 then
+        --             logger.info("切换会话时应用全局开关数量: " .. tostring(applied))
+        --         end
+        --     end
+        -- elseif context:get_property("config_update_flag") == "1" then
+        --     logger.debug("config_update_flag: " .. context:get_property("config_update_flag"))
+        --     if tcp_socket and tcp_socket.apply_global_options_to_context then
+        --         local applied = tcp_socket.apply_global_options_to_context(context)
+        --         if applied > 0 then
+        --             logger.info("切换会话时应用全局开关数量: " .. tostring(applied))
+        --         end
+        --     end
+        --     -- 配置更新了, 清空config_update_flag
+        --     context:set_property("config_update_flag", "0")
 
-        else
-            return
-        end
+        -- else
+        --     return
+        -- end
 
-        -- 切换到新的应用中后, 检查一次app_options当中的开关选项和当前的开关选项是否一致,如果不一致则切换成配置中设置的结果
-        -- 正常应该是检测到app变化之后再执行, 当前放在这里相当于每次都执行
-        -- 对app_options当中的每个应用选项进行检查
-        for _, app_key in ipairs(smart_cursor_processor.app_options:keys()) do
-            -- 将current_app中的"."替换成"_"
-            current_app = current_app:gsub("%.", "_")
-            if app_key == current_app then
-                -- logger.debug("current_app和app_key相同, 开始匹配开关状态")
-                local item = smart_cursor_processor.app_options:get(app_key)
-                if item and item.get_map then
-                    local app_map = item:get_map()
-                    for _, k in ipairs(app_map:keys()) do
-                        local value = config:get_bool("app_options/" .. app_key .. "/" .. k)
-                        logger.debug(" k: " .. k .. "value: " .. tostring(value))
-                        -- 这里应该是判断这个value和当前context中的开关状态是否一致,如果不一致则切换成配置中设置的结果
-                        if k ~= "__label__" and value ~= context:get_option(k) then
-                            context:set_option(k, value)
-                            logger.debug("set_option k: " .. k .. " value: " .. tostring(value))
-                        end
-                    end
-                end
-            end
-        end
+        -- -- 切换到新的应用中后, 检查一次app_options当中的开关选项和当前的开关选项是否一致,如果不一致则切换成配置中设置的结果
+        -- -- 正常应该是检测到app变化之后再执行, 当前放在这里相当于每次都执行
+        -- -- 对app_options当中的每个应用选项进行检查
+        -- for _, app_key in ipairs(smart_cursor_processor.app_options:keys()) do
+        --     -- 将current_app中的"."替换成"_"
+        --     current_app = current_app:gsub("%.", "_")
+        --     if app_key == current_app then
+        --         -- logger.debug("current_app和app_key相同, 开始匹配开关状态")
+        --         local item = smart_cursor_processor.app_options:get(app_key)
+        --         if item and item.get_map then
+        --             local app_map = item:get_map()
+        --             for _, k in ipairs(app_map:keys()) do
+        --                 local value = config:get_bool("app_options/" .. app_key .. "/" .. k)
+        --                 logger.debug(" k: " .. k .. "value: " .. tostring(value))
+        --                 -- 这里应该是判断这个value和当前context中的开关状态是否一致,如果不一致则切换成配置中设置的结果
+        --                 if k ~= "__label__" and value ~= context:get_option(k) then
+        --                     context:set_option(k, value)
+        --                     logger.debug("set_option k: " .. k .. " value: " .. tostring(value))
+        --                 end
+        --             end
+        --         end
+        --     end
+        -- end
 
     end)
     -- env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)

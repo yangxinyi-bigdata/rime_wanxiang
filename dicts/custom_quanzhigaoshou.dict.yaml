@@ -3,13 +3,14 @@
 #https://github.com/amzxyz/RIME-LMDG
 # ------- 测试添加词库词汇-------
 ---
-name: test
+name: 全职高手
 version: "20250928"
 sort: by_weight
 ...
 
-叶秋	ye qiu	3580
-叶丘	ye qiu	4580
+叶秋	ye qiu	180
+叶丘	ye qiu	10
 叶修	ye xiu	460
 千机伞	qian ji san	82
 苏沐橙	su mu cheng	133
+

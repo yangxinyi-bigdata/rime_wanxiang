@@ -1,0 +1,11 @@
+# Rime dictionary
+# encoding: utf-8
+# 演示环境使用的示例词库，主要存放测试词条。
+---
+name: 测试词库
+version: "20251011"
+sort: by_weight
+...
+
+测试词库	ce shi ci ku	100
+Rime 输入法	rime shu ru fa	90

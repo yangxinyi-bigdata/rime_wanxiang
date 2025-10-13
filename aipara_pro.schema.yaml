@@ -345,10 +345,6 @@ app_options:
     __label__: Code (com.microsoft.VSCode)
     ascii_punct: true
     vim_mode: true
-  md_obsidian:
-    __label__: Obsidian (md.obsidian)
-    ascii_punct: true
-    vim_mode: true
   com_openai_chat:
     __label__: ChatGPT (com.openai.chat)
     ascii_punct: true

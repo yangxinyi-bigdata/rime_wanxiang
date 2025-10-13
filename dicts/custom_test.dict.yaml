@@ -1,16 +1,11 @@
-# rime dictionary
+# Rime dictionary
 # encoding: utf-8
-#https://github.com/amzxyz/RIME-LMDG
-# ------- 测试添加词库词汇-------
+# 演示环境使用的示例词库，主要存放测试词条。
 ---
-name: test
-version: "20250928"
+name: 测试词库
+version: "20251011"
 sort: by_weight
 ...
 
-杨心一	yang xin yi	0
-省活	sheng huo	0
-省货	sheng huo	0
-把	ba	9000
-吧	ba	9100
-吧	ba	9100
+杨心一	yang xin yi	1000
+杨悦	yang yue	1000
