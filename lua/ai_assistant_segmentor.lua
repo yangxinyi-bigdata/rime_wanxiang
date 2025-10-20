@@ -121,9 +121,6 @@ end
 
 function ai_assistant_segmentor.init(env)
     logger.info("AI对话分词器初始化完成")
-
-    -- 配置更新由 cloud_input_processor 统一管理，无需在此处调用
-    local config = env.engine.schema.config
     logger.info("等待 cloud_input_processor 统一更新配置")
 end
 

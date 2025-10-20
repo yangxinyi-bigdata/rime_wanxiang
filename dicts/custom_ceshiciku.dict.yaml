@@ -1,0 +1,11 @@
+# Rime dictionary
+# encoding: utf-8
+# 专门用于测试的词库
+---
+name: 测试词库
+version: "20251015"
+sort: by_weight
+...
+
+慰劳死	wei lao bing	10000	1
+牢姿	lao zi	1	4

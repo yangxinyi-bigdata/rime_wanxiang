@@ -1231,6 +1231,7 @@ inf	Inf
 obi	Obi
 dib	Dib
 nub	Nub
+GMV	GMV
 bap	Bap
 bub	Bub
 keg	Keg
@@ -1993,6 +1994,7 @@ edge	Edge
 edit	Edit
 educ	Educ
 eggs	Eggs
+Etsy	Etsy
 eGPU	EGPU
 elec	Elec
 elem	Elem
@@ -29349,6 +29351,7 @@ vaulting	Vaulting
 pugilism	Pugilism
 pugilist	Pugilist
 misspell	Misspell
+linewidth	Linewidth
 gleaning	Gleaning
 nazareth	Nazareth
 napoleon	Napoleon

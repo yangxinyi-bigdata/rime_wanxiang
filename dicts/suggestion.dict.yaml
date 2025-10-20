@@ -5635,6 +5635,7 @@ sort: by_weight
 半官方机构	ban guan fang ji gou	1
 半胱天冬酶	ban guang tian dong mei	1
 半胱亚磺酸	ban guang ya huang suan	1
+搬过几次家	ban guo ji ci jia	1
 半海百合属	ban hai bai he shu	1
 搬好小板凳	ban hao xiao ban deng	1
 半合成机油	ban he cheng ji you	1
@@ -18692,6 +18693,7 @@ sort: by_weight
 菜单中点击	cai dan zhong dian ji	1
 菜单中选择	cai dan zhong xuan ze	1
 猜到了开头	cai dao le kai tou	1
+踩到棉花上	cai dao mian hua shang	1
 菜刀实名制	cai dao shi ming zhi	1
 猜到是谁了	cai dao shi shui le	1
 菜刀走江湖	cai dao zou jiang hu	1
@@ -28197,6 +28199,7 @@ sort: by_weight
 出了那么多	chu le na me duo	1
 除了你以外	chu le ni yi wai	1
 除了你之外	chu le ni zhi wai	1
+出了什么事	chu le shen me shi	1
 出了什么事	chu le shen me shi	1
 除了他以外	chu le ta yi wai	1
 除了他之外	chu le ta zhi wai	1
@@ -38254,6 +38257,7 @@ sort: by_weight
 得了肩周炎	de le jian zhou yan	1
 得了精神病	de le jing shen bing	1
 得了颈椎病	de le jing zhui bing	1
+得了什么病	de le shen me bing	1
 得了什么病	de le shen me bing	1
 得了失心疯	de le shi xin feng	1
 得了糖尿病	de le tang niao bing	1
@@ -52168,6 +52172,7 @@ sort: by_weight
 发生了口角	fa sheng le kou jue	1
 发生了矛盾	fa sheng le mao dun	1
 发生了什么	fa sheng le shen me	1
+发生了什么	fa sheng le shen me	1
 发生了一次	fa sheng le yi ci	1
 发生了一起	fa sheng le yi qi	1
 发生了意外	fa sheng le yi wai	1
@@ -52267,6 +52272,7 @@ sort: by_weight
 发现了另一	fa xian le ling yi	1
 发现了没有	fa xian le mei you	1
 发现了商机	fa xian le shang ji	1
+发现了什么	fa xian le shen me	1
 发现了什么	fa xian le shen me	1
 发现了问题	fa xian le wen ti	1
 发现了一个	fa xian le yi ge	1
@@ -55699,6 +55705,7 @@ sort: by_weight
 非纳税收益	fei na shui shou yi	1
 非那斯特莱	fei na si te lai	1
 非那雄胺片	fei na xiong an pian	1
+非奈利酮片	fei nai li tong pian	1
 肺囊虫肺炎	fei nang chong fei yan	1
 非内阁部门	fei nei ge bu men	1
 非你不挂念	fei ni bu gua nian	1
@@ -56612,7 +56619,7 @@ sort: by_weight
 非主流网名	fei zhu liu wang ming	1
 非主流文化	fei zhu liu wen hua	1
 非主流艺术	fei zhu liu yi shu	1
-非主流音乐	fei zhu liu yin le	1
+非主流音乐	fei zhu liu yin yue	1
 非主流右派	fei zhu liu you pai	1
 非主流造型	fei zhu liu zao xing	1
 非主流宅人	fei zhu liu zhai ren	1
@@ -57929,6 +57936,7 @@ sort: by_weight
 疯狂的表现	feng kuang de biao xian	1
 疯狂的蠢贼	feng kuang de chun zei	1
 疯狂的代价	feng kuang de dai jia	1
+疯狂的地步	feng kuang de di bu	1
 疯狂的粉丝	feng kuang de fen si	1
 疯狂的攻击	feng kuang de gong ji	1
 疯狂的工作	feng kuang de gong zuo	1
@@ -80993,6 +81001,7 @@ sort: by_weight
 核心领导层	he xin ling dao ceng	1
 何信禄龙属	he xin lu long shu	1
 核心路由器	he xin lu you qi	1
+核心期待感	he xin qi dai gan	1
 核心启动区	he xin qi dong qu	1
 核心驱动力	he xin qu dong li	1
 核心区范围	he xin qu fan wei	1
@@ -86458,7 +86467,6 @@ sort: by_weight
 华润总公司	hua run zong gong si	1
 滑鳃喉盘鱼	hua sai hou pan yu	1
 花色小蛋糕	hua se xiao dan gao	1
-华厦大酒店	hua sha da jiu dian	1
 花山殡仪馆	hua shan bin yi guan	1
 华山风景区	hua shan feng jing qu	1
 华珊瑚蛇属	hua shan hu she shu	1
@@ -86658,6 +86666,7 @@ sort: by_weight
 华西医学院	hua xi yi xue yuan	1
 华夏常青树	hua xia chang qing shu	1
 华夏出版社	hua xia chu ban she	1
+华厦大酒店	hua xia da jiu dian	1
 华夏大酒店	hua xia da jiu dian	1
 华夏碘泡虫	hua xia dian pao chong	1
 华夏东路站	hua xia dong lu zhan	1
@@ -91696,6 +91705,7 @@ sort: by_weight
 几步的距离	ji bu de ju li	1
 极不负责任	ji bu fu ze ren	1
 记不记得住	ji bu ji de zhu	1
+急不可耐地	ji bu ke nai de	1
 吉卜力动画	ji bu li dong hua	1
 季布里夫基	ji bu li fu ji	1
 吉卜力公园	ji bu li gong yuan	1
@@ -100156,7 +100166,6 @@ sort: by_weight
 僵人综合征	jiang ren zong he zheng	1
 姜蓉非洲鱼	jiang rong fei zhou yu	1
 降三世明王	jiang san shi ming wang	1
-江厦桥东站	jiang sha qiao dong zhan	1
 江沙提克鸟	jiang sha ti ke niao	1
 江山多少年	jiang shan duo shao nian	1
 桨扇发动机	jiang shan fa dong ji	1
@@ -100417,6 +100426,7 @@ sort: by_weight
 江西中医药	jiang xi zhong yi yao	1
 缰鰕虎鱼属	jiang xia hu yu shu	1
 江夏客厅站	jiang xia ke ting zhan	1
+江厦桥东站	jiang xia qiao dong zhan	1
 江夏区区长	jiang xia qu qu chang	1
 绛县长春观	jiang xian chang chun guan	1
 绛县公安局	jiang xian gong an ju	1
@@ -102350,6 +102360,7 @@ sort: by_weight
 结婚的结婚	jie hun de jie hun	1
 结婚的理由	jie hun de li you	1
 结婚的那天	jie hun de na tian	1
+结婚的年纪	jie hun de nian ji	1
 结婚的年龄	jie hun de nian ling	1
 结婚的女人	jie hun de nv ren	1
 结婚的女神	jie hun de nv shen	1
@@ -106358,6 +106369,7 @@ sort: by_weight
 经历了风雨	jing li le feng yu	1
 经历了高考	jing li le gao kao	1
 经历了离婚	jing li le li hun	1
+经历了什么	jing li le shen me	1
 经历了什么	jing li le shen me	1
 经历了生死	jing li le sheng si	1
 经历了太多	jing li le tai duo	1
@@ -112091,6 +112103,7 @@ sort: by_weight
 看到了光明	kan dao le guang ming	1
 看到了没有	kan dao le mei you	1
 看到了商机	kan dao le shang ji	1
+看到了什么	kan dao le shen me	1
 看到了什么	kan dao le shen me	1
 看到了世界	kan dao le shi jie	1
 看到了曙光	kan dao le shu guang	1
@@ -135465,7 +135478,6 @@ sort: by_weight
 民主革命家	min zhu ge ming jia	1
 民主共和党	min zhu gong he dang	1
 民主共和国	min zhu gong he guo	1
-民主共和政	min zhu gong he zheng	1
 民主共和制	min zhu gong he zhi	1
 民主捍卫者	min zhu han wei zhe	1
 民主和科学	min zhu he ke xue	1
@@ -165698,8 +165710,6 @@ sort: by_weight
 杀出一片天	sha chu yi pian tian	1
 杀出一条路	sha chu yi tiao lu	1
 沙葱鸢尾属	sha cong yuan wei shu	1
-厦大图书馆	sha da tu shu guan	1
-厦大医院站	sha da yi yuan zhan	1
 砂单胞菌属	sha dan bao jun shu	1
 鲨胆大话王	sha dan da hua wang	1
 杀稻瘟菌素	sha dao wen jun su	1
@@ -168108,6 +168118,8 @@ sort: by_weight
 上行下给式	shang xing xia gei shi	1
 上学的孩子	shang xue de hai zi	1
 上学的路上	shang xue de lu shang	1
+上学的年纪	shang xue de nian ji	1
+上学的年龄	shang xue de nian ling	1
 上学的日子	shang xue de ri zi	1
 上学的上学	shang xue de shang xue	1
 上学的时候	shang xue de shi hou	1
@@ -172531,6 +172543,7 @@ sort: by_weight
 省广播电台	sheng guang bo dian tai	1
 声光电技术	sheng guang dian ji shu	1
 声光热电力	sheng guang re dian li	1
+声光调制器	sheng guang tiao zhi qi	1
 胜过吃补药	sheng guo chi bu yao	1
 生过孩子后	sheng guo hai zi hou	1
 生过好多次	sheng guo hao duo ci	1
@@ -177871,6 +177884,7 @@ sort: by_weight
 是啥玩意啊	shi sha wan yi a	1
 是啥意思啊	shi sha yi si a	1
 是啥意思了	shi sha yi si le	1
+是啥原因呢	shi sha yuan yin ne	1
 石山坂本线	shi shan ban ben xian	1
 石山本愿寺	shi shan ben yuan si	1
 狮山大学城	shi shan da xue cheng	1
@@ -180703,6 +180717,7 @@ sort: by_weight
 手绘效果图	shou hui xiao guo tu	1
 收货报告单	shou huo bao gao dan	1
 收获的果实	shou huo de guo shi	1
+收获的季节	shou huo de ji jie	1
 收获的季节	shou huo de ji jie	1
 收获的快乐	shou huo de kuai le	1
 收获的日子	shou huo de ri zi	1
@@ -196292,6 +196307,7 @@ sort: by_weight
 同一款游戏	tong yi kuan you xi	1
 统一了思想	tong yi le si xiang	1
 统一零售价	tong yi ling shou jia	1
+同一路径下	tong yi lu jing xia	1
 统一码标准	tong yi ma biao zhun	1
 统一码联盟	tong yi ma lian meng	1
 统一马其顿	tong yi ma qi dun	1
@@ -198065,6 +198081,7 @@ sort: by_weight
 退票手续费	tui piao shou xu fei	1
 退票通知单	tui piao tong zhi dan	1
 退去的时候	tui qu de shi hou	1
+褪去了青涩	tui qu le qing se	1
 退色的记忆	tui se de ji yi	1
 腿上的肌肉	tui shang de ji rou	1
 退市第一股	tui shi di yi gu	1
@@ -198151,7 +198168,6 @@ sort: by_weight
 吞了吞口水	tun le tun kou shui	1
 吞米桑布扎	tun mi sang bu zha	1
 吞拿鱼罐头	tun na yu guan tou	1
-褪去了青涩	tun qu le qing se	1
 臀上皮神经	tun shang pi shen jing	1
 吞噬溶酶体	tun shi rong mei ti	1
 豚鼠特工队	tun shu te gong dui	1
@@ -212187,6 +212203,7 @@ sort: by_weight
 喜欢帮助人	xi huan bang zhu ren	1
 喜欢布莱德	xi huan bu lai de	1
 喜欢不喜欢	xi huan bu xi huan	1
+喜欢不喜欢	xi huan bu xi huan	1
 喜欢吃大米	xi huan chi da mi	1
 喜欢吃的菜	xi huan chi de cai	1
 喜欢吃东西	xi huan chi dong xi	1
@@ -212724,6 +212741,7 @@ sort: by_weight
 溪流下口鲶	xi liu xia kou nian	1
 夕露沾我衣	xi lu zhan wo yi	1
 溪洛渡电站	xi luo du dian zhan	1
+希律的生日	xi lv de sheng ri	1
 喜马灯心草	xi ma deng xin cao	1
 锡马尖条鳅	xi ma jian tiao qiu	1
 喜马拉雅猫	xi ma la ya mao	1
@@ -213909,6 +213927,8 @@ sort: by_weight
 下次再说吧	xia ci zai shuo ba	1
 下次注意点	xia ci zhu yi dian	1
 下大甲溪桥	xia da jia xi qiao	1
+厦大图书馆	xia da tu shu guan	1
+厦大医院站	xia da yi yuan zhan	1
 下大雨的天	xia da yu de tian	1
 下蛋的母鸡	xia dan de mu ji	1
 下单的时候	xia dan de shi hou	1
@@ -217922,6 +217942,7 @@ sort: by_weight
 相同或相近	xiang tong huo xiang jin	1
 相同或相似	xiang tong huo xiang si	1
 相同价值观	xiang tong jia zhi guan	1
+相同路径下	xiang tong lu jing xia	1
 相同条件下	xiang tong tiao jian xia	1
 向同一方向	xiang tong yi fang xiang	1
 相同与不同	xiang tong yu bu tong	1
@@ -226958,6 +226979,7 @@ sort: by_weight
 需要认识到	xu yao ren shi dao	1
 需要人照顾	xu yao ren zhao gu	1
 需要身份证	xu yao shen fen zheng	1
+需要什么了	xu yao shen me le	1
 需要什么样	xu yao shen me yang	1
 需要升级了	xu yao sheng ji le	1
 需要使用时	xu yao shi yong shi	1
@@ -230436,7 +230458,9 @@ sort: by_weight
 炎热的天气	yan re de tian qi	1
 炎热的午后	yan re de wu hou	1
 炎热的夏季	yan re de xia ji	1
+炎热的夏季	yan re de xia ji	1
 炎热的夏日	yan re de xia ri	1
+炎热的夏天	yan re de xia tian	1
 炎热的下午	yan re de xia wu	1
 炎热的夏夜	yan re de xia ye	1
 炎热的夜晚	yan re de ye wan	1
@@ -234053,13 +234077,17 @@ sort: by_weight
 一定不会输	yi ding bu hui shu	1
 一定程度上	yi ding cheng du shang	1
 一定的程度	yi ding de cheng du	1
+一定的程度	yi ding de cheng du	1
 一定的高度	yi ding de gao du	1
 一定的关系	yi ding de guan xi	1
 一定的好处	yi ding de hao chu	1
 一定的距离	yi ding de ju li	1
+一定的年纪	yi ding de nian ji	1
+一定的年龄	yi ding de nian ling	1
 一定的强度	yi ding de qiang du	1
 一定的深度	yi ding de shen du	1
 一定的湿度	yi ding de shi du	1
+一定的时间	yi ding de shi jian	1
 一定的水平	yi ding de shui ping	1
 一定的速度	yi ding de su du	1
 一定的温度	yi ding de wen du	1
@@ -236162,6 +236190,7 @@ sort: by_weight
 以肉食为主	yi rou shi wei zhu	1
 以肉眼可见	yi rou yan ke jian	1
 一如既往地	yi ru ji wang de	1
+一如你初妆	yi ru ni chu zhuang	1
 一如年少时	yi ru nian shao shi	1
 亿瑞典克朗	yi rui dian ke lang	1
 异蕊落檐属	yi rui luo yan shu	1
@@ -237181,6 +237210,7 @@ sort: by_weight
 意味着放弃	yi wei zhe fang qi	1
 意味着风险	yi wei zhe feng xian	1
 意味着更多	yi wei zhe geng duo	1
+意味着什么	yi wei zhe shen me	1
 意味着什么	yi wei zhe shen me	1
 意味着未来	yi wei zhe wei lai	1
 意味着一切	yi wei zhe yi qie	1
@@ -238426,6 +238456,7 @@ sort: by_weight
 隐藏于黑暗	yin cang yu hei an	1
 隐藏在角落	yin cang zai jiao luo	1
 隐藏在幕后	yin cang zai mu hou	1
+隐藏着什么	yin cang zhe shen me	1
 隐藏着什么	yin cang zhe shen me	1
 隐藏状态栏	yin cang zhuang tai lan	1
 阴曹朴丽鱼	yin cao pu li yu	1
@@ -247264,6 +247295,7 @@ sort: by_weight
 约定的场所	yue ding de chang suo	1
 约定的地点	yue ding de di dian	1
 约定的地方	yue ding de di fang	1
+约定的时间	yue ding de shi jian	1
 约定的时间	yue ding de shi jian	1
 约定好时间	yue ding hao shi jian	1
 约定驾驶人	yue ding jia shi ren	1
@@ -256784,6 +256816,7 @@ sort: by_weight
 止步于此了	zhi bu yu ci le	1
 知不知道啊	zhi bu zhi dao a	1
 知不知道呢	zhi bu zhi dao ne	1
+值不值得买	zhi bu zhi de mai	1
 值不值得买	zhi bu zhi de mai	1
 值不值得做	zhi bu zhi de zuo	1
 制裁俄罗斯	zhi cai e luo si	1
@@ -270245,6 +270278,7 @@ sort: by_weight
 作词作曲家	zuo ci zuo qu jia	1
 做促销活动	zuo cu xiao huo dong	1
 做错的事情	zuo cuo de shi qing	1
+做错了什么	zuo cuo le shen me	1
 做错了什么	zuo cuo le shen me	1
 做错了事情	zuo cuo liao shi qing	1
 做错一件事	zuo cuo yi jian shi	1
@@ -307539,7 +307573,6 @@ sort: by_weight
 拳拳爱国之心	quan quan ai guo zhi xin	1
 拳拳赤子之心	quan quan chi zi zhi xin	1
 泉三高速公路	quan san gao su gong lu	1
-泉厦高速公路	quan sha gao su gong lu	1
 泉山门停车场	quan shan men ting che chang	1
 泉山森林公园	quan shan sen lin gong yuan	1
 券商中国记者	quan shang zhong guo ji zhe	1
@@ -307597,6 +307630,7 @@ sort: by_weight
 全膝关节置换	quan xi guan jie zhi huan	1
 全息玫瑰碎片	quan xi mei gui sui pian	1
 全息摄影测量	quan xi she ying ce liang	1
+泉厦高速公路	quan xia gao su gong lu	1
 全县干部职工	quan xian gan bu zhi gong	1
 全县生产总值	quan xian sheng chan zong zhi	1
 全县脱贫攻坚	quan xian tuo pin gong jian	1
@@ -309321,8 +309355,6 @@ sort: by_weight
 杀虫剂的使用	sha chong ji de shi yong	1
 杀出一匹黑马	sha chu yi pi hei ma	1
 杀出一条生路	sha chu yi tiao sheng lu	1
-厦村邓氏宗祠	sha cun deng shi zong ci	1
-厦大翔安校区	sha da xiang an xiao qu	1
 杀得片甲不留	sha de pian jia bu liu	1
 沙地䍁牛尾鱼	sha di sui niu wei yu	1
 沙地肖叶甲属	sha di xiao ye jia shu	1
@@ -309372,7 +309404,6 @@ sort: by_weight
 傻傻分不清楚	sha sha fen bu qing chu	1
 莎莎妇女银袋	sha sha fu nv yin dai	1
 厦沙高速公路	sha sha gao su gong lu	1
-沙厦高速公路	sha sha gao su gong lu	1
 杀伤力的武器	sha shang li de wu qi	1
 厦深客运专线	sha shen ke yun zhuan xian	1
 沙氏矮长颌鱼	sha shi ai chang he yu	1
@@ -309392,6 +309423,7 @@ sort: by_weight
 沙特电信公司	sha te dian xin gong si	1
 沙特似真小鲤	sha te si zhen xiao li	1
 杀外寄生虫药	sha wai ji sheng chong yao	1
+沙厦高速公路	sha xia gao su gong lu	1
 傻小子睡凉炕	sha xiao zi shui liang kang	1
 傻小子学害怕	sha xiao zi xue hai pa	1
 杀蚜蝇姬蜂属	sha ya ying ji feng shu	1
@@ -316613,8 +316645,6 @@ sort: by_weight
 同志仍需努力	tong zhi reng xu nu li	1
 同志仍须努力	tong zhi reng xu nu li	1
 通直散骑侍郎	tong zhi san qi shi lang	1
-同治陕甘回变	tong zhi shan gan hui bian	1
-同治陕甘回乱	tong zhi shan gan hui luan	1
 同志社会运动	tong zhi she hui yun dong	1
 同知枢密院事	tong zhi shu mi yuan shi	1
 同治苏州府志	tong zhi su zhou fu zhi	1
@@ -317478,6 +317508,7 @@ sort: by_weight
 网络安全保卫	wang luo an quan bao wei	1
 网络安全攻防	wang luo an quan gong fang	1
 网络安全事件	wang luo an quan shi jian	1
+网络安全术语	wang luo an quan shu yu	1
 网络巴尔干化	wang luo ba er gan hua	1
 网络暴力事件	wang luo bao li shi jian	1
 网络本体语言	wang luo ben ti yu yan	1
@@ -318504,9 +318535,7 @@ sort: by_weight
 我亲爱的父亲	wo qin ai de fu qin	1
 我亲爱的老师	wo qin ai de lao shi	1
 我亲爱的妈妈	wo qin ai de ma ma	1
-我亲爱的秘书	wo qin ai de mi shu	1
 我亲爱的朋友	wo qin ai de peng you	1
-我亲爱的未来	wo qin ai de wei lai	1
 我亲爱的祖国	wo qin ai de zu guo	1
 斡勤巴儿合黑	wo qin ba er he hei	1
 我轻轻的招手	wo qing qing de zhao shou	1
@@ -320050,6 +320079,8 @@ sort: by_weight
 吓出一身冷汗	xia chu yi shen leng han	1
 瑕疵担保责任	xia ci dan bao ze ren	1
 下次要注意了	xia ci yao zhu yi le	1
+厦村邓氏宗祠	xia cun deng shi zong ci	1
+厦大翔安校区	xia da xiang an xiao qu	1
 狭带细鳞盔鱼	xia dai xi lin kui yu	1
 侠盗飞车系列	xia dao fei che xi lie	1
 侠盗猎魔系列	xia dao lie mo xi lie	1
@@ -320107,7 +320138,7 @@ sort: by_weight
 厦门海事法院	xia men hai shi fa yuan	1
 厦门禾山中学	xia men he shan zhong xue	1
 厦门弘爱医院	xia men hong ai yi yuan	1
-厦门华厦学院	xia men hua sha xue yuan	1
+厦门华厦学院	xia men hua xia xue yuan	1
 厦门建发集团	xia men jian fa ji tuan	1
 厦门马拉松赛	xia men ma la song sai	1
 厦门马垅医院	xia men ma long yi yuan	1
@@ -330703,7 +330734,7 @@ sort: by_weight
 中煤能源股份	zhong mei neng yuan gu fen	1
 中煤能源集团	zhong mei neng yuan ji tuan	1
 中煤平朔集团	zhong mei ping shuo ji tuan	1
-中美望厦条约	zhong mei wang sha tiao yue	1
+中美望厦条约	zhong mei wang xia tiao yue	1
 中美倭松鼠属	zhong mei wo song shu shu	1
 中美续增条约	zhong mei xu zeng tiao yue	1
 中美洲娇丽鱼	zhong mei zhou jiao li yu	1
@@ -337640,20 +337671,12 @@ sort: by_weight
 党的十九大召开	dang de shi jiu da zhao kai	1
 党的十七大精神	dang de shi qi da jing shen	1
 党的性质和宗旨	dang de xing zhi he zong zhi	1
-当地的风俗习惯	dang di de feng su xi guan	1
-当地的风土人情	dang di de feng tu ren qing	1
-当地的经济发展	dang di de jing ji fa zhan	1
-当地的经济水平	dang di de jing ji shui ping	1
-当地的气候条件	dang di de qi hou tiao jian	1
 当地的生活水平	dang di de sheng huo shui ping	1
 当地球停止转动	dang di qiu ting zhi zhuan dong	1
 当归补血口服液	dang gui bu xue kou fu ye	1
 当归生姜羊肉汤	dang gui sheng jiang yang rou tang	1
 当过去就在眼前	dang guo qu jiu zai yan qian	1
-当哈利碰上莎莉	dang ha li peng shang sha li	1
 当哈利遇到莎莉	dang ha li yu dao sha li	1
-当哈利遇见莎莉	dang ha li yu jian sha li	1
-当哈利遇上莎莉	dang ha li yu shang sha li	1
 党和人民的事业	dang he ren min de shi ye	1
 当和尚遇到钻石	dang he shang yu dao zuan shi	1
 当婚姻走到尽头	dang hun yin zou dao jin tou	1
@@ -337684,10 +337707,6 @@ sort: by_weight
 当时轻别意中人	dang shi qing bie yi zhong ren	1
 当事人进行主义	dang shi ren jin xing zhu yi	1
 当时若不登高望	dang shi ruo bu deng gao wang	1
-当时我就吓傻了	dang shi wo jiu xia sha le	1
-当时我就震惊了	dang shi wo jiu zhen jing le	1
-当时怎么没想到	dang shi zen me mei xiang dao	1
-当时自怕中原复	dang shi zi pa zhong yuan fu	1
 当天和尚撞天钟	dang tian he shang zhuang tian zhong	1
 当铁马遇上战车	dang tie ma yu shang zhan che	1
 党委办公室主任	dang wei ban gong shi zhu ren	1
@@ -337734,25 +337753,6 @@ sort: by_weight
 道德非自然主义	dao de fei zi ran zhu yi	1
 道德形上学基础	dao de xing shang xue ji chu	1
 道德与立法原理	dao de yu li fa yuan li	1
-到底出了什么事	dao di chu le shen me shi	1
-到底得了什么病	dao di de le shen me bing	1
-到底发生了什么	dao di fa sheng le shen me	1
-到底发现了什么	dao di fa xian le shen me	1
-到底经历了什么	dao di jing li le shen me	1
-到底看到了什么	dao di kan dao le shen me	1
-到底是啥原因呢	dao di shi sha yuan yin ne	1
-到底喜欢不喜欢	dao di xi huan bu xi huan	1
-到底需要什么了	dao di xu yao shen me le	1
-到底意味着什么	dao di yi wei zhe shen me	1
-到底隐藏着什么	dao di yin cang zhe shen me	1
-到底有没有怀孕	dao di you mei you huai yun	1
-到底有没有整容	dao di you mei you zheng rong	1
-到底有什么不同	dao di you shen me bu tong	1
-到底有什么魅力	dao di you shen me mei li	1
-到底有什么魔力	dao di you shen me mo li	1
-到底有什么意义	dao di you shen me yi yi	1
-到底值不值得买	dao di zhi bu zhi de mai	1
-到底做错了什么	dao di zuo cuo le shen me	1
 道耳顿分压定律	dao er dun fen ya ding lv	1
 道尔顿分压定律	dao er dun fen ya ding lv	1
 道法自然除心魔	dao fa zi ran chu xin mo	1
@@ -337770,24 +337770,7 @@ sort: by_weight
 到老终无怨恨心	dao lao zhong wu yuan hen xin	1
 倒了八辈子的霉	dao le ba bei zi de mei	1
 倒了八辈子血霉	dao le ba bei zi xue mei	1
-到了吃饭的时间	dao le chi fan de shi jian	1
-到了二十一世纪	dao le er shi yi shi ji	1
-到了疯狂的地步	dao le feng kuang de di bu	1
-到了结婚的年纪	dao le jie hun de nian ji	1
-到了另一个世界	dao le ling yi ge shi jie	1
 到了千年又觉陈	dao le qian nian you jue chen	1
-到了上学的年纪	dao le shang xue de nian ji	1
-到了上学的年龄	dao le shang xue de nian ling	1
-到了适婚的年龄	dao le shi hun de nian ling	1
-到了收获的季节	dao le shou huo de ji jie	1
-到了希律的生日	dao le xi lv de sheng ri	1
-到了炎热的夏季	dao le yan re de xia ji	1
-到了炎热的夏天	dao le yan re de xia tian	1
-到了一定的程度	dao le yi ding de cheng du	1
-到了一定的年纪	dao le yi ding de nian ji	1
-到了一定的年龄	dao le yi ding de nian ling	1
-到了一定的时间	dao le yi ding de shi jian	1
-到了约定的时间	dao le yue ding de shi jian	1
 悼良会之永绝兮	dao liang hui zhi yong jue xi	1
 道林格雷综合征	dao lin ge lei zong he zheng	1
 道路等基础设施	dao lu deng ji chu she shi	1
@@ -338182,19 +338165,6 @@ sort: by_weight
 第十八届超级碗	di shi ba jie chao ji wan	1
 第十二世本因坊	di shi er shi ben yin fang	1
 迪氏拟半齿甲鲶	di shi ni ban chi jia nian	1
-迪士尼动画世界	di shi ni dong hua shi jie	1
-迪士尼度假区线	di shi ni du jia qu xian	1
-迪士尼飞天巡游	di shi ni fei tian xun you	1
-迪士尼公主系列	di shi ni gong zhu xi lie	1
-迪士尼幻想工程	di shi ni huan xiang gong cheng	1
-迪士尼经典动画	di shi ni jing dian dong hua	1
-迪士尼九大元老	di shi ni jiu da yuan lao	1
-迪士尼卡通电影	di shi ni ka tong dian ying	1
-迪士尼快速通行	di shi ni kuai su tong xing	1
-迪士尼收购福斯	di shi ni shou gou fu si	1
-迪士尼戏剧集团	di shi ni xi ju ji tuan	1
-迪士尼戏剧制作	di shi ni xi ju zhi zuo	1
-迪士尼在逃公主	di shi ni zai tao gong zhu	1
 第十七世噶玛巴	di shi qi shi ga ma ba	1
 第十四个的目标	di shi si ge de mu biao	1
 蒂氏脱硫念珠菌	di shi tuo liu nian zhu jun	1
@@ -345831,6 +345801,7 @@ sort: by_weight
 胸甲拟半齿甲鲶	xiong jia ni ban chi jia nian	1
 胸廓出口综合征	xiong kuo chu kou zong he zheng	1
 熊去氧胆酸胶囊	xiong qu yang dan suan jiao nang	1
+休达及梅利利亚	xiu da ji mei li li ya	1
 溴代邻苯三酚红	xiu dai lin ben san fen hong	1
 溴代三氟甲烷气	xiu dai san fu jia wan qi	1
 溴化四乙酸二锝	xiu hua si yi suan er de	1

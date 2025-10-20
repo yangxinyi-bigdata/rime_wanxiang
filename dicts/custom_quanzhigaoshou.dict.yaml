@@ -1,16 +1,11 @@
-# rime dictionary
+# Rime dictionary
 # encoding: utf-8
-#https://github.com/amzxyz/RIME-LMDG
-# ------- 测试添加词库词汇-------
+# 全职高手人名词库
 ---
 name: 全职高手
-version: "20250928"
+version: "20251014"
 sort: by_weight
 ...
 
-叶秋	ye qiu	180
-叶丘	ye qiu	10
-叶修	ye xiu	460
-千机伞	qian ji san	82
-苏沐橙	su mu cheng	133
-
+叶秋	ye qiu	10000	1
+叶修	ye xiu	1	2

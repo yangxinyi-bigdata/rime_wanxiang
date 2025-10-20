@@ -3027,8 +3027,8 @@ sort: by_weight
 潭头镇	tan tou zhen	293
 潭子区	tan zi qu	1
 唐家堡	tang jia bao	340
-塘厦镇	tang sha zhen	404
 汤旺县	tang wang xian	1
+塘厦镇	tang xia zhen	404
 汤峪镇	tang yu zhen	336
 陶北村	tao bei cun	219
 陶厂镇	tao chang zhen	127
@@ -3231,7 +3231,6 @@ sort: by_weight
 王渠村	wang qu cun	69
 王曲乡	wang qu xiang	181
 王圈村	wang quan cun	127
-望厦村	wang sha cun	234
 王沙村	wang sha cun	69
 王山村	wang shan cun	112
 王石村	wang shi cun	1
@@ -3264,6 +3263,7 @@ sort: by_weight
 王屋镇	wang wu zhen	163
 王武庄	wang wu zhuang	210
 王西村	wang xi cun	52
+望厦村	wang xia cun	234
 王仙镇	wang xian zhen	145
 王巷村	wang xiang cun	139
 王相村	wang xiang cun	52
@@ -14512,7 +14512,7 @@ sort: by_weight
 横湖桥村	heng hu qiao cun	1
 衡家坳村	heng jia ao cun	1
 横江桥乡	heng jiang qiao xiang	58
-横江厦村	heng jiang sha cun	156
+横江厦村	heng jiang xia cun	156
 横滘头村	heng jiao tou cun	1
 横街子村	heng jie zi cun	92
 横泾堂村	heng jing tang cun	1
@@ -16808,7 +16808,6 @@ sort: by_weight
 江热夏乡	jiang re xia xiang	92
 江日堂乡	jiang ri tang xiang	116
 蒋三鸡庄	jiang san ji zhuang	35
-江厦街道	jiang sha jie dao	10
 江山底村	jiang shan di cun	1
 姜山头村	jiang shan tou cun	1
 蒋山镇村	jiang shan zhen cun	1
@@ -16837,6 +16836,7 @@ sort: by_weight
 江西营村	jiang xi ying cun	35
 江西俞村	jiang xi yu cun	58
 将熙泽村	jiang xi ze cun	1
+江厦街道	jiang xia jie dao	10
 降香坪村	jiang xiang ping cun	1
 蒋巷镇村	jiang xiang zhen cun	1
 蒋辛屯镇	jiang xin tun zhen	173
@@ -17238,7 +17238,6 @@ sort: by_weight
 金沙夼村	jin sha kuang cun	1
 金厦山庄	jin sha shan zhuang	1
 金沙滩镇	jin sha tan zhen	183
-锦厦新村	jin sha xin cun	1
 金沙新村	jin sha xin cun	1
 金山堡村	jin shan bao cun	105
 金山店镇	jin shan dian zhen	207
@@ -17289,6 +17288,7 @@ sort: by_weight
 锦溪古镇	jin xi gu zhen	387
 金溪山庄	jin xi shan zhuang	203
 金霞街道	jin xia jie dao	10
+锦厦新村	jin xia xin cun	1
 进鲜港村	jin xian gang cun	1
 金线沟村	jin xian gou cun	1
 金乡街道	jin xiang jie dao	10
@@ -25877,9 +25877,7 @@ sort: by_weight
 沙樊头村	sha fan tou cun	1
 沙凤新村	sha feng xin cun	1
 沙岗店村	sha gang dian cun	1
-厦港街道	sha gang jie dao	10
 沙港头村	sha gang tou cun	1
-厦港新村	sha gang xin cun	134
 沙岗子村	sha gang zi cun	77
 沙圪垯村	sha ge da cun	1
 沙圪堵镇	sha ge du zhen	183
@@ -30726,7 +30724,6 @@ sort: by_weight
 王沙埠村	wang sha bu cun	1
 王沙沟村	wang sha gou cun	1
 王沙湾村	wang sha wan cun	1
-望厦新村	wang sha xin cun	1
 王山底村	wang shan di cun	77
 王山沟村	wang shan gou cun	1
 王芟河村	wang shan he cun	1
@@ -30803,6 +30800,7 @@ sort: by_weight
 王西沟村	wang xi gou cun	1
 王西章乡	wang xi zhang xiang	35
 王喜庄村	wang xi zhuang cun	1
+望厦新村	wang xia xin cun	1
 王仙庄村	wang xian zhuang cun	1
 王香铺村	wang xiang pu cun	1
 王辛店村	wang xin dian cun	1
@@ -33336,6 +33334,8 @@ sort: by_weight
 下房子村	xia fang zi cun	92
 下符桥镇	xia fu qiao zhen	116
 下甘沟村	xia gan gou cun	1
+厦港街道	xia gang jie dao	10
+厦港新村	xia gang xin cun	134
 夏各庄村	xia ge zhuang cun	92
 夏各庄镇	xia ge zhuang zhen	173
 夏格庄镇	xia ge zhuang zhen	116
