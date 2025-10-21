@@ -35,15 +35,15 @@ end
 
 setup_lua_paths()
 
-local tcp_socket = nil
+local tcp_zmq = nil
 local ok, err = pcall(function()
-    tcp_socket = require("tcp_socket_sync")
+    tcp_zmq = require("tcp_zmq")
 end)
 if not ok then
-    logger.error("加载 tcp_socket_sync 失败: " .. tostring(err))
+    logger.error("加载 tcp_zmq 失败: " .. tostring(err))
 else
-    logger.info("加载 tcp_socket_sync 成功")
-    if tcp_socket then
+    logger.info("加载 tcp_zmq 成功")
+    if tcp_zmq then
         logger.info("sync_module不为nil")
     else
         logger.error("sync_module为nil，尽管require没有报错")
@@ -431,7 +431,7 @@ function cloud_ai_filter.func(translation, env)
             logger.info("根据segment切片得到 segment_input: " .. segment_input)
 
             -- 发送翻译请求（异步，不等待响应）
-            local send_success = tcp_socket.send_convert_request(cloud_ai_filter.schema_name,
+            local send_success = tcp_zmq.send_convert_request(cloud_ai_filter.schema_name,
                 cloud_ai_filter.shuru_schema, segment_input, long_candidates_table)
             if send_success then
                 logger.info("云输入翻译请求发送成功，开始流式获取结果")
@@ -447,7 +447,7 @@ function cloud_ai_filter.func(translation, env)
             end
         end)
         if not ok then
-            logger.error("tcp_socket.send_convert_request 调用失败: " .. tostring(err))
+            logger.error("tcp_zmq.send_convert_request 调用失败: " .. tostring(err))
             context:set_property("get_cloud_stream", "error")
             logger.info("get_cloud_stream, 设置为error")
         end
@@ -463,7 +463,7 @@ function cloud_ai_filter.func(translation, env)
             if context:get_property("cloud_convert") == "1" then
                 context:set_property("cloud_convert", "0") -- 重置选项，避免重复触发
             end
-            local stream_result = tcp_socket.read_convert_result(timeout)
+            local stream_result = tcp_zmq.read_convert_result(timeout)
             local ordered_candidates = {}
             local segment_input = input:sub(segment._start + 1, segment._end)
 

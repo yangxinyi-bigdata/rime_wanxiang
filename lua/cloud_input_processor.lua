@@ -36,12 +36,12 @@ local punct_eng_chinese_filter = safe_require("punct_eng_chinese_filter")
 local text_splitter = safe_require("text_splitter")
 
 -- 引入TCP同步模块
-local tcp_socket
+local tcp_zmq
 local tcp_ok, tcp_err = pcall(function()
-    tcp_socket = require("tcp_socket_sync")
+    tcp_zmq = require("tcp_zmq")
 end)
 if not tcp_ok then
-    logger.error("加载 tcp_socket_sync 失败: " .. tostring(tcp_err))
+    logger.error("加载 tcp_zmq 失败: " .. tostring(tcp_err))
 end
 
 -- 返回值常量定义
@@ -685,14 +685,14 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
                         local ok, result = pcall(function()
 
                             -- 读取最新消息（丢弃积压的旧消息，保留最新的有用消息）
-                            local flushed_bytes = tcp_socket.flush_ai_socket_buffer()
+                            local flushed_bytes = tcp_zmq.flush_ai_socket_buffer()
                             if flushed_bytes and flushed_bytes > 0 then
                                 logger.debug("清理了积压的AI消息: " .. flushed_bytes .. " 字节")
                             else
                                 logger.debug("无积压的AI消息需要处理")
                             end
 
-                            tcp_socket.send_chat_message(final_commit_text, chat_trigger) -- 正常输入换行
+                            tcp_zmq.send_chat_message(final_commit_text, chat_trigger) -- 正常输入换行
 
                             -- 清理上次的候选词
                             local current_content = context:get_property("ai_replay_stream")
@@ -730,7 +730,7 @@ local function handle_ai_chat_selection(key_repr, chat_trigger, env, last_segmen
 
                             else
                                 -- 发送聊天消息，包含对话类型信息
-                                tcp_socket.send_chat_message(going_commit_text, chat_trigger, false)
+                                tcp_zmq.send_chat_message(going_commit_text, chat_trigger, false)
                                 -- 拦截按键, 清空当前context中的内容. 应该根据配置清空控制是否清空,或者正常上屏. 如果上屏则应该发送回车.
                                 logger.debug("context:clear()")
                                 context:clear()
@@ -834,7 +834,7 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
                         -- 在这里添加一个分支: 判断候选词的类型是不是我自己设置的: "clear_chat_history", 如果是: 则直接取消上屏, 并发送socket消息.
                         if candidate.type == "clear_chat_history" then
                             -- 发送聊天消息，包含对话类型信息, command_value应该是assitant_id, assitant_id也就是chat_trigger
-                            tcp_socket.sync_with_server(env, false, nil, "clear_chat_history", chat_trigger)
+                            tcp_zmq.sync_with_server(env, false, nil, "clear_chat_history", chat_trigger)
 
                             -- 拦截按键, 清空当前context中的内容. 应该根据配置清空控制是否清空,或者正常上屏. 如果上屏则应该发送回车.
                             logger.debug("clear_chat_history: 清空候选词不上屏, context:clear()")
@@ -887,7 +887,7 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
                         local ok, result = pcall(function()
 
                             -- 读取最新消息（丢弃积压的旧消息，保留最新的有用消息）
-                            local flushed_bytes = tcp_socket.flush_ai_socket_buffer()
+                            local flushed_bytes = tcp_zmq.flush_ai_socket_buffer()
                             if flushed_bytes and flushed_bytes > 0 then
                                 logger.debug("清理了积压的AI消息: " .. flushed_bytes .. " 字节")
                             else
@@ -916,7 +916,7 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
                                     response_key = cloud_input_processor.ai_assistant_config.behavior
                                                        .after_question_send_key
                                 end
-                                tcp_socket.send_chat_message(all_selected_candidate_without_first, chat_trigger,
+                                tcp_zmq.send_chat_message(all_selected_candidate_without_first, chat_trigger,
                                     response_key) -- 正常输入换行
                                 -- 再判断strip_chat_prefix为true或者false,如果为true,则清空并且重新上屏字符串
                                 if cloud_input_processor.ai_assistant_config.behavior.strip_chat_prefix then
@@ -939,7 +939,7 @@ local function all_segmentation_selected_candidate(key_repr, chat_trigger, env, 
 
                             else
                                 -- 发送聊天消息，包含对话类型信息
-                                tcp_socket.send_chat_message(all_selected_candidate_without_first, chat_trigger, false)
+                                tcp_zmq.send_chat_message(all_selected_candidate_without_first, chat_trigger, false)
                                 -- 拦截按键, 清空当前context中的内容. 应该根据配置清空控制是否清空,或者正常上屏. 如果上屏则应该发送回车.
                                 logger.debug("context:clear()")
                                 context:clear()
@@ -1029,11 +1029,11 @@ function cloud_input_processor.init(env)
 
     if need_update then
         -- 在初始化时设置配置更新处理器
-        if tcp_socket and tcp_socket.set_config_update_handler then
-            -- 将update_all_modules_config函数绑定到tcp_socket
-            tcp_socket.set_config_update_handler(cloud_input_processor.update_all_modules_config,
+        if tcp_zmq and tcp_zmq.set_config_update_handler then
+            -- 将update_all_modules_config函数绑定到tcp_zmq
+            tcp_zmq.set_config_update_handler(cloud_input_processor.update_all_modules_config,
                 cloud_input_processor.update_context_property)
-            logger.debug("已将配置更新处理器绑定到tcp_socket")
+            logger.debug("已将配置更新处理器绑定到tcp_zmq")
         end
 
         -- 使用统一的配置更新函数更新所有模块配置
@@ -1198,7 +1198,7 @@ function cloud_input_processor.func(key, env)
                 context:clear()
                 logger.debug("context:clear()结束")
                 -- 使用TCP通信发送粘贴命令到Python服务端（跨平台通用）
-                if tcp_socket then
+                if tcp_zmq then
                     logger.debug("🍴 通过TCP发送粘贴命令到Python服务端 (intercept模式)")
                     -- 如果获取input中的文本呢? 
                     if cloud_input_processor.ai_assistant_config.behavior.add_reply_prefix then
@@ -1211,11 +1211,11 @@ function cloud_input_processor.func(key, env)
                     local paste_success
                     logger.debug("send_key: " .. context:get_property("send_key"))
                     if context:get_property("send_key") ~= "" then
-                        paste_success = tcp_socket.sync_with_server(env, true, true, "button",
+                        paste_success = tcp_zmq.sync_with_server(env, true, true, "button",
                             "paste_then_" .. context:get_property("send_key"))
                         context:set_property("send_key", "")
                     else
-                        paste_success = tcp_socket.sync_with_server(env, false, false, "button", "paste")
+                        paste_success = tcp_zmq.sync_with_server(env, false, false, "button", "paste")
                     end
 
                     if paste_success then
@@ -1247,10 +1247,10 @@ function cloud_input_processor.func(key, env)
 
                 logger.debug("send_key: " .. context:get_property("send_key"))
                 if context:get_property("send_key") ~= "" then
-                    tcp_socket.sync_with_server(env, true, true, "button", context:get_property("send_key"))
+                    tcp_zmq.sync_with_server(env, true, true, "button", context:get_property("send_key"))
                     context:set_property("send_key", "")
                 else
-                    tcp_socket.sync_with_server(env, true, true)
+                    tcp_zmq.sync_with_server(env, true, true)
                 end
 
                 -- return kNoop

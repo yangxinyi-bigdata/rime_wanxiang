@@ -16,25 +16,19 @@ local logger = logger_module.create("smart_cursor_processor", {
 -- 初始化时清空日志文件
 logger.clear()
 
-local tcp_socket = nil
+local tcp_zmq = nil
 local ok, err = pcall(function()
-    tcp_socket = require("tcp_socket_sync")
+    tcp_zmq = require("tcp_zmq")
 end)
 if not ok then
-    logger.error("加载 tcp_socket_sync 失败: " .. tostring(err))
+    logger.error("加载 tcp_zmq 失败: " .. tostring(err))
 else
-    logger.info("加载 tcp_socket_sync 成功")
-    if tcp_socket then
-        local ok_init, err = pcall(function()
-            tcp_socket.init()
-        end)
-        if not ok_init then
-            logger.error("sync_module.init() 执行失败: " .. tostring(err))
-        else
-            logger.info("sync_module.init() 执行成功")
-        end
+    logger.info("加载 tcp_zmq 成功")
+    if tcp_zmq then
+        logger.info("tcp_zmq不为nil")
+        tcp_zmq.init()
     else
-        logger.error("sync_module为nil，尽管require没有报错")
+        logger.error("tcp_zmq 为nil，尽管require没有报错")
     end
 end
 
@@ -119,9 +113,9 @@ function smart_cursor_processor.init(env)
     -- 配置更新由 cloud_input_processor 统一管理，无需在此处调用
     logger.info("等待 cloud_input_processor 统一更新配置")
 
-    -- 初始化时应用 tcp_socket_sync 记录的全局开关（实现跨会话同步）
-    if tcp_socket and tcp_socket.apply_global_options_to_context then
-        local applied = tcp_socket.apply_global_options_to_context(context)
+    -- 初始化时应用 tcp_zmq_sync 记录的全局开关（实现跨会话同步）
+    if tcp_zmq and tcp_zmq.apply_global_options_to_context then
+        local applied = tcp_zmq.apply_global_options_to_context(context)
         if applied > 0 then
             logger.info("初始化应用全局开关数量: " .. tostring(applied))
         end
@@ -159,8 +153,7 @@ function smart_cursor_processor.init(env)
         ['"'] = true
     }
 
-
-    smart_cursor_processor.send_chars = text_splitter.send_chars 
+    smart_cursor_processor.send_chars = text_splitter.send_chars
 
     -- env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
     --     logger.debug("unhandled_key_notifier")
@@ -189,10 +182,10 @@ function smart_cursor_processor.init(env)
         -- 传递提交内容文本的信息
         logger.debug("send_key: " .. context:get_property("send_key"))
         if context:get_property("send_key") ~= "" then
-            tcp_socket.sync_with_server(env, true, true, "button", context:get_property("send_key"))
+            tcp_zmq.sync_with_server(env, true, true, "button", context:get_property("send_key"))
             context:set_property("send_key", "")
         else
-            tcp_socket.sync_with_server(env, true, true)
+            tcp_zmq.sync_with_server(env, true, true)
         end
     end)
 
@@ -252,7 +245,8 @@ function smart_cursor_processor.init(env)
     end)
 
     env.property_update_notifier = context.property_update_notifier:connect(function(context)
-        -- 属性更新通知：当 client_app 变化时，将 tcp_socket 的全局开关应用到新会话
+        logger.debug("进入property_update_notifier")
+        -- 属性更新通知：当 client_app 变化时，将 tcp_zmq 的全局开关应用到新会话
         local current_app = context:get_property("client_app")
         -- if current_app ~= "" then
         --     logger.debug("current_app: " .. current_app)
@@ -262,22 +256,23 @@ function smart_cursor_processor.init(env)
             smart_cursor_processor.previous_client_app = current_app
             logger.debug("第一次设置previous_client_app:  " .. smart_cursor_processor.previous_client_app)
 
-        elseif current_app ~= "" and smart_cursor_processor.previous_client_app ~= "" and current_app ~= smart_cursor_processor.previous_client_app then
-            logger.debug("current_app ~= prev_app: previous_client_app(env): " .. smart_cursor_processor.previous_client_app ..
-                             " current_app: " .. current_app)
+        elseif current_app ~= "" and smart_cursor_processor.previous_client_app ~= "" and current_app ~=
+            smart_cursor_processor.previous_client_app then
+            logger.debug("current_app ~= prev_app: previous_client_app(env): " ..
+                             smart_cursor_processor.previous_client_app .. " current_app: " .. current_app)
 
             smart_cursor_processor.previous_client_app = current_app
             -- 切换到新会话后，应用一次全局开关（覆盖各会话差异，保持一致）
-            if tcp_socket and tcp_socket.apply_global_options_to_context then
-                local applied = tcp_socket.apply_global_options_to_context(context)
+            if tcp_zmq and tcp_zmq.apply_global_options_to_context then
+                local applied = tcp_zmq.apply_global_options_to_context(context)
                 if applied > 0 then
                     logger.info("切换会话时应用全局开关数量: " .. tostring(applied))
                 end
             end
         elseif context:get_property("config_update_flag") == "1" then
             logger.debug("config_update_flag: " .. context:get_property("config_update_flag"))
-            if tcp_socket and tcp_socket.apply_global_options_to_context then
-                local applied = tcp_socket.apply_global_options_to_context(context)
+            if tcp_zmq and tcp_zmq.apply_global_options_to_context then
+                local applied = tcp_zmq.apply_global_options_to_context(context)
                 if applied > 0 then
                     logger.info("切换会话时应用全局开关数量: " .. tostring(applied))
                 end
@@ -324,20 +319,20 @@ function smart_cursor_processor.init(env)
     -- env.custom_update_notifier = context.update_notifier:connect(function(context)
     --     -- 防止递归调用的标志
     --     if context:get_property("tcp_sync_in_progress") == "true" then
-    --         logger.debug("tcp_socket.sync_with_server() 正在进行中，跳过本次调用")
+    --         logger.debug("tcp_zmq.sync_with_server() 正在进行中，跳过本次调用")
     --         return
     --     end
 
-    --     if tcp_socket then
+    --     if tcp_zmq then
     --         -- 设置标志，表示正在进行同步
     --         context:set_property("tcp_sync_in_progress", "true")
 
     --         local success, err = pcall(function()
-    --             tcp_socket.sync_with_server()
+    --             tcp_zmq.sync_with_server()
     --         end)
 
     --         if not success then
-    --             logger.error("tcp_socket.sync_with_server() 调用失败: " .. tostring(err))
+    --             logger.error("tcp_zmq.sync_with_server() 调用失败: " .. tostring(err))
     --         end
 
     --         -- 清除标志
@@ -349,29 +344,29 @@ function smart_cursor_processor.init(env)
 
     env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
         logger.debug("unhandled_key_notifier触发： sync_with_server和服务端同步信息")
-        -- tcp_socket.sync_with_server("unhandled_key_notifier", env, true)
-        tcp_socket.sync_with_server(env, true)
+        -- tcp_zmq.sync_with_server("unhandled_key_notifier", env, true)
+        tcp_zmq.sync_with_server(env, true)
         -- 首先判断输入的字符是不是符号要求的字符
         local char
         if env.key_repr then
             logger.debug("进入env.key_repr: " .. env.key_repr)
-            char = smart_cursor_processor.send_chars[env.key_repr]            
+            char = smart_cursor_processor.send_chars[env.key_repr]
             if char then
                 logger.debug("unhandled_key_notifier捕获字符: " .. char)
-                tcp_socket.sync_with_server(env, true, nil, nil, nil, nil, "unhandled_key_notifier", char)
+                tcp_zmq.sync_with_server(env, true, nil, nil, nil, nil, "unhandled_key_notifier", char)
             else
-                tcp_socket.sync_with_server(env, true)
+                tcp_zmq.sync_with_server(env, true)
             end
         else
-            tcp_socket.sync_with_server(env, true)
+            tcp_zmq.sync_with_server(env, true)
         end
-        
+
     end)
 
     env.new_update_notifier = context.update_notifier:connect(function(context)
         -- 每次上下文更新都和服务端同步
         logger.debug("sync_with_server和服务端同步信息")
-        tcp_socket.sync_with_server(env, true)
+        tcp_zmq.sync_with_server(env, true)
 
         -- 判断is_composing状态是否发生了变化
         local current_is_composing = context:is_composing()
@@ -455,9 +450,9 @@ function smart_cursor_processor.init(env)
     --         logger.debug("is_composing状态发生变化: " .. tostring(prev_state) .. " -> " ..
     --                          tostring(current_is_composing))
     --         logger.debug("从输入状态变化，触发发送当前开关信息.")
-    --         if tcp_socket then
+    --         if tcp_zmq then
     --             -- 传递option信息
-    --             tcp_socket.sync_with_server(env, true)
+    --             tcp_zmq.sync_with_server(env, true)
     --         else
     --             logger.debug("sync_module为nil，跳过状态更新")
     --         end
@@ -669,6 +664,21 @@ function smart_cursor_processor.move_by_spans_manager(env, direction)
     end
 end
 
+local function apply_global_options_to_context(context)
+    if not context then
+        return 0, context
+    end
+    local applied = 0
+    for name, val in pairs(tcp_zmq.global_option_state) do
+        if context:get_option(name) ~= val then
+            context:set_option(name, val)
+            applied = applied + 1
+            logger.debug(string.format("应用全局开关到context: %s = %s", name, tostring(val)))
+        end
+    end
+    return applied
+end
+
 function smart_cursor_processor.func(key, env)
     local engine = env.engine
     local context = engine.context
@@ -682,66 +692,71 @@ function smart_cursor_processor.func(key, env)
     logger.info("key_repr: " .. key_repr)
 
     -- 根据当前应用与 app_options 中的 vim_mode 配置，同步 ascii_mode 状态（按应用独立文件）
-    local current_app = context:get_property("client_app")
-    if current_app ~= "" and smart_cursor_processor.app_options then
-        -- 将 client_app 中的 . 替换为 _，以匹配 app_options 的键
-        local app_key = current_app:gsub("%.", "_")
+    -- local current_app = context:get_property("client_app")
+    -- if current_app ~= "" and smart_cursor_processor.app_options then
+    --     -- 将 client_app 中的 . 替换为 _，以匹配 app_options 的键
+    --     local app_key = current_app:gsub("%.", "_")
 
-        -- 读取该 app 的 vim_mode 开关
-        local config = engine.schema.config
-        -- 获取这个app的配置
-        local item = smart_cursor_processor.app_options:get(app_key)
-        local vim_mode_enabled = false
-        if item then
-            vim_mode_enabled = config:get_bool("app_options/" .. app_key .. "/vim_mode")
-            logger.debug("app: " .. app_key .. " vim_mode 状态: " .. tostring(vim_mode_enabled))
-        end
+    --     -- 读取该 app 的 vim_mode 开关
+    --     local config = engine.schema.config
+    --     -- 获取这个app的配置
+    --     local item = smart_cursor_processor.app_options:get(app_key)
+    --     local vim_mode_enabled = false
+    --     if item then
+    --         vim_mode_enabled = config:get_bool("app_options/" .. app_key .. "/vim_mode")
+    --         logger.debug("app: " .. app_key .. " vim_mode 状态: " .. tostring(vim_mode_enabled))
+    --     end
 
-        if vim_mode_enabled then
-            -- 读取用户目录下 /Users/.../Library/Rime/.{app_key}_vim_mode 文件
-            local user_data_dir = rime_api.get_user_data_dir()
-            local vim_mode_path = user_data_dir .. "/log" .. "/." .. app_key .. "_vim_mode"
-            -- logger.debug("vim_mode_path: " .. vim_mode_path)
+    --     if vim_mode_enabled then
+    --         -- 读取用户目录下 /Users/.../Library/Rime/.{app_key}_vim_mode 文件
+    --         local user_data_dir = rime_api.get_user_data_dir()
+    --         local vim_mode_path = user_data_dir .. "/log" .. "/." .. app_key .. "_vim_mode"
+    --         -- logger.debug("vim_mode_path: " .. vim_mode_path)
 
-            local mode_file, open_err = io.open(vim_mode_path, "r")
-            if not mode_file then
-                logger.debug("无法打开 vim_mode 文件: " .. vim_mode_path .. " 错误: " .. tostring(open_err))
-            else
-                local current_vim_mode = mode_file:read("*l")
-                mode_file:close()
-                -- 记录下来当前应用的vim模式
+    --         local mode_file, open_err = io.open(vim_mode_path, "r")
+    --         if not mode_file then
+    --             logger.debug("无法打开 vim_mode 文件: " .. vim_mode_path .. " 错误: " .. tostring(open_err))
+    --         else
+    --             local current_vim_mode = mode_file:read("*l")
+    --             mode_file:close()
+    --             -- 记录下来当前应用的vim模式
 
-                local previous_mode = smart_cursor_processor.app_vim_mode_state[app_key]
-                if previous_mode ~= current_vim_mode then
-                    smart_cursor_processor.app_vim_mode_state[app_key] = current_vim_mode
-                    logger.debug("app: " .. app_key .. " 模式变化: " .. tostring(previous_mode) .. " -> " .. tostring(current_vim_mode))
-                    if current_vim_mode == "normal_mode" then
-                        -- normal 模式默认切换到 ascii 输入
-                        local ascii_mode = context:get_option("ascii_mode")
-                        if ascii_mode == false then
-                            context:set_option("ascii_mode", true)
-                            -- logger.debug("检测到 normal_mode, 切换 ascii_mode 为 true")
-                        end
-                    elseif current_vim_mode == "insert_mode" then
-                        -- insert 模式保持中文输入
-                        local ascii_mode = context:get_option("ascii_mode")
-                        if ascii_mode == true then
-                            context:set_option("ascii_mode", false)
-                            -- logger.debug("检测到 insert_mode, 切换 ascii_mode 为 false")
-                        end
-                    end
-                end
-            end
-        end
-    end
-    -- update_global_option_state为true，则应用一次全局开关（覆盖各会话差异，保持一致）
-    -- if tcp_socket and tcp_socket.update_global_option_state then
-    --     local applied = tcp_socket.apply_global_options_to_context(context)
-    --     if applied > 0 then
-    --         logger.info("切换应用全局开关数量: " .. tostring(applied))
+    --             local previous_mode = smart_cursor_processor.app_vim_mode_state[app_key]
+    --             if previous_mode ~= current_vim_mode then
+    --                 smart_cursor_processor.app_vim_mode_state[app_key] = current_vim_mode
+    --                 logger.debug("app: " .. app_key .. " 模式变化: " .. tostring(previous_mode) .. " -> " ..
+    --                                  tostring(current_vim_mode))
+    --                 if current_vim_mode == "normal_mode" then
+    --                     -- normal 模式默认切换到 ascii 输入
+    --                     local ascii_mode = context:get_option("ascii_mode")
+    --                     if ascii_mode == false then
+    --                         context:set_option("ascii_mode", true)
+    --                         -- logger.debug("检测到 normal_mode, 切换 ascii_mode 为 true")
+    --                     end
+    --                 elseif current_vim_mode == "insert_mode" then
+    --                     -- insert 模式保持中文输入
+    --                     local ascii_mode = context:get_option("ascii_mode")
+    --                     if ascii_mode == true then
+    --                         context:set_option("ascii_mode", false)
+    --                         -- logger.debug("检测到 insert_mode, 切换 ascii_mode 为 false")
+    --                     end
+    --                 end
+    --             end
+    --         end
     --     end
     -- end
-    -- 
+    -- update_global_option_state为true，则应用一次全局开关（覆盖各会话差异，保持一致）
+    -- 将已记录的全局开关应用到当前 context，返回应用的数量
+
+    logger.debug("update_global_option_state: " .. tostring(tcp_zmq.update_global_option_state) )
+    if tcp_zmq and tcp_zmq.update_global_option_state then
+        logger.info("update_global_option_state")
+        tcp_zmq.update_global_option_state = false
+        local applied = apply_global_options_to_context(context)
+        if applied > 0 then
+            logger.info("切换应用全局开关数量: " .. tostring(applied))
+        end
+    end
 
     if not key or not context:is_composing() then
         return kNoop
@@ -980,9 +995,9 @@ function smart_cursor_processor.func(key, env)
 
         elseif key_repr == smart_cursor_processor.paste_to_input then
             -- 粘贴命令, 向服务器请求粘贴板中的文本内容get_clipboard
-            if tcp_socket then
+            if tcp_zmq then
                 logger.debug("🍴通过TCP发送get_clipboard命令到Python服务端")
-                local paste_success = tcp_socket.sync_with_server(env, false, false, "get_clipboard", "", 0.2)
+                local paste_success = tcp_zmq.sync_with_server(env, false, false, "get_clipboard", "", 0.2)
 
                 if paste_success then
                     logger.debug("✅ get_clipboard令发送成功")

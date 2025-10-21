@@ -4,12 +4,14 @@
 -- 2. nihk -> abc 标签（正常拼音处理）
 local logger_module = require("logger")
 local debug_utils = require("debug_utils")
+-- local ok, zmq = pcall(require, "lzmq")
 
 local logger = logger_module.create("ai_assistant_segmentor", {
     enabled = true,
     unique_file_log = false,
     log_level = "DEBUG"
 })
+
 
 -- 初始化时清空日志文件
 logger.clear()

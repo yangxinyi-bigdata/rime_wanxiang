@@ -40,6 +40,21 @@ else
     end
 end
 
+local tcp_zmq = nil
+local ok, err = pcall(function()
+    tcp_zmq = require("tcp_zmq")
+end)
+if not ok then
+    logger.error("加载 tcp_zmq 失败: " .. tostring(err))
+else
+    logger.info("加载 tcp_zmq 成功")
+    if tcp_zmq then
+        logger.info("tcp_zmq 不为nil")
+    else
+        logger.error("tcp_zmq 为nil，尽管require没有报错")
+    end
+end
+
 -- 模块级配置缓存
 local ai_assistant_translator = {}
 ai_assistant_translator.chat_triggers = {}
@@ -301,7 +316,7 @@ function ai_assistant_translator.func(input, segment, env)
 
     -- 执行流式获取AI回复
     logger.debug("read_latest_from_ai_socket执行")
-    local stream_result = tcp_socket.read_latest_from_ai_socket()
+    local stream_result = tcp_zmq.read_latest_from_ai_socket()
 
     -- 根据优化后的返回结构判断是否继续获取数据
     if stream_result and stream_result.status == "success" and stream_result.data then
