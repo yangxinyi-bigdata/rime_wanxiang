@@ -7,20 +7,6 @@ name: suggestion
 version: "LTS"
 sort: by_weight
 ...
-兵鲶	bing nian	1
-荷属	he shu	1
-葡属	pu shu	1
-英属	ying shu	1
-宝丽鱼	bao li yu	1
-盾海鲶	dun hai nian	1
-红脂鲤	hong zhi li	1
-棘盖鲶	ji gai nian	1
-颊脂鲤	jia zhi li	1
-琼脂鲤	qiong zhi li	1
-石脂鲤	shi zhi li	1
-溪脂鲤	xi zhi li	1
-泽丝鲶	ze si nian	1
-驻大使	zhu da shi	1
 阿巴科群岛	a ba ke qun dao	1
 阿贝尔定理	a bei er ding li	1
 阿贝尔群论	a bei er qun lun	1
@@ -1437,8 +1423,8 @@ sort: by_weight
 氨基苯硫酚	an ji ben liu fen	1
 氨基苯胂酸	an ji ben shen suan	1
 氨基苯乙醇	an ji ben yi chun	1
-氨基苯乙炔	an ji ben yi gui	1
 氨基苯乙醚	an ji ben yi mi	1
+氨基苯乙炔	an ji ben yi que	1
 氨基苯乙酸	an ji ben yi suan	1
 氨基吡咯烷	an ji bi ge wan	1
 氨基丙二醇	an ji bing er chun	1
@@ -1476,7 +1462,6 @@ sort: by_weight
 氨基甲酸铵	an ji jia suan an	1
 氨基甲酸钾	an ji jia suan jia	1
 氨基甲酸盐	an ji jia suan yan	1
-胺基甲酸酯	an ji jia suan zhi	1
 氨基甲酸酯	an ji jia suan zhi	1
 氨基甲酰基	an ji jia xian ji	1
 氨基甲酰氯	an ji jia xian lv	1
@@ -3610,45 +3595,26 @@ sort: by_weight
 八月狂想曲	ba yue kuang xiang qu	1
 八月廿八日	ba yue nian ba ri	1
 八月廿二日	ba yue nian er ri	1
-捌月廿贰日	ba yue nian er ri	1
 八月廿九日	ba yue nian jiu ri	1
-捌月廿玖日	ba yue nian jiu ri	1
 八月廿六日	ba yue nian liu ri	1
-捌月廿陆日	ba yue nian liu ri	1
 八月廿七日	ba yue nian qi ri	1
-捌月廿柒日	ba yue nian qi ri	1
 八月廿三日	ba yue nian san ri	1
-捌月廿叁日	ba yue nian san ri	1
 八月廿四日	ba yue nian si ri	1
-捌月廿肆日	ba yue nian si ri	1
 八月廿五日	ba yue nian wu ri	1
-捌月廿伍日	ba yue nian wu ri	1
 八月廿一日	ba yue nian yi ri	1
-捌月廿壹日	ba yue nian yi ri	1
-捌月卅壹日	ba yue sa yi ri	1
 八月三十号	ba yue san shi hao	1
 八月三十日	ba yue san shi ri	1
-捌月叁拾日	ba yue san shi ri	1
 八月十八日	ba yue shi ba ri	1
-捌月拾捌日	ba yue shi ba ri	1
 八月十二日	ba yue shi er ri	1
-捌月拾贰日	ba yue shi er ri	1
-捌月拾玖日	ba yue shi jiu ri	1
 八月十九日	ba yue shi jiu ri	1
 八月十六日	ba yue shi liu ri	1
-捌月拾陆日	ba yue shi liu ri	1
 八月十七日	ba yue shi qi ri	1
-捌月拾柒日	ba yue shi qi ri	1
 八月十三号	ba yue shi san hao	1
 八月十三日	ba yue shi san ri	1
-捌月拾叁日	ba yue shi san ri	1
 八月十四日	ba yue shi si ri	1
-捌月拾肆日	ba yue shi si ri	1
 八月十五号	ba yue shi wu hao	1
-捌月拾伍日	ba yue shi wu ri	1
 八月十五日	ba yue shi wu ri	1
 八月十一日	ba yue shi yi ri	1
-捌月拾壹日	ba yue shi yi ri	1
 八月照相馆	ba yue zhao xiang guan	1
 霸占停车位	ba zhan ting che wei	1
 八丈人参草	ba zhang ren shen cao	1
@@ -4685,6 +4651,7 @@ sort: by_weight
 白色棒球帽	bai se bang qiu mao	1
 白色宝马车	bai se bao ma che	1
 白色比基尼	bai se bi ji ni	1
+百色闭壳龟	bai se bi ke gui	1
 白色长颈鹿	bai se chang jing lu	1
 白色长筒袜	bai se chang tong wa	1
 白色衬衫裙	bai se chen shan qun	1
@@ -4782,6 +4749,7 @@ sort: by_weight
 白色蕾丝裙	bai se lei si qun	1
 白色连裤袜	bai se lian ku wa	1
 白色连衣裙	bai se lian yi qun	1
+百色螺序草	bai se luo xu cao	1
 白色曼陀罗	bai se man tuo luo	1
 白色面包车	bai se mian bao che	1
 白色念球菌	bai se nian qiu jun	1
@@ -4815,6 +4783,7 @@ sort: by_weight
 白色羊蹄甲	bai se yang ti jia	1
 白色一字肩	bai se yi zi jian	1
 白色与黑色	bai se yu hei se	1
+百色鱼龙属	bai se yu long shu	1
 白色羽绒服	bai se yu rong fu	1
 白色鱼尾裙	bai se yu wei qun	1
 白色越野车	bai se yue ye che	1
@@ -5074,7 +5043,7 @@ sort: by_weight
 白血病前期	bai xue bing qian qi	1
 白血病细胞	bai xue bing xi bao	1
 白血病治疗	bai xue bing zhi liao	1
-白雪粗肋草	bai xue cu le cao	1
+白雪粗肋草	bai xue cu lei cao	1
 白雪格粒螺	bai xue ge li luo	1
 白雪火绒草	bai xue huo rong cao	1
 白穴美体鳗	bai xue mei ti man	1
@@ -10432,11 +10401,11 @@ sort: by_weight
 本业是歌手	ben ye shi ge shou	1
 本益成长比	ben yi cheng zhang bi	1
 苯乙醇胺醚	ben yi chun an mi	1
-苯乙炔羧酸	ben yi gui suo suan	1
-苯乙炔亚铜	ben yi gui ya tong	1
 苯乙基醋酸	ben yi ji cu suan	1
 苯乙基哌啶	ben yi ji pai ding	1
 苯乙基硼酸	ben yi ji peng suan	1
+苯乙炔羧酸	ben yi que suo suan	1
+苯乙炔亚铜	ben yi que ya tong	1
 本意是好的	ben yi shi hao de	1
 本意是什么	ben yi shi shen me	1
 本意是为了	ben yi shi wei le	1
@@ -10632,8 +10601,6 @@ sort: by_weight
 壁虎的尾巴	bi hu de wei ba	1
 壁虎在漫步	bi hu zai man bu	1
 笔画排检法	bi hua pai jian fa	1
-笔划排检法	bi hua pai jian fa	1
-笔划输入法	bi hua shu ru fa	1
 笔画输入法	bi hua shu ru fa	1
 闭环式管理	bi huan shi guan li	1
 比黄金还贵	bi huang jin hai gui	1
@@ -13085,8 +13052,6 @@ sort: by_weight
 并购重组委	bing gou chong zu wei	1
 病关索杨雄	bing guan suo yang xiong	1
 冰柜藏尸案	bing gui cang shi an	1
-丙炔酸甲酯	bing gui suan jia zhi	1
-丙炔酸乙酯	bing gui suan yi zhi	1
 冰海绵轮虫	bing hai mian lun chong	1
 冰河洗剑录	bing he xi jian lu	1
 冰红茶加冰	bing hong cha jia bing	1
@@ -13310,6 +13275,8 @@ sort: by_weight
 并区姬蜂属	bing qu ji feng shu	1
 病去如抽丝	bing qu ru chou si	1
 并全力以赴	bing quan li yi fu	1
+丙炔酸甲酯	bing que suan jia zhi	1
+丙炔酸乙酯	bing que suan yi zhi	1
 病人的病情	bing ren de bing qing	1
 病人的护理	bing ren de hu li	1
 病人的健康	bing ren de jian kang	1
@@ -13738,10 +13705,7 @@ sort: by_weight
 波塞东龙属	bo sai dong long shu	1
 勃三尺微命	bo san chi wei ming	1
 播散性黄瘤	bo san xing huang liu	1
-百色闭壳龟	bo se bi ke gui	1
-百色螺序草	bo se luo xu cao	1
 玻色弦理论	bo se xian li lun	1
-百色鱼龙属	bo se yu long shu	1
 渤生楼梯草	bo sheng lou ti cao	1
 博氏背灯鱼	bo shi bei deng yu	1
 博士毕业生	bo shi bi ye sheng	1
@@ -20429,7 +20393,6 @@ sort: by_weight
 层内角砾岩	ceng nei jiao li yan	1
 层牛肝菌属	ceng niu gan jun shu	1
 曾盛极一时	ceng sheng ji yi shi	1
-曾仕强教授	ceng shi qiang jiao shou	1
 曾受邀参加	ceng shou yao can jia	1
 层束梗孢属	ceng shu geng bao shu	1
 曾为歌舞场	ceng wei ge wu chang	1
@@ -31095,7 +31058,7 @@ sort: by_weight
 从科学角度	cong ke xue jiao du	1
 从空中俯瞰	cong kong zhong fu kan	1
 从空中俯视	cong kong zhong fu shi	1
-从空中落下	cong kong zhong la xia	1
+从空中落下	cong kong zhong luo xia	1
 从空中坠落	cong kong zhong zhui luo	1
 从昆明出发	cong kun ming chu fa	1
 从来不抱怨	cong lai bu bao yuan	1
@@ -31695,7 +31658,6 @@ sort: by_weight
 醋酸氟孕酮	cu suan fu yun tong	1
 醋酸杆菌属	cu suan gan jun shu	1
 醋酸根离子	cu suan gen li zi	1
-醋酸炔诺酮	cu suan gui nuo tong	1
 醋酸环己酯	cu suan huan ji zhi	1
 醋酸環己酯	cu suan huan ji zhi	1
 醋酸茴香酯	cu suan hui xiang zhi	1
@@ -31704,6 +31666,7 @@ sort: by_weight
 醋酸铝溶液	cu suan lv rong ye	1
 醋酸泼尼松	cu suan po ni song	1
 醋酸铅试纸	cu suan qian shi zhi	1
+醋酸炔诺酮	cu suan que nuo tong	1
 醋酸十二酯	cu suan shi er zhi	1
 醋酸是乙酸	cu suan shi yi suan	1
 醋酸双氧铀	cu suan shuang yang you	1
@@ -43808,7 +43771,6 @@ sort: by_weight
 顶冠瘿螨属	ding guan ying man shu	1
 丁桂儿脐贴	ding gui er qi tie	1
 丁鱥级潜艇	ding gui ji qian ting	1
-丁炔酸乙酯	ding gui suan yi zhi	1
 定国节度使	ding guo jie du shi	1
 顶果轴脉蕨	ding guo zhou mai jue	1
 定海关战役	ding hai guan zhan yi	1
@@ -43947,6 +43909,7 @@ sort: by_weight
 丁桥镇政府	ding qiao zhen zheng fu	1
 顶切叶蚁属	ding qie ye yi shu	1
 丁清祥铜像	ding qing xiang tong xiang	1
+丁炔酸乙酯	ding que suan yi zhi	1
 丁日昌故居	ding ri chang gu ju	1
 丁日昌旧居	ding ri chang jiu ju	1
 定容比热容	ding rong bi re rong	1
@@ -45210,7 +45173,7 @@ sort: by_weight
 都会有遗憾	dou hui you yi han	1
 都挥之不去	dou hui zhi bu qu	1
 都会注意到	dou hui zhu yi dao	1
-都记不得了	dou ji bu de de	1
+都记不得了	dou ji bu de le	1
 斗鸡台遗址	dou ji tai yi zhi	1
 兜甲动物门	dou jia dong wu men	1
 豆荚野螟属	dou jia ye ming shu	1
@@ -49921,9 +49884,9 @@ sort: by_weight
 二苯基亚砜	er ben ji ya feng	1
 二苯基氧磷	er ben ji yang lin	1
 二苯基乙胺	er ben ji yi an	1
-二苯基乙炔	er ben ji yi gui	1
 二苯基乙腈	er ben ji yi jing	1
 二苯基乙醛	er ben ji yi quan	1
+二苯基乙炔	er ben ji yi que	1
 二苯基乙酸	er ben ji yi suan	1
 二苯基乙酮	er ben ji yi tong	1
 二苯基乙烷	er ben ji yi wan	1
@@ -50296,10 +50259,10 @@ sort: by_weight
 二甲基胆蒽	er jia ji dan en	1
 二甲基丁胺	er jia ji ding an	1
 二甲基丁醇	er jia ji ding chun	1
-二甲基丁炔	er jia ji ding gui	1
 二甲基丁基	er jia ji ding ji	1
 二甲基丁腈	er jia ji ding jing	1
 二甲基丁醛	er jia ji ding quan	1
+二甲基丁炔	er jia ji ding que	1
 二甲基丁酸	er jia ji ding suan	1
 二甲基丁烷	er jia ji ding wan	1
 二甲基丁烯	er jia ji ding xi	1
@@ -50353,8 +50316,8 @@ sort: by_weight
 二甲基溴苯	er jia ji xiu ben	1
 二甲基亚砜	er jia ji ya feng	1
 二甲基乙胺	er jia ji yi an	1
-二甲基乙炔	er jia ji yi gui	1
 二甲基乙醚	er jia ji yi mi	1
+二甲基乙炔	er jia ji yi que	1
 二甲基乙烯	er jia ji yi xi	1
 二甲基吲哚	er jia ji yin duo	1
 二甲哌替啶	er jia pai ti ding	1
@@ -50522,7 +50485,7 @@ sort: by_weight
 二氯丙二腈	er lv bing er jing	1
 二氯丙烯胺	er lv bing xi an	1
 二氯代酰胺	er lv dai xian an	1
-二氯代乙炔	er lv dai yi gui	1
+二氯代乙炔	er lv dai yi que	1
 二氯靛酚钠	er lv dian fen na	1
 二氯碘甲烷	er lv dian jia wan	1
 二氯二氨铂	er lv er an bo	1
@@ -51311,7 +51274,6 @@ sort: by_weight
 二异丙基酮	er yi bing ji tong	1
 二异丙基锌	er yi bing ji xin	1
 二乙二醇醚	er yi er chun mi	1
-二乙炔基苯	er yi gui ji ben	1
 二乙基苯胺	er yi ji ben an	1
 二乙基苄胺	er yi ji bian an	1
 二乙基硅烷	er yi ji gui wan	1
@@ -51327,6 +51289,7 @@ sort: by_weight
 二乙醘吗啡	er yi ke ma fei	1
 二异氰酸盐	er yi qing suan yan	1
 二异氰酸酯	er yi qing suan zhi	1
+二乙炔基苯	er yi que ji ben	1
 二乙酸碘苯	er yi suan dian ben	1
 二乙酸睾酮	er yi suan gao tong	1
 二一添作五	er yi tian zuo wu	1
@@ -51368,7 +51331,6 @@ sort: by_weight
 二月的胜者	er yue de sheng zhe	1
 二月二十八	er yue er shi ba	1
 二月二十六	er yue er shi liu	1
-贰月贰拾日	er yue er shi ri	1
 二月二十三	er yue er shi san	1
 二月二十四	er yue er shi si	1
 二月革命党	er yue ge ming dang	1
@@ -51380,14 +51342,11 @@ sort: by_weight
 二月廿四日	er yue nian si ri	1
 二月廿五日	er yue nian wu ri	1
 二月廿一日	er yue nian yi ri	1
-贰月拾捌日	er yue shi ba ri	1
 二月十八日	er yue shi ba ri	1
-贰月拾贰日	er yue shi er ri	1
 二月十二日	er yue shi er ri	1
 二月十九日	er yue shi jiu ri	1
 二月十六日	er yue shi liu ri	1
 二月十七日	er yue shi qi ri	1
-贰月拾叁日	er yue shi san ri	1
 二月十三日	er yue shi san ri	1
 二月十四日	er yue shi si ri	1
 二月十五号	er yue shi wu hao	1
@@ -53694,7 +53653,7 @@ sort: by_weight
 房产空置税	fang chan kong zhi shui	1
 房产税出台	fang chan shui chu tai	1
 房产税改革	fang chan shui gai ge	1
-房产税开征	fang chan shui kai zhi	1
+房产税开征	fang chan shui kai zheng	1
 房产税试点	fang chan shui shi dian	1
 房产税征收	fang chan shui zheng shou	1
 房产投资者	fang chan tou zi zhe	1
@@ -59851,7 +59810,6 @@ sort: by_weight
 富士吉田市	fu shi ji tian shi	1
 富士急行线	fu shi ji xing xian	1
 富士级战舰	fu shi ji zhan jian	1
-复式记帐法	fu shi ji zhang fa	1
 复式记账法	fu shi ji zhang fa	1
 福士甲虫车	fu shi jia chong che	1
 副食加工间	fu shi jia gong jian	1
@@ -60828,7 +60786,6 @@ sort: by_weight
 副作用更小	fu zuo yong geng xiao	1
 副作用较大	fu zuo yong jiao da	1
 副作用最小	fu zuo yong zui xiao	1
-副𰬸唇魮属	fu 𰬸 chun pi shu	1
 尕巴松多镇	ga ba song duo zhen	1
 嘎查党支部	ga cha dang zhi bu	1
 嘎达布其镇	ga da bu qi zhen	1
@@ -62323,7 +62280,6 @@ sort: by_weight
 港岛西联网	gang dao xi lian wang	1
 港岛线西延	gang dao xian xi yan	1
 刚地弓形虫	gang di gong xing chong	1
-岗底斯山脉	gang di si shan mai	1
 冈底斯山脉	gang di si shan mai	1
 钢都花园站	gang dou hua yuan zhan	1
 刚铎摄政王	gang duo she zheng wang	1
@@ -67312,7 +67268,7 @@ sort: by_weight
 更是要注意	geng shi yao zhu yi	1
 更舒服一点	geng shu fu yi dian	1
 庚酸雌二醇	geng suan ci er chun	1
-庚酸炔诺酮	geng suan gui nuo tong	1
+庚酸炔诺酮	geng suan que nuo tong	1
 庚酸群勃龙	geng suan qun bo long	1
 庚酸十八酯	geng suan shi ba zhi	1
 庚酸烯丙酯	geng suan xi bing zhi	1
@@ -73737,8 +73693,6 @@ sort: by_weight
 贵宾金环会	gui bin jin huan hui	1
 贵宾楼饭店	gui bin lou fan dian	1
 贵宾休息室	gui bin xiu xi shi	1
-炔丙环己酯	gui bing huan ji zhi	1
-炔丙基卤醇	gui bing ji lu chun	1
 归并排序法	gui bing pai xu fa	1
 鬼才路人甲	gui cai lu ren jia	1
 鬼才设计师	gui cai she ji shi	1
@@ -75832,7 +75786,6 @@ sort: by_weight
 国民认知度	guo min ren zhi du	1
 国民荣誉奖	guo min rong yu jiang	1
 国民荣誉赏	guo min rong yu shang	1
-国民身分证	guo min shen fen zheng	1
 国民身份证	guo min shen fen zheng	1
 国民收音机	guo min shou yin ji	1
 国民体育会	guo min ti yu hui	1
@@ -78358,7 +78311,6 @@ sort: by_weight
 航空总部站	hang kong zong bu zhan	1
 航空总医院	hang kong zong yi yuan	1
 杭濑川之战	hang lai chuan zhi zhan	1
-珩琅山路站	hang lang shan lu zhan	1
 行列输入法	hang lie shu ru fa	1
 航母打击群	hang mu da ji qun	1
 航母的建造	hang mu de jian zao	1
@@ -82823,6 +82775,7 @@ sort: by_weight
 横口裂腹鱼	heng kou lie fu yu	1
 横跨大西洋	heng kua da xi yang	1
 横跨太平洋	heng kua tai ping yang	1
+珩琅山路站	heng lang shan lu zhan	1
 恒力房地产	heng li fang di chan	1
 衡量测量值	heng liang ce liang zhi	1
 衡量的标准	heng liang de biao zhun	1
@@ -84424,7 +84377,7 @@ sort: by_weight
 厚身犀孔鲷	hou shen xi kong diao	1
 后生白云岩	hou sheng bai yun yan	1
 厚生基金会	hou sheng ji jin hui	1
-后生角砾岩	hou sheng jiao li yan	1
+后生角砾岩	hou sheng jue li yan	1
 后生可畏啊	hou sheng ke wei a	1
 厚生劳动相	hou sheng lao dong xiang	1
 侯氏翅鲎属	hou shi chi hou shu	1
@@ -87321,7 +87274,7 @@ sort: by_weight
 环丙基甲醇	huan bing ji jia chun	1
 环丙基甲醛	huan bing ji jia quan	1
 环丙基羧酸	huan bing ji suo suan	1
-环丙基乙炔	huan bing ji yi gui	1
+环丙基乙炔	huan bing ji yi que	1
 环丙氯地孕	huan bing lv di yun	1
 环丙嘧啶酸	huan bing mi ding suan	1
 环丙烷合成	huan bing wan he cheng	1
@@ -87444,7 +87397,7 @@ sort: by_weight
 环己基哌嗪	huan ji ji pai qin	1
 环己基羧酸	huan ji ji suo suan	1
 环己基乙醇	huan ji ji yi chun	1
-环己基乙炔	huan ji ji yi gui	1
+环己基乙炔	huan ji ji yi que	1
 环己甲哌啶	huan ji jia pai ding	1
 环己六硫酮	huan ji liu liu tong	1
 焕基美术馆	huan ji mei shu guan	1
@@ -94755,6 +94708,7 @@ sort: by_weight
 技校毕业生	ji xiao bi ye sheng	1
 绩效不达标	ji xiao bu da biao	1
 极小多项式	ji xiao duo xiang shi	1
+极小范数解	ji xiao fan shu jie	1
 及消防安全	ji xiao fang an quan	1
 极小谷精草	ji xiao gu jing cao	1
 极小化求值	ji xiao hua qiu zhi	1
@@ -95854,8 +95808,8 @@ sort: by_weight
 甲基碘酸胺	jia ji dian suan an	1
 甲基丁二酸	jia ji ding er suan	1
 甲基丁二烯	jia ji ding er xi	1
-甲基丁炔醇	jia ji ding gui chun	1
 甲基丁基醚	jia ji ding ji mi	1
+甲基丁炔醇	jia ji ding que chun	1
 甲基丁烯醇	jia ji ding xi chun	1
 甲基丁烯醛	jia ji ding xi quan	1
 甲基丁烯酸	jia ji ding xi suan	1
@@ -95880,7 +95834,6 @@ sort: by_weight
 甲基谷氨酸	jia ji gu an suan	1
 假鸡冠鳚属	jia ji guan wei shu	1
 甲基硅醇钠	jia ji gui chun na	1
-甲基炔诺酮	jia ji gui nuo tong	1
 甲基硅酸钠	jia ji gui suan na	1
 甲基硅橡胶	jia ji gui xiang jiao	1
 甲基红酚酞	jia ji hong fen tai	1
@@ -95963,6 +95916,7 @@ sort: by_weight
 甲基球菌科	jia ji qiu jun ke	1
 甲基球菌目	jia ji qiu jun mu	1
 甲基球菌属	jia ji qiu jun shu	1
+甲基炔诺酮	jia ji que nuo tong	1
 甲基热菌科	jia ji re jun ke	1
 甲基肉桂醛	jia ji rou gui quan	1
 甲基肉桂酸	jia ji rou gui suan	1
@@ -95986,8 +95940,8 @@ sort: by_weight
 甲基微菌属	jia ji wei jun shu	1
 甲基戊二醇	jia ji wu er chun	1
 甲基戊二烯	jia ji wu er xi	1
-甲基戊炔醇	jia ji wu gui chun	1
 甲基戊基酮	jia ji wu ji tong	1
+甲基戊炔醇	jia ji wu que chun	1
 甲基戊烯酸	jia ji wu xi suan	1
 甲基细菌属	jia ji xi jun shu	1
 甲基腺嘌呤	jia ji xian piao ling	1
@@ -111986,9 +111940,9 @@ sort: by_weight
 开着私家车	kai zhe si jia che	1
 开着拖拉机	kai zhe tuo la ji	1
 开这种玩笑	kai zhe zhong wan xiao	1
+开征房产税	kai zheng fang chan shui	1
 开证申请人	kai zheng shen qing ren	1
 开证申请书	kai zheng shen qing shu	1
-开征房产税	kai zhi fang chan shui	1
 开支计算法	kai zhi ji suan fa	1
 开州区街道	kai zhou qu jie dao	1
 开足了马力	kai zu le ma li	1
@@ -118132,11 +118086,6 @@ sort: by_weight
 拉文囊鳃鳗	la wen nang sai man	1
 拉乌尔定律	la wu er ding lv	1
 拉乌尔菌属	la wu er jun shu	1
-落下的功课	la xia de gong ke	1
-落下的课程	la xia de ke cheng	1
-落下的声音	la xia de sheng yin	1
-落下了帷幕	la xia le wei mu	1
-落下一个人	la xia yi ge ren	1
 拉休里龙属	la xiu li long shu	1
 拉央拉央岛	la yang la yang dao	1
 腊月二十八	la yue er shi ba	1
@@ -124958,7 +124907,6 @@ sort: by_weight
 另矿生菌属	ling kuang sheng jun shu	1
 绫濑川弓亲	ling lai chuan gong qin	1
 灵兰秘典论	ling lan mi dian lun	1
-领了结婚证	ling le jie hun zhen	1
 另类毕业照	ling lei bi ye zhao	1
 另类的存在	ling lei de cun zai	1
 另类的方式	ling lei de fang shi	1
@@ -124968,6 +124916,7 @@ sort: by_weight
 凌厉的线条	ling li de xian tiao	1
 凌厉的眼神	ling li de yan shen	1
 零利率政策	ling li lv zheng ce	1
+领了结婚证	ling liao jie hun zheng	1
 领料申请书	ling liao shen qing shu	1
 凌冽的寒风	ling lie de han feng	1
 玲玲马戏团	ling ling ma xi tuan	1
@@ -127704,9 +127653,6 @@ sort: by_weight
 陆源沉积物	lu yuan chen ji wu	1
 芦原妃名子	lu yuan fei ming zi	1
 潞苑南大街	lu yuan nan da jie	1
-陆月贰拾日	lu yue er shi ri	1
-陆月叁拾日	lu yue san shi ri	1
-陆月拾叁日	lu yue shi san ri	1
 路越走越宽	lu yue zou yue kuan	1
 路越走越窄	lu yue zou yue zhai	1
 炉渣混凝土	lu zha hun ning tu	1
@@ -128320,6 +128266,11 @@ sort: by_weight
 螺纹支管台	luo wen zhi guan tai	1
 裸无臂鳎属	luo wu bi ta shu	1
 洛西亚龙属	luo xi ya long shu	1
+落下的功课	luo xia de gong ke	1
+落下的课程	luo xia de ke cheng	1
+落下的声音	luo xia de sheng yin	1
+落下了帷幕	luo xia le wei mu	1
+落下一个人	luo xia yi ge ren	1
 螺线图星云	luo xian tu xing yun	1
 螺线向量场	luo xian xiang liang chang	1
 裸项俯海鲶	luo xiang fu hai nian	1
@@ -128554,7 +128505,7 @@ sort: by_weight
 绿萼凤仙花	lv e feng xian hua	1
 氯二苯甲醇	lv er ben jia chun	1
 氯二苯甲酮	lv er ben jia tong	1
-氯二苯乙炔	lv er ben yi gui	1
+氯二苯乙炔	lv er ben yi que	1
 氯二碘甲烷	lv er dian jia wan	1
 氯二氟吡啶	lv er fu bi ding	1
 氯二氟甲烷	lv er fu jia wan	1
@@ -128956,8 +128907,8 @@ sort: by_weight
 绿纹霸鹟属	lv wen ba weng shu	1
 绿纹尺蛾属	lv wen chi e shu	1
 氯五氟乙烷	lv wu fu yi wan	1
-氯烯炔菊酯	lv xi gui ju zhi	1
 吕西马库斯	lv xi ma ku si	1
+氯烯炔菊酯	lv xi que ju zhi	1
 绿线铅笔鱼	lv xian qian bi yu	1
 氯硝基苯胺	lv xiao ji ben an	1
 氯硝基苯腈	lv xiao ji ben jing	1
@@ -130309,7 +130260,7 @@ sort: by_weight
 慢慢说乐团	man man shuo yue tuan	1
 慢慢腾腾的	man man teng teng de	1
 慢慢体会到	man man ti hui dao	1
-慢慢吞吞地	man man tong tong de	1
+慢慢吞吞地	man man tun tun de	1
 慢慢往上升	man man wang shang sheng	1
 慢慢往下看	man man wang xia kan	1
 慢慢喜欢你	man man xi huan ni	1
@@ -133835,7 +133786,7 @@ sort: by_weight
 每月第一天	mei yue di yi tian	1
 每月发生的	mei yue fa sheng de	1
 每月还款额	mei yue huan kuan e	1
-每月统纪传	mei yue tong yi zhuan	1
+每月统纪传	mei yue tong ji zhuan	1
 每月销售额	mei yue xiao shou e	1
 每月要多少	mei yue yao duo shao	1
 每月营业额	mei yue ying ye e	1
@@ -135234,13 +135185,6 @@ sort: by_weight
 民国廿五年	min guo nian wu nian	1
 民国廿一年	min guo nian yi nian	1
 民国奇女子	min guo qi nv zi	1
-民国卅八年	min guo sa ba nian	1
-民国卅九年	min guo sa jiu nian	1
-民国卅七年	min guo sa qi nian	1
-民国卅三年	min guo sa san nian	1
-民国卅四年	min guo sa si nian	1
-民国卅五年	min guo sa wu nian	1
-民国卅一年	min guo sa yi nian	1
 民国三十年	min guo san shi nian	1
 民国十八年	min guo shi ba nian	1
 民国十二年	min guo shi er nian	1
@@ -137690,11 +137634,6 @@ sort: by_weight
 母系氏社会	mu xi shi she hui	1
 母系氏族制	mu xi shi zu zhi	1
 木樨园桥北	mu xi yuan qiao bei	1
-木下和津实	mu xia he jin shi	1
-木下杢太郎	mu xia jiang tai lang	1
-木下藤吉郎	mu xia teng ji lang	1
-木下亚由美	mu xia ya you mei	1
-木下优树菜	mu xia you shu cai	1
 木香顺气丸	mu xiang shun qi wan	1
 木香烃内酯	mu xiang ting nei zhi	1
 木屑颗粒机	mu xie ke li ji	1
@@ -151048,7 +150987,6 @@ sort: by_weight
 起跑反应时	qi pao fan ying shi	1
 气泡缓冲材	qi pao huan chong cai	1
 气泡鸟尾蛤	qi pao niao wei ha	1
-汽泡排序法	qi pao pai xu fa	1
 气泡排序法	qi pao pai xu fa	1
 起泡葡萄酒	qi pao pu tao jiu	1
 气泡水准仪	qi pao shui zhun yi	1
@@ -152213,13 +152151,11 @@ sort: by_weight
 七月廿四日	qi yue nian si ri	1
 七月廿五日	qi yue nian wu ri	1
 七月七日晴	qi yue qi ri qing	1
-柒月叁拾日	qi yue san shi ri	1
 七月三十日	qi yue san shi ri	1
 七月三十一	qi yue san shi yi	1
 齐岳山隧道	qi yue shan sui dao	1
 七月十八日	qi yue shi ba ri	1
 七月十二日	qi yue shi er ri	1
-柒月拾玖日	qi yue shi jiu ri	1
 七月十九日	qi yue shi jiu ri	1
 七月十六日	qi yue shi liu ri	1
 七月十七日	qi yue shi qi ri	1
@@ -152229,7 +152165,6 @@ sort: by_weight
 七月十五号	qi yue shi wu hao	1
 七月十五日	qi yue shi wu ri	1
 七月十一号	qi yue shi yi hao	1
-柒月拾壹日	qi yue shi yi ri	1
 七月十一日	qi yue shi yi ri	1
 契约型基金	qi yue xing ji jin	1
 七月与安生	qi yue yu an sheng	1
@@ -155568,7 +155503,7 @@ sort: by_weight
 氰基苯甲酸	qing ji ben jia suan	1
 氰基苯硼酸	qing ji ben peng suan	1
 氰基苯乙腈	qing ji ben yi jing	1
-氰基多炔烃	qing ji duo gui ting	1
+氰基多炔烃	qing ji duo que ting	1
 氰基化合物	qing ji hua he wu	1
 请及时告知	qing ji shi gao zhi	1
 请及时关注	qing ji shi guan zhu	1
@@ -159436,6 +159371,8 @@ sort: by_weight
 确保可持续	que bao ke chi xu	1
 确保纳税人	que bao na shui ren	1
 确保提供的	que bao ti gong de	1
+炔丙环己酯	que bing huan ji zhi	1
+炔丙基卤醇	que bing ji lu chun	1
 雀部长次郎	que bu zhang ci lang	1
 缺叉石蛾属	que cha shi e shu	1
 雀巢宝路糖	que chao bao lu tang	1
@@ -159682,6 +159619,7 @@ sort: by_weight
 缺血再灌注	que xue zai guan zhu	1
 缺氧的小鱼	que yang de xiao yu	1
 却一点都不	que yi dian dou bu	1
+却一个字也	que yi ge zi ye	1
 却一无所获	que yi wu suo huo	1
 却一笑而过	que yi xiao er guo	1
 却又不知道	que you bu zhi dao	1
@@ -159989,6 +159927,7 @@ sort: by_weight
 让你们闭嘴	rang ni men bi zui	1
 让你失望了	rang ni shi wang le	1
 让你受精了	rang ni shou jing le	1
+让你笑话了	rang ni xiao hua le	1
 让您费心了	rang nin fei xin le	1
 让您见笑了	rang nin jian xiao le	1
 让您失望了	rang nin shi wang le	1
@@ -161472,7 +161411,6 @@ sort: by_weight
 人参蜂王浆	ren shen feng wang jiang	1
 妊娠高血压	ren shen gao xue ya	1
 人参归脾丸	ren shen gui pi wan	1
-人参炔三醇	ren shen gui san chun	1
 妊娠合并症	ren shen he bing zheng	1
 妊娠和分娩	ren shen he fen mian	1
 人身和设备	ren shen he she bei	1
@@ -161483,6 +161421,7 @@ sort: by_weight
 人参汽锅鸡	ren shen qi guo ji	1
 妊娠期女性	ren shen qi nv xing	1
 妊娠期贫血	ren shen qi pin xue	1
+人参炔三醇	ren shen que san chun	1
 壬申誓记石	ren shen shi ji shi	1
 妊娠糖尿病	ren shen tang niao bing	1
 人参提取物	ren shen ti qu wu	1
@@ -165451,7 +165390,6 @@ sort: by_weight
 三月底以前	san yue di yi qian	1
 三月杜鹃红	san yue du juan hong	1
 三月二十七	san yue er shi qi	1
-叁月贰拾日	san yue er shi ri	1
 三月二十日	san yue er shi ri	1
 三月廿八日	san yue nian ba ri	1
 三月廿二日	san yue nian er ri	1
@@ -165462,16 +165400,12 @@ sort: by_weight
 三月廿四日	san yue nian si ri	1
 三月廿五日	san yue nian wu ri	1
 三月廿一日	san yue nian yi ri	1
-三月卅一日	san yue sa yi ri	1
-叁月叁拾日	san yue san shi ri	1
 三月三十日	san yue san shi ri	1
 三月十八日	san yue shi ba ri	1
 三月十二日	san yue shi er ri	1
 三月十九日	san yue shi jiu ri	1
 三月十六日	san yue shi liu ri	1
-叁月拾柒日	san yue shi qi ri	1
 三月十七日	san yue shi qi ri	1
-叁月拾叁日	san yue shi san ri	1
 三月十三日	san yue shi san ri	1
 三月十四日	san yue shi si ri	1
 三月十五日	san yue shi wu ri	1
@@ -171806,6 +171740,7 @@ sort: by_weight
 渗透性岩石	shen tou xing yan shi	1
 渗透压发电	shen tou ya fa dian	1
 申屠氏宗祠	shen tu shi zong ci	1
+伸腿瞪眼丸	shen tui deng yan wan	1
 深湾游艇会	shen wan you ting hui	1
 神旺大饭店	shen wang da fan dian	1
 神旺大酒店	shen wang da jiu dian	1
@@ -172510,7 +172445,6 @@ sort: by_weight
 生旦净末丑	sheng dan jing mo chou	1
 生旦净末我	sheng dan jing mo wo	1
 生当复来归	sheng dang fu lai gui	1
-生当做人杰	sheng dang zuo ren jie	1
 剩的不多了	sheng de bu duo le	1
 生的是女儿	sheng de shi nv er	1
 省电力公司	sheng dian li gong si	1
@@ -173423,7 +173357,7 @@ sort: by_weight
 升起的烟花	sheng qi de yan hua	1
 生气的样子	sheng qi de yang zi	1
 生气归生气	sheng qi gui sheng qi	1
-升起和落下	sheng qi he la xia	1
+升起和落下	sheng qi he luo xia	1
 省气象局站	sheng qi xiang ju zhan	1
 省钱的方法	sheng qian de fang fa	1
 升迁的机会	sheng qian de ji hui	1
@@ -181755,8 +181689,8 @@ sort: by_weight
 叔丁基硫醇	shu ding ji liu chun	1
 叔丁基色胺	shu ding ji se an	1
 叔丁基乙苯	shu ding ji yi ben	1
-叔丁基乙炔	shu ding ji yi gui	1
 叔丁基异腈	shu ding ji yi jing	1
+叔丁基乙炔	shu ding ji yi que	1
 叔丁基乙酸	shu ding ji yi suan	1
 叔丁氧羰基	shu ding yang tang ji	1
 树洞啊树洞	shu dong a shu dong	1
@@ -183189,6 +183123,7 @@ sort: by_weight
 双翅螳蛉科	shuang chi tang ling ke	1
 双翅舞花姜	shuang chi wu hua jiang	1
 双齿相手蟹	shuang chi xiang shou xie	1
+双重差分法	shuang chong cha fen fa	1
 双重秤量法	shuang chong cheng liang fa	1
 双重代表权	shuang chong dai biao quan	1
 双重底形态	shuang chong di xing tai	1
@@ -184464,6 +184399,7 @@ sort: by_weight
 水溶性多糖	shui rong xing duo tang	1
 水溶性肥料	shui rong xing fei liao	1
 水溶性硅油	shui rong xing gui you	1
+水溶性果胶	shui rong xing guo jiao	1
 水溶性涂料	shui rong xing tu liao	1
 水溶性物质	shui rong xing wu zhi	1
 水溶性纤维	shui rong xing xian wei	1
@@ -185218,7 +185154,7 @@ sort: by_weight
 似杯水母属	si bei shui mu shu	1
 丝背线翼鲶	si bei xian yi nian	1
 私奔到月球	si ben dao yue qiu	1
-四苯基丙炔	si ben ji bing gui	1
+四苯基丙炔	si ben ji bing que	1
 四苯基卟啉	si ben ji bu lin	1
 四苯基二磷	si ben ji er lin	1
 四苯基二膦	si ben ji er lin	1
@@ -186660,7 +186596,7 @@ sort: by_weight
 似胸翼鱼属	si xiong yi yu shu	1
 四溴代乙烯	si xiu dai yi xi	1
 四溴合金酸	si xiu he jin suan	1
-四溴化乙炔	si xiu hua yi gui	1
+四溴化乙炔	si xiu hua yi que	1
 四溴邻甲酚	si xiu lin jia fen	1
 四溴氧化钨	si xiu yang hua wu	1
 似魣盗目鱼	si xu dao mu yu	1
@@ -186784,7 +186720,6 @@ sort: by_weight
 四月二十号	si yue er shi hao	1
 四月二十六	si yue er shi liu	1
 四月二十七	si yue er shi qi	1
-肆月贰拾日	si yue er shi ri	1
 四月二十日	si yue er shi ri	1
 四月二十三	si yue er shi san	1
 四月二十五	si yue er shi wu	1
@@ -186798,21 +186733,16 @@ sort: by_weight
 四月廿五日	si yue nian wu ri	1
 四月廿一日	si yue nian yi ri	1
 四月三十号	si yue san shi hao	1
-肆月叁拾日	si yue san shi ri	1
 四月三十日	si yue san shi ri	1
-肆月拾捌日	si yue shi ba ri	1
 四月十八日	si yue shi ba ri	1
 四月十二日	si yue shi er ri	1
 四月十九日	si yue shi jiu ri	1
 四月十六号	si yue shi liu hao	1
 四月十六日	si yue shi liu ri	1
-肆月拾柒日	si yue shi qi ri	1
 四月十七日	si yue shi qi ri	1
 四月十三日	si yue shi san ri	1
-肆月拾肆日	si yue shi si ri	1
 四月十四日	si yue shi si ri	1
 四月十五日	si yue shi wu ri	1
-肆月拾壹日	si yue shi yi ri	1
 四月十一日	si yue shi yi ri	1
 四月一日的	si yue yi ri de	1
 四月樱花飞	si yue ying hua fei	1
@@ -195927,6 +195857,8 @@ sort: by_weight
 通什束腰蟹	tong shi shu yao xie	1
 同时性双语	tong shi xing shuang yu	1
 同时也开始	tong shi ye kai shi	1
+同时在使用	tong shi zai shi yong	2
+同事在使用	tong shi zai shi yong	1
 同时支持了	tong shi zhi chi le	1
 统帅大饭店	tong shuai da fan dian	1
 统帅青凤蝶	tong shuai qing feng die	1
@@ -196553,7 +196485,6 @@ sort: by_weight
 头孢泊肟酯	tou bao po wo zhi	1
 头孢羟氨苄	tou bao qiang an bian	1
 头孢曲松钠	tou bao qu song na	1
-头孢曲松纳	tou bao qu song na	1
 投保人豁免	tou bao ren huo mian	1
 头孢噻肟钠	tou bao sai wo na	1
 头孢西丁钠	tou bao xi ding na	1
@@ -199243,7 +199174,7 @@ sort: by_weight
 挽回前女友	wan hui qian nv you	1
 晚会主持人	wan hui zhu chi ren	1
 玩火的女孩	wan huo de nv hai	1
-烷基苯乙炔	wan ji ben yi gui	1
+烷基苯乙炔	wan ji ben yi que	1
 弯棘匙甲鲶	wan ji chi jia nian	1
 烷基醇酰胺	wan ji chun xian an	1
 烷基芳香酮	wan ji fang xiang tong	1
@@ -211421,8 +211352,6 @@ sort: by_weight
 五月廿四日	wu yue nian si ri	1
 五月廿五日	wu yue nian wu ri	1
 五月廿一日	wu yue nian yi ri	1
-五月卅一日	wu yue sa yi ri	1
-伍月叁拾日	wu yue san shi ri	1
 五月三十日	wu yue san shi ri	1
 五月生辰石	wu yue sheng chen shi	1
 五月十八日	wu yue shi ba ri	1
@@ -211436,7 +211365,6 @@ sort: by_weight
 五月十三日	wu yue shi san ri	1
 五月十四日	wu yue shi si ri	1
 五月十五日	wu yue shi wu ri	1
-伍月拾壹日	wu yue shi yi ri	1
 无约束条件	wu yue shu tiao jian	1
 五月双子座	wu yue shuang zi zuo	1
 五月天成员	wu yue tian cheng yuan	1
@@ -212787,7 +212715,7 @@ sort: by_weight
 细毛猪笼草	xi mao zhu long cao	1
 细眉杜父鱼	xi mei du fu yu	1
 锡梅伊基内	xi mei yi ji nei	1
-西门木炔酸	xi men mu gui suan	1
+西门木炔酸	xi men mu que suan	1
 西门子公司	xi men zi gong si	1
 西蒙角石属	xi meng jiao shi shu	1
 西蒙拉特尔	xi meng la te er	1
@@ -224057,7 +223985,7 @@ sort: by_weight
 信仰治疗师	xin yang zhi liao shi	1
 心叶薄唇蕨	xin ye bao chun jue	1
 新叶春蜓属	xin ye chun ting shu	1
-心叶粗肋草	xin ye cu le cao	1
+心叶粗肋草	xin ye cu lei cao	1
 心叶虎耳草	xin ye hu er cao	1
 新野口藓属	xin ye kou xian shu	1
 心叶蓝钟花	xin ye lan zhong hua	1
@@ -229724,6 +229652,7 @@ sort: by_weight
 延迟满足感	yan chi man zu gan	1
 延翅蛇根草	yan chi she gen cao	1
 延迟一个月	yan chi yi ge yue	1
+延迟这么高	yan chi zhe me gao	1
 演出过程中	yan chu guo cheng zhong	1
 演出家协会	yan chu jia xie hui	1
 演出结束后	yan chu jie shu hou	1
@@ -234739,19 +234668,8 @@ sort: by_weight
 异冠吻鳕属	yi guan wen xue shu	1
 异冠叶蝉属	yi guan ye chan shu	1
 一贯制学校	yi guan zhi xue xiao	1
-乙炔雌二醇	yi gui ci er chun	1
-乙炔二羧酸	yi gui er suo suan	1
-乙炔发生器	yi gui fa sheng qi	1
-乙炔化合物	yi gui hua he wu	1
 已归还投资	yi gui huan tou zi	1
-乙炔基吡啶	yi gui ji bi ding	1
-乙炔基甲醇	yi gui ji jia chun	1
-乙炔聚合物	yi gui ju he wu	1
 衣柜里必备	yi gui li bi bei	1
-乙炔络合物	yi gui luo he wu	1
-乙炔气瓶阀	yi gui qi ping fa	1
-乙炔燃烧器	yi gui ran shao qi	1
-乙炔属烃类	yi gui shu ting lei	1
 乙硅烷基膦	yi gui wan ji lin	1
 一棍子打死	yi gun zi da si	1
 异果齿缘草	yi guo chi yuan cao	1
@@ -235181,10 +235099,10 @@ sort: by_weight
 已经进入了	yi jing jin ru le	1
 已经开始了	yi jing kai shi le	1
 已经快没了	yi jing kuai mei le	1
-已经落下了	yi jing la xia le	1
 已经来不及	yi jing lai bu ji	1
 已经离不开	yi jing li bu kai	1
 已经联系了	yi jing lian xi le	1
+已经落下了	yi jing luo xia le	1
 已经卖光了	yi jing mai guang le	1
 已经买过了	yi jing mai guo le	1
 已经没办法	yi jing mei ban fa	1
@@ -236160,7 +236078,18 @@ sort: by_weight
 一圈又一圈	yi quan you yi quan	1
 以确保安全	yi que bao an quan	1
 一阕长亭暮	yi que chang ting mu	1
+乙炔雌二醇	yi que ci er chun	1
+乙炔二羧酸	yi que er suo suan	1
+乙炔发生器	yi que fa sheng qi	1
+乙炔化合物	yi que hua he wu	1
+乙炔基吡啶	yi que ji bi ding	1
+乙炔基甲醇	yi que ji jia chun	1
+乙炔聚合物	yi que ju he wu	1
+乙炔络合物	yi que luo he wu	1
+乙炔气瓶阀	yi que qi ping fa	1
+乙炔燃烧器	yi que ran shao qi	1
 已确认用户	yi que ren yong hu	1
+乙炔属烃类	yi que shu ting lei	1
 一群人围观	yi qun ren wei guan	1
 一群又一群	yi qun you yi qun	1
 依然爱丽丝	yi ran ai li si	1
@@ -236925,13 +236854,13 @@ sort: by_weight
 乙酸副品红	yi suan fu pin hong	1
 乙酸甘油酯	yi suan gan you zhi	1
 乙酸根离子	yi suan gen li zi	1
-乙酸炔诺酮	yi suan gui nuo tong	1
 乙酸环己酯	yi suan huan ji zhi	1
 乙酸茴香酯	yi suan hui xiang zhi	1
 乙酸可的松	yi suan ke di song	1
 乙酸蘑菇酯	yi suan mo gu zhi	1
 乙酸脑啡肽	yi suan nao fei tai	1
 乙酸铅试纸	yi suan qian shi zhi	1
+乙酸炔诺酮	yi suan que nuo tong	1
 乙酸肉桂酯	yi suan rou gui zhi	1
 乙酸三氧铼	yi suan san yang lai	1
 乙酸三乙铵	yi suan san yi an	1
@@ -237344,8 +237273,8 @@ sort: by_weight
 乙烯基甲醚	yi xi ji jia mi	1
 乙烯基咔唑	yi xi ji ka zuo	1
 乙息记可汗	yi xi ji ke han	1
-乙烯基乙炔	yi xi ji yi gui	1
 乙烯基乙醚	yi xi ji yi mi	1
+乙烯基乙炔	yi xi ji yi que	1
 乙烯基乙烯	yi xi ji yi xi	1
 乙烯基酯尸	yi xi ji zhi shi	1
 乙烯精馏塔	yi xi jing liu ta	1
@@ -238496,7 +238425,7 @@ sort: by_weight
 因彻吐血局	yin che tu xie ju	1
 阴沉的天空	yin chen de tian kong	1
 阴沉的天气	yin chen de tian qi	1
-茵陈二炔酮	yin chen er gui tong	1
+茵陈二炔酮	yin chen er que tong	1
 茵陈五苓散	yin chen wu ling san	1
 隐翅虫毒素	yin chi chong du su	1
 隐翅虫皮炎	yin chi chong pi yan	1
@@ -250630,6 +250559,7 @@ sort: by_weight
 曾氏大宗祠	zeng shi da zong ci	1
 曾氏金梭鱼	zeng shi jin suo yu	1
 增施磷钾肥	zeng shi lin jia fei	1
+曾仕强教授	zeng shi qiang jiao shou	1
 增施有机肥	zeng shi you ji fei	1
 曾氏猪笼草	zeng shi zhu long cao	1
 增收不增利	zeng shou bu zeng li	1
@@ -253331,7 +253261,7 @@ sort: by_weight
 这也是一切	zhe ye shi yi qie	1
 这也意味着	zhe ye yi wei zhe	1
 这也有助于	zhe ye you zhu yu	1
-这也证明了	zhe ye zheng ming liao	1
+这也证明了	zhe ye zheng ming le	1
 这一场比赛	zhe yi chang bi sai	1
 这一场战斗	zhe yi chang zhan dou	1
 这一次意外	zhe yi ci yi wai	1
@@ -255808,7 +255738,7 @@ sort: by_weight
 证明复印件	zheng ming fu yin jian	1
 证明给你看	zheng ming gei ni kan	1
 证明给我看	zheng ming gei wo kan	1
-证明了自己	zheng ming liao zi ji	1
+证明了自己	zheng ming le zi ji	1
 证明我的爱	zheng ming wo de ai	1
 证明一件事	zheng ming yi jian shi	1
 证明怎么写	zheng ming zen me xie	1
@@ -257832,7 +257762,7 @@ sort: by_weight
 置莲怀袖中	zhi lian huai xiu zhong	1
 直连式存储	zhi lian shi cun chu	1
 脂联素受体	zhi lian su shou ti	1
-直链乙炔碳	zhi lian yi gui tan	1
+直链乙炔碳	zhi lian yi que tan	1
 智联招聘网	zhi lian zhao pin wang	1
 质量安全性	zhi liang an quan xing	1
 质量百分比	zhi liang bai fen bi	1
@@ -258161,7 +258091,7 @@ sort: by_weight
 知名俱乐部	zhi ming ju le bu	1
 知名开发商	zhi ming kai fa shang	1
 知名科学家	zhi ming ke xue jia	1
-指明了方向	zhi ming liao fang xiang	1
+指明了方向	zhi ming le fang xiang	1
 致命罗密欧	zhi ming luo mi ou	1
 致命螺旋丸	zhi ming luo xuan wan	1
 知名漫画家	zhi ming man hua jia	1
@@ -261416,6 +261346,7 @@ sort: by_weight
 中世纪政治	zhong shi ji zheng zhi	1
 中世纪中东	zhong shi ji zhong dong	1
 中世纪中期	zhong shi ji zhong qi	1
+中世纪传说	zhong shi ji zhuan shuo	1
 中世纪资料	zhong shi ji zi liao	1
 中世纪足球	zhong shi ji zu qiu	1
 中世纪组织	zhong shi ji zu zhi	1
@@ -261429,7 +261360,6 @@ sort: by_weight
 重石束腰蟹	zhong shi shu yao xie	1
 中式四合院	zhong shi si he yuan	1
 忠实消费者	zhong shi xiao fei zhe	1
-中世纪传说	zhong shi yi zhuan shuo	1
 忠实拥护者	zhong shi yong hu zhe	1
 中石油集团	zhong shi you ji tuan	1
 中式油烟机	zhong shi you yan ji	1
@@ -270068,6 +269998,7 @@ sort: by_weight
 最小对立体	zui xiao dui li ti	1
 最小多项式	zui xiao duo xiang shi	1
 最小二乘法	zui xiao er cheng fa	1
+最小二乘解	zui xiao er cheng jie	1
 最小费用流	zui xiao fei yong liu	1
 最小分辨率	zui xiao fen bian lv	1
 最小割模型	zui xiao ge mo xing	1
@@ -270439,7 +270370,6 @@ sort: by_weight
 做广播体操	zuo guang bo ti cao	1
 做广告宣传	zuo guang gao xuan chuan	1
 左光禄大夫	zuo guang lu dai fu	1
-左炔诺孕酮	zuo gui nuo yun tong	1
 做鬼也风流	zuo gui ye feng liu	1
 做过的事情	zuo guo de shi qing	1
 做过服务员	zuo guo fu wu yuan	1
@@ -270633,6 +270563,7 @@ sort: by_weight
 左权开花调	zuo quan kai hua diao	1
 做全职妈妈	zuo quan zhi ma ma	1
 做全职太太	zuo quan zhi tai tai	1
+左炔诺孕酮	zuo que nuo yun tong	1
 做群众工作	zuo qun zhong gong zuo	1
 做热身运动	zuo re shen yun dong	1
 做人的本分	zuo ren de ben fen	1
@@ -271814,7 +271745,6 @@ sort: by_weight
 氨基甲基噻唑	an ji jia ji sai zuo	1
 氨基甲酸甲酯	an ji jia suan jia zhi	1
 氨基甲酸乙酯	an ji jia suan yi zhi	1
-胺基甲酸乙酯	an ji jia suan yi zhi	1
 氨基甲酸酯类	an ji jia suan zhi lei	1
 氨基氯苯甲腈	an ji lv ben jia jing	1
 氨基氯苯甲酸	an ji lv ben jia suan	1
@@ -272389,17 +272319,12 @@ sort: by_weight
 八月二十二日	ba yue er shi er ri	1
 八月二十九日	ba yue er shi jiu ri	1
 八月二十六日	ba yue er shi liu ri	1
-捌月贰拾陆日	ba yue er shi liu ri	1
 八月二十七日	ba yue er shi qi ri	1
-捌月贰拾叁日	ba yue er shi san ri	1
 八月二十三日	ba yue er shi san ri	1
 八月二十四日	ba yue er shi si ri	1
 八月二十五号	ba yue er shi wu hao	1
-捌月贰拾伍日	ba yue er shi wu ri	1
 八月二十五日	ba yue er shi wu ri	1
-捌月贰拾壹日	ba yue er shi yi ri	1
 八月二十一日	ba yue er shi yi ri	1
-捌月叁拾壹日	ba yue san shi yi ri	1
 八月十五日夜	ba yue shi wu ri ye	1
 八月十五夜月	ba yue shi wu ye yue	1
 八月宗派事件	ba yue zong pai shi jian	1
@@ -272700,14 +272625,18 @@ sort: by_weight
 白肉迷孔菌科	bai rou mi kong jun ke	1
 白肉迷孔菌属	bai rou mi kong jun shu	1
 白塞氏综合征	bai sai shi zong he zheng	1
+百色巴马机场	bai se ba ma ji chang	1
 白色不适合你	bai se bu shi he ni	1
+百色复叶耳蕨	bai se fu ye er jue	1
 白色高领毛衣	bai se gao ling mao yi	1
+百色高速公路	bai se gao su gong lu	1
 白色或灰白色	bai se huo hui bai se	1
 白色蕾丝上衣	bai se lei si shang yi	1
 白色纳粹十字	bai se na cui shi zi	1
 白色念珠菌病	bai se nian zhu jun bing	1
 白色四鳍旗鱼	bai se si qi qi yu	1
 白色酸洗担体	bai se suan xi dan ti	1
+百色田阳机场	bai se tian yang ji chang	1
 白色珍珠项链	bai se zhen zhu xiang lian	1
 拜沙达竞技场	bai sha da jing ji chang	1
 拜沙达体育场	bai sha da ti yu chang	1
@@ -274620,7 +274549,6 @@ sort: by_weight
 丙肝病毒感染	bing gan bing du gan ran	1
 并购重组政策	bing gou chong zu zheng ce	1
 病故军人遗属	bing gu jun ren yi shu	1
-丙炔压缩气体	bing gui ya suo qi ti	1
 冰河世纪系列	bing he shi ji xi lie	1
 冰河世纪消融	bing he shi ji xiao rong	1
 冰黄肤乐软膏	bing huang fu le ruan gao	1
@@ -274655,6 +274583,7 @@ sort: by_weight
 冰淇淋的愿望	bing qi lin de yuan wang	1
 冰期起源假说	bing qi qi yuan jia shuo	1
 病情突然加重	bing qing tu ran jia zhong	1
+丙炔压缩气体	bing que ya suo qi ti	1
 病人及其家属	bing ren ji qi jia shu	1
 丙三醇缩甲醛	bing san chun suo jia quan	1
 冰山上的来客	bing shan shang de lai ke	1
@@ -274785,11 +274714,7 @@ sort: by_weight
 般若波罗蜜多	bo re bo luo mi duo	1
 伯仁由我而死	bo ren you wo er si	1
 波萨达斯主义	bo sa da si zhu yi	1
-百色巴马机场	bo se ba ma ji chang	1
 波瑟费勒斯属	bo se fei le si shu	1
-百色复叶耳蕨	bo se fu ye er jue	1
-百色高速公路	bo se gao su gong lu	1
-百色田阳机场	bo se tian yang ji chang	1
 伯沙撒的盛宴	bo sha sa de sheng yan	1
 博深高速公路	bo shen gao su gong lu	1
 伯氏埃塞蛇鳗	bo shi ai sai she man	1
@@ -276878,7 +276803,6 @@ sort: by_weight
 长羽柄双盖蕨	chang yu bing shuang gai jue	1
 长羽复叶耳蕨	chang yu fu ye er jue	1
 长余高速公路	chang yu gao su gong lu	1
-长羽毛的恐龙	chang yu mao de kong long	1
 长余佩之陆离	chang yu pei zhi lu li	1
 长羽深巨口鱼	chang yu shen ju kou yu	1
 长羽芽胞耳蕨	chang yu ya bao er jue	1
@@ -281881,7 +281805,7 @@ sort: by_weight
 对二甲苯蓝酸	dui er jia ben lan suan	1
 对二氯甲基苯	dui er lv jia ji ben	1
 对二异丙基苯	dui er yi bing ji ben	1
-对二乙炔基苯	dui er yi gui ji ben	1
+对二乙炔基苯	dui er yi que ji ben	1
 堆放建筑垃圾	dui fang jian zhu la ji	1
 对非洲的争夺	dui fei zhou de zheng duo	1
 对氟苯磺酰氯	dui fu ben huang xian lv	1
@@ -282610,7 +282534,7 @@ sort: by_weight
 二甲基环已醇	er jia ji huan yi chun	1
 二甲基黄溶液	er jia ji huang rong ye	1
 二甲基黄试纸	er jia ji huang shi zhi	1
-二甲基己炔醇	er jia ji ji gui chun	1
+二甲基己炔醇	er jia ji ji que chun	1
 二甲基己烷度	er jia ji ji wan du	1
 二甲基甲醯胺	er jia ji jia xi an	1
 二甲基联萘胺	er jia ji lian nai an	1
@@ -283063,7 +282987,6 @@ sort: by_weight
 二乙二醇己醚	er yi er chun ji mi	1
 二乙二醇乙醚	er yi er chun yi mi	1
 二一工人大学	er yi gong ren da xue	1
-二乙炔基联苯	er yi gui ji lian ben	1
 二乙基氨乙醇	er yi ji an yi chun	1
 二乙基苯基脲	er yi ji ben ji niao	1
 二乙基二己胺	er yi ji er ji an	1
@@ -283073,6 +282996,7 @@ sort: by_weight
 二乙基替苯胺	er yi ji ti ben an	1
 二乙哌啶二酮	er yi pai ding er tong	1
 二异氰酸甲苯	er yi qing suan jia ben	1
+二乙炔基联苯	er yi que ji lian ben	1
 二乙酸贝毒素	er yi suan bei du su	1
 二乙酸四乙胺	er yi suan si yi an	1
 二乙烯基硫醚	er yi xi ji liu mi	1
@@ -283092,14 +283016,6 @@ sort: by_weight
 二元期权平台	er yuan qi quan ping tai	1
 二愿妾身常健	er yuan qie shen chang jian	1
 二元乙丙橡胶	er yuan yi bing xiang jiao	1
-贰月贰拾捌日	er yue er shi ba ri	1
-贰月贰拾贰日	er yue er shi er ri	1
-贰月贰拾陆日	er yue er shi liu ri	1
-贰月贰拾柒日	er yue er shi qi ri	1
-贰月贰拾叁日	er yue er shi san ri	1
-贰月贰拾肆日	er yue er shi si ri	1
-贰月贰拾伍日	er yue er shi wu ri	1
-贰月贰拾壹日	er yue er shi yi ri	1
 二战法国海军	er zhan fa guo hai jun	1
 二战伤亡人数	er zhan shang wang ren shu	1
 二战中的苏联	er zhan zhong de su lian	1
@@ -284696,7 +284612,6 @@ sort: by_weight
 复方甘草合剂	fu fang gan cao he ji	1
 复方甘草酸苷	fu fang gan cao suan gan	1
 复方感冒灵片	fu fang gan mao ling pian	1
-复方炔诺酮片	fu fang gui nuo tong pian	1
 复方甲氧那明	fu fang jia yang na ming	1
 复方康纳乐霜	fu fang kang na le shuang	1
 复方利血平片	fu fang li xue ping pian	1
@@ -284704,6 +284619,7 @@ sort: by_weight
 复方罗布麻片	fu fang luo bu ma pian	1
 复方氯霉素酊	fu fang lv mei su ding	1
 复方氢氧化铝	fu fang qing yang hua lv	1
+复方炔诺酮片	fu fang que nuo tong pian	1
 复方伸筋胶囊	fu fang shen jin jiao nang	1
 复方水杨酸酊	fu fang shui yang suan ding	1
 复方土槿皮酊	fu fang tu jin pi ding	1
@@ -285464,8 +285380,6 @@ sort: by_weight
 杆状核粒细胞	gan zhuang he li xi bao	1
 杆状套病毒科	gan zhuang tao bing du ke	1
 干自己喜欢的	gan zi ji xi huan de	1
-甘𫉄龟金花虫	gan 𫉄 gui jin hua chong	1
-甘𫉄猿金花虫	gan 𫉄 yuan jin hua chong	1
 港澳高速公路	gang ao gao su gong lu	1
 港澳台侨联招	gang ao tai qiao lian zhao	1
 港澳同胞眷属	gang ao tong bao juan shu	1
@@ -288043,8 +287957,6 @@ sort: by_weight
 硅宝科技股份	gui bao ke ji gu fen	1
 硅宝科技实业	gui bao ke ji shi ye	1
 龟壁湾褐蛇鳗	gui bi wan he she man	1
-炔丙基化合物	gui bing ji hua he wu	1
-炔丙基环己烷	gui bing ji huan ji wan	1
 归参山药猪腰	gui can shan yao zhu yao	1
 桧仓烈士陵园	gui cang lie shi ling yuan	1
 轨道计数定理	gui dao ji shu ding li	1
@@ -288114,7 +288026,6 @@ sort: by_weight
 龟兔赛跑算法	gui tu sai pao suan fa	1
 鬼娃恰吉系列	gui wa qia ji xi lie	1
 癸烷磺酸钠盐	gui wan huang suan na yan	1
-炔烷基化合物	gui wan ji hua he wu	1
 贵瓮高速公路	gui weng gao su gong lu	1
 桂梧高速公路	gui wu gao su gong lu	1
 诡屋惊凶实录	gui wu jing xiong shi lu	1
@@ -296302,18 +296213,13 @@ sort: by_weight
 九一式重战车	jiu yi shi zhong zhan che	1
 九永高速公路	jiu yong gao su gong lu	1
 九又四分之三	jiu you si fen zhi san	1
-玖月贰拾捌日	jiu yue er shi ba ri	1
 九月二十八日	jiu yue er shi ba ri	1
-玖月贰拾贰日	jiu yue er shi er ri	1
 九月二十二日	jiu yue er shi er ri	1
-玖月贰拾玖日	jiu yue er shi jiu ri	1
 九月二十九日	jiu yue er shi jiu ri	1
 九月二十六日	jiu yue er shi liu ri	1
-玖月贰拾陆日	jiu yue er shi liu ri	1
 九月二十七日	jiu yue er shi qi ri	1
 九月二十三日	jiu yue er shi san ri	1
 九月二十四号	jiu yue er shi si hao	1
-玖月贰拾肆日	jiu yue er shi si ri	1
 九月二十四日	jiu yue er shi si ri	1
 九月二十五日	jiu yue er shi wu ri	1
 九月二十一日	jiu yue er shi yi ri	1
@@ -296361,7 +296267,6 @@ sort: by_weight
 聚丙烯睛纤维	ju bing xi jing xian wei	1
 聚丙烯腈纤维	ju bing xi jing xian wei	1
 聚丙烯酸树脂	ju bing xi suan shu zhi	1
-菊部地区有血	ju bu di qu you xue	1
 局部二值模式	ju bu er zhi mo shi	1
 局部过敏反应	ju bu guo min fan ying	1
 局部极限定理	ju bu ji xian ding li	1
@@ -297134,7 +297039,7 @@ sort: by_weight
 开展专项整治	kai zhan zhuan xiang zheng zhi	1
 开展自查自纠	kai zhan zi cha zi jiu	1
 开展综合整治	kai zhan zong he zheng zhi	1
-开征房地产税	kai zhi fang di chan shui	1
+开征房地产税	kai zheng fang di chan shui	1
 看别人的故事	kan bie ren de gu shi	1
 看别人的脸色	kan bie ren de lian se	1
 坎伯诺尔德人	kan bo nuo er de ren	1
@@ -300003,8 +299908,8 @@ sort: by_weight
 淋雨的短尾鸟	lin yu de duan wei niao	1
 磷杂环丁二烯	lin za huan ding er xi	1
 磷杂环茂二烯	lin za huan mao er xi	1
-磷杂乙炔醇钠	lin za yi gui chun na	1
-磷杂乙炔醇盐	lin za yi gui chun yan	1
+磷杂乙炔醇钠	lin za yi que chun na	1
+磷杂乙炔醇盐	lin za yi que chun yan	1
 林长高速公路	lin zhang gao su gong lu	1
 临漳临英扒兔	lin zhang lin ying ba tu	1
 拎着大包小包	lin zhe da bao xiao bao	1
@@ -300774,8 +300679,6 @@ sort: by_weight
 鲈鱼不是鲁豫	lu yu bu shi lu yu	1
 泸渝高速公路	lu yu gao su gong lu	1
 路域环境整治	lu yu huan jing zheng zhi	1
-陆月贰拾肆日	lu yue er shi si ri	1
-陆月贰拾伍日	lu yue er shi wu ri	1
 路越远心越近	lu yue yuan xin yue jin	1
 鹿寨香桥岩溶	lu zhai xiang qiao yan rong	1
 路证券营业部	lu zheng quan ying ye bu	1
@@ -305946,20 +305849,16 @@ sort: by_weight
 起源号探测器	qi yuan hao tan ce qi	1
 祈愿世界和平	qi yuan shi jie he ping	1
 七月二十八日	qi yue er shi ba ri	1
-柒月贰拾贰日	qi yue er shi er ri	1
 七月二十二日	qi yue er shi er ri	1
 七月二十九日	qi yue er shi jiu ri	1
 七月二十六日	qi yue er shi liu ri	1
-柒月贰拾柒日	qi yue er shi qi ri	1
 七月二十七日	qi yue er shi qi ri	1
 七月二十三日	qi yue er shi san ri	1
-柒月贰拾肆日	qi yue er shi si ri	1
 七月二十四日	qi yue er shi si ri	1
 七月二十五日	qi yue er shi wu ri	1
 七月二十一日	qi yue er shi yi ri	1
 七月九日大道	qi yue jiu ri da dao	1
 七月流血事件	qi yue liu xue shi jian	1
-柒月叁拾壹日	qi yue san shi yi ri	1
 七月三十一日	qi yue san shi yi ri	1
 契约自由原则	qi yue zi you yuan ze	1
 骑着高头大马	qi zhe gao tou da ma	1
@@ -306399,7 +306298,6 @@ sort: by_weight
 强力恢复魔法	qiang li hui fu mo fa	1
 枪里没有子弹	qiang li mei you zi dan	1
 强力陨石魔法	qiang li yun shi mo fa	1
-强撸灰飞烟灭	qiang lu hui fei yan mie	1
 强掳萨宾妇女	qiang lu sa bin fu nv	1
 强扭的瓜不甜	qiang niu de gua bu tian	1
 强农惠农政策	qiang nong hui nong zheng ce	1
@@ -306862,7 +306760,7 @@ sort: by_weight
 氰基甲酸甲酯	qing ji jia suan jia zhi	1
 氰基甲酸乙酯	qing ji jia suan yi zhi	1
 氰基降冰片烯	qing ji jiang bing pian xi	1
-氰基磷杂乙炔	qing ji lin za yi gui	1
+氰基磷杂乙炔	qing ji lin za yi que	1
 氰基硼氰化钠	qing ji peng qing hua na	1
 氰基硼氢化钠	qing ji peng qing hua na	1
 清季外交史料	qing ji wai jiao shi liao	1
@@ -307720,6 +307618,8 @@ sort: by_weight
 确保人身安全	que bao ren shen an quan	1
 确保数据真实	que bao shu ju zhen shi	1
 确保万无一失	que bao wan wu yi shi	1
+炔丙基化合物	que bing ji hua he wu	1
+炔丙基环己烷	que bing ji huan ji wan	1
 雀巢食品公司	que chao shi pin gong si	1
 缺翅管蓟马属	que chi guan ji ma shu	1
 缺翅萤金花虫	que chi ying jin hua chong	1
@@ -307735,6 +307635,7 @@ sort: by_weight
 缺气保用轮胎	que qi bao yong lun tai	1
 鹊色唐纳雀属	que se tang na que shu	1
 确实出乎意料	que shi chu hu yi liao	1
+炔烷基化合物	que wan ji hua he wu	1
 缺影游鳔条鳅	que ying you biao tiao qiu	1
 确有悔改表现	que you hui gai biao xian	1
 却再也找不回	que zai ye zhao bu hui	1
@@ -309308,12 +309209,6 @@ sort: by_weight
 三垣二十八宿	san yuan er shi ba xiu	1
 三原色光模式	san yuan se guang mo shi	1
 三元乙丙橡胶	san yuan yi bing xiang jiao	1
-叁月贰拾捌日	san yue er shi ba ri	1
-叁月贰拾玖日	san yue er shi jiu ri	1
-叁月贰拾陆日	san yue er shi liu ri	1
-叁月贰拾肆日	san yue er shi si ri	1
-叁月贰拾伍日	san yue er shi wu ri	1
-叁月叁拾壹日	san yue san shi yi ri	1
 三藏十二部经	san zang shi er bu jing	1
 三闸极电晶体	san zha ji dian jing ti	1
 三宅纹寄居蟹	san zhai wen ji ju xie	1
@@ -314626,12 +314521,9 @@ sort: by_weight
 四月二十八日	si yue er shi ba ri	1
 四月二十二号	si yue er shi er hao	1
 四月二十二日	si yue er shi er ri	1
-肆月贰拾玖日	si yue er shi jiu ri	1
 四月二十九日	si yue er shi jiu ri	1
 四月二十六日	si yue er shi liu ri	1
-肆月贰拾陆日	si yue er shi liu ri	1
 四月二十七日	si yue er shi qi ri	1
-肆月贰拾叁日	si yue er shi san ri	1
 四月二十三日	si yue er shi san ri	1
 四月二十四日	si yue er shi si ri	1
 四月二十五日	si yue er shi wu ri	1
@@ -315079,7 +314971,7 @@ sort: by_weight
 锁骨式呼吸法	suo gu shi hu xi fa	1
 所管理的基金	suo guan li de ji jin	1
 所获得的荣誉	suo huo de de rong yu	1
-羧基苯乙炔基	suo ji ben yi gui ji	1
+羧基苯乙炔基	suo ji ben yi que ji	1
 羧基丁腈橡胶	suo ji ding jing xiang jiao	1
 羧基二苯甲酮	suo ji er ben jia tong	1
 索基尔尼察亚	suo ji er ni cha ya	1
@@ -318113,7 +318005,6 @@ sort: by_weight
 韦氏杂色脂鲤	wei shi za se zhi li	1
 维氏真巨口鱼	wei shi zhen ju kou yu	1
 维氏栉精器鱼	wei shi zhi jing qi yu	1
-魏氏智力测验	wei shi zhi li ce yan	1
 韦氏智力测验	wei shi zhi li ce yan	1
 韦氏智力量表	wei shi zhi li liang biao	1
 围手术期护理	wei shou shu qi hu li	1
@@ -319494,22 +319385,17 @@ sort: by_weight
 无缘无故的恨	wu yuan wu gu de hen	1
 五月的莫斯科	wu yue de mo si ke	1
 五月二十八日	wu yue er shi ba ri	1
-伍月贰拾贰日	wu yue er shi er ri	1
 五月二十二日	wu yue er shi er ri	1
 五月二十九日	wu yue er shi jiu ri	1
 五月二十六日	wu yue er shi liu ri	1
 五月二十七日	wu yue er shi qi ri	1
 五月二十三日	wu yue er shi san ri	1
-伍月贰拾肆日	wu yue er shi si ri	1
 五月二十四日	wu yue er shi si ri	1
-伍月贰拾伍日	wu yue er shi wu ri	1
 五月二十五日	wu yue er shi wu ri	1
-伍月贰拾壹日	wu yue er shi yi ri	1
 五月二十一日	wu yue er shi yi ri	1
 五月花号公约	wu yue hua hao gong yue	1
 五月九日宪法	wu yue jiu ri xian fa	1
 五月三十五日	wu yue san shi wu ri	1
-伍月叁拾壹日	wu yue san shi yi ri	1
 五月三十一日	wu yue san shi yi ri	1
 无约束力决议	wu yue shu li jue yi	1
 五月同等学力	wu yue tong deng xue li	1
@@ -324795,11 +324681,6 @@ sort: by_weight
 一公升的眼泪	yi gong sheng de yan lei	1
 异构系统架构	yi gou xi tong jia gou	1
 以管资本为主	yi guan zi ben wei zhu	1
-乙炔基雌二醇	yi gui ji ci er chun	1
-乙炔基化合物	yi gui ji hua he wu	1
-乙炔基环己醇	yi gui ji huan ji chun	1
-乙炔基环戊醇	yi gui ji huan wu chun	1
-乙炔类聚合物	yi gui lei ju he wu	1
 以规则为基础	yi gui ze wei ji chu	1
 一国保守主义	yi guo bao shou zhu yi	1
 以国家的名义	yi guo jia de ming yi	1
@@ -325215,6 +325096,11 @@ sort: by_weight
 乙醛缩二乙醇	yi quan suo er yi chun	1
 以全新的面貌	yi quan xin de mian mao	1
 以全新的视角	yi quan xin de shi jiao	1
+乙炔基雌二醇	yi que ji ci er chun	1
+乙炔基化合物	yi que ji hua he wu	1
+乙炔基环己醇	yi que ji huan ji chun	1
+乙炔基环戊醇	yi que ji huan wu chun	1
+乙炔类聚合物	yi que lei ju he wu	1
 依然不离不弃	yi ran bu li bu qi	1
 依然历历在目	yi ran li li zai mu	1
 已然仁至义尽	yi ran ren zhi yi jin	1
@@ -326092,8 +325978,6 @@ sort: by_weight
 银棕皱牙脂鲤	yin zong zhou ya zhi li	1
 银座佳驿酒店	yin zuo jia yi jiu dian	1
 银座晶都国际	yin zuo jing du guo ji	1
-银座一丁目站	yin zuo yi ding mu zhan	1
-茵𫈟旌介壳虫	yin 𫈟 jing jie ke chong	1
 英阿马岛战争	ying a ma dao zhan zheng	1
 英埃共管苏丹	ying ai gong guan su dan	1
 硬币的另一面	ying bi de ling yi mian	1
@@ -328722,6 +328606,7 @@ sort: by_weight
 漳永高速公路	zhang yong gao su gong lu	1
 章鱼哔的原罪	zhang yu bi de yuan zui	1
 章鱼部屋劳动	zhang yu bu wu lao dong	1
+长羽毛的恐龙	zhang yu mao de kong long	1
 章鱼噼的原罪	zhang yu pi de yuan zui	1
 张雨绮的性格	zhang yu qi de xing ge	1
 张垣绥靖公署	zhang yuan sui jing gong shu	1
@@ -332936,7 +332821,6 @@ sort: by_weight
 做更多的事情	zuo geng duo de shi qing	1
 做更好的自己	zuo geng hao de zi ji	1
 坐骨海绵体肌	zuo gu hai mian ti ji	1
-左炔诺孕酮片	zuo gui nuo yun tong pian	1
 坐过山车一般	zuo guo shan che yi ban	1
 坐过山车一样	zuo guo shan che yi yang	1
 左海公园西门	zuo hai gong yuan xi men	1
@@ -332997,6 +332881,7 @@ sort: by_weight
 做强做优做大	zuo qiang zuo you zuo da	1
 左倾机会主义	zuo qing ji hui zhu yi	1
 做情绪的主人	zuo qing xu de zhu ren	1
+左炔诺孕酮片	zuo que nuo yun tong pian	1
 做任何的事情	zuo ren he de shi qing	1
 左塞尔金字塔	zuo sai er jin zi ta	1
 左三圈右三圈	zuo san quan you san quan	1
@@ -335823,7 +335708,6 @@ sort: by_weight
 侧头拟上口脂鲤	ce tou ni shang kou zhi li	1
 侧头伊都毛鼻鲶	ce tou yi du mao bi nian	1
 侧支发光杆菌属	ce zhi fa guang gan jun shu	1
-梣叶楲叉钩丝壳	cen ye wei cha gou si ke	1
 曾伴浮云归晚翠	ceng ban fu yun gui wan cui	1
 曾被疏花断客魂	ceng bei shu hua duan ke hun	1
 层层叠叠的梯田	ceng ceng die die de ti tian	1
@@ -336304,6 +336188,7 @@ sort: by_weight
 沉水性水生植物	chen shui xing shui sheng zhi wu	1
 沉檀轻注些儿个	chen tan qing zhu xie er ge	1
 趁我们都还年轻	chen wo men dou hai nian qing	1
+梣叶楲叉钩丝壳	chen ye wei cha gou si ke	1
 陈羽凡和白百何	chen yu fan he bai bai he	1
 趁着自己还年轻	chen zhe zi ji hai nian qing	1
 乘白鼋兮逐文鱼	cheng bai yuan xi zhu wen yu	1
@@ -339306,7 +339191,7 @@ sort: by_weight
 二手搪瓷反应釜	er shou tang ci fan ying fu	1
 而寿者不可知矣	er shou zhe bu ke zhi yi	1
 二叔丁基对甲酚	er shu ding ji dui jia fen	1
-二叔丁氧基乙炔	er shu ding yang ji yi gui	1
+二叔丁氧基乙炔	er shu ding yang ji yi que	1
 二水基亚磷酸铅	er shui ji ya lin suan qian	1
 二顺反子病毒科	er shun fan zi bing du ke	1
 二胎政策的放开	er tai zheng ce de fang kai	1
@@ -340450,7 +340335,7 @@ sort: by_weight
 复方瓜子金颗粒	fu fang gua zi jin ke li	1
 复方磺胺甲恶唑	fu fang huang an jia e zuo	1
 复方甲地孕酮片	fu fang jia di yun tong pian	1
-复方甲基炔诺酮	fu fang jia ji gui nuo tong	1
+复方甲基炔诺酮	fu fang jia ji que nuo tong	1
 复方甲氧那明胶	fu fang jia yang na ming jiao	1
 复方金钱草颗粒	fu fang jin qian cao ke li	1
 复方金银花颗粒	fu fang jin yin hua ke li	1
@@ -340517,7 +340402,7 @@ sort: by_weight
 复方鱼腥草口服	fu fang yu xing cao kou fu	1
 复方孕二烯酮片	fu fang yun er xi tong pian	1
 复方珍珠暗疮片	fu fang zhen zhu an chuang pian	1
-复方左炔诺孕酮	fu fang zuo gui nuo yun tong	1
+复方左炔诺孕酮	fu fang zuo que nuo yun tong	1
 氟芬那酸丁酯软	fu fen na suan ding zhi ruan	1
 阜丰福新面粉厂	fu feng fu xin mian fen chang	1
 富钙无球粒陨石	fu gai wu qiu li yun shi	1
@@ -340774,11 +340659,6 @@ sort: by_weight
 改革开放的春风	gai ge kai fang de chun feng	1
 盖革米勒计数器	gai ge mi le ji shu qi	1
 改过自新的机会	gai guo zi xin de ji hui	1
-该来的还是会来	gai lai de hai shi hui lai	1
-该来的还是要来	gai lai de hai shi yao lai	1
-该来的终究会来	gai lai de zhong jiu hui lai	1
-该来的总是会来	gai lai de zong shi hui lai	1
-该来的总是要来	gai lai de zong shi yao lai	1
 改了一次又一次	gai le yi ci you yi ci	1
 改良草地符号二	gai liang cao di fu hao er	1
 改良草地符号一	gai liang cao di fu hao yi	1
@@ -342659,6 +342539,7 @@ sort: by_weight
 脊髓小脑萎缩症	ji sui xiao nao wei suo zheng	1
 脊髓性肌萎缩症	ji sui xing ji wei suo zheng	1
 吉特曼氏综合症	ji te man shi zong he zheng	1
+极小最小二乘解	ji xiao zui xiao er cheng jie	1
 机械设计及理论	ji xie she ji ji li lun	1
 急性出血性肠炎	ji xing chu xue xing chang yan	1
 急性单纯性胃炎	ji xing dan chun xing wei yan	1
@@ -342728,7 +342609,7 @@ sort: by_weight
 甲基硫代芬太尼	jia ji liu dai fen tai ni	1
 甲基培尼皮质醇	jia ji pei ni pi zhi chun	1
 甲基脯氨酸甲酯	jia ji pu an suan jia zhi	1
-甲基三烯炔诺酮	jia ji san xi gui nuo tong	1
+甲基三烯炔诺酮	jia ji san xi que nuo tong	1
 甲基戊二酸单酰	jia ji wu er suan dan xian	1
 甲基烯丙基硫醚	jia ji xi bing ji liu mi	1
 甲基烯丙基硒醚	jia ji xi bing ji xi mi	1
@@ -342837,7 +342718,7 @@ sort: by_weight
 甲型勒托病毒属	jia xing le tuo bing du shu	1
 甲型线状病毒科	jia xing xian zhuang bing du ke	1
 甲戌乙亥山头火	jia xu yi hai shan tou huo	1
-甲氧基苯丙炔酸	jia yang ji ben bing gui suan	1
+甲氧基苯丙炔酸	jia yang ji ben bing que suan	1
 甲氧基苯酚乙酸	jia yang ji ben fen yi suan	1
 甲氧基苯甲硫醚	jia yang ji ben jia liu mi	1
 甲氧基哌拉酰胺	jia yang ji pai la xian an	1
@@ -344626,7 +344507,7 @@ sort: by_weight
 三甲港海滨乐园	san jia gang hai bin le yuan	1
 三甲基叠氮硅烷	san jia ji die dan gui wan	1
 三甲基二氯化砷	san jia ji er lv hua shen	1
-三甲基硅基乙炔	san jia ji gui ji yi gui	1
+三甲基硅基乙炔	san jia ji gui ji yi que	1
 三甲基硅基乙烷	san jia ji gui ji yi wan	1
 三甲基硅基乙烯	san jia ji gui ji yi xi	1
 三甲基一氯硅烷	san jia ji yi lv gui wan	1
@@ -344850,7 +344731,7 @@ sort: by_weight
 书当快意读易尽	shu dang kuai yi du yi jin	1
 书到用时方恨少	shu dao yong shi fang hen shao	1
 叔丁基对苯二酚	shu ding ji dui ben er fen	1
-叔丁基磷杂乙炔	shu ding ji lin za yi gui	1
+叔丁基磷杂乙炔	shu ding ji lin za yi que	1
 叔丁氧基化合物	shu ding yang ji hua he wu	1
 熟读唐诗三百首	shu du tang shi san bai shou	1
 数对清风想念他	shu dui qing feng xiang nian ta	1
@@ -345355,10 +345236,8 @@ sort: by_weight
 五维赖氨酸颗粒	wu wei lai an suan ke li	1
 无限小应变理论	wu xian xiao ying bian li lun	1
 五氧化二钒粉尘	wu yang hua er fan fen chen	1
-五氧化二釩粉塵	wu yang hua er fan fen chen	1
 五氧化二钒熏烟	wu yang hua er fan xun yan	1
 五氧化二钽粉尘	wu yang hua er tan fen chen	1
-五氧化二鉭粉塵	wu yang hua er tan fen chen	1
 无氧芽胞杆菌属	wu yang ya bao gan jun shu	1
 吴用智取生辰纲	wu yong zhi qu sheng chen gang	1
 无疣齿吻沙蚕属	wu you chi wen sha can shu	1
@@ -346014,7 +345893,6 @@ sort: by_weight
 以官方发布为准	yi guan fang fa bu wei zhun	1
 以官方公布为准	yi guan fang gong bu wei zhun	1
 以官方消息为准	yi guan fang xiao xi wei zhun	1
-乙炔基甲基甲醇	yi gui ji jia ji jia chun	1
 以国际化的视野	yi guo ji hua de shi ye	1
 以好逸恶劳为耻	yi hao yi wu lao wei chi	1
 以后我会好好的	yi hou wo hui hao hao de	1
@@ -346071,6 +345949,7 @@ sort: by_weight
 以前想都不敢想	yi qian xiang dou bu gan xiang	1
 以强烈的事业心	yi qiang lie de shi ye xin	1
 以求亲媚于主上	yi qiu qin mei yu zhu shang	1
+乙炔基甲基甲醇	yi que ji jia ji jia chun	1
 以热爱祖国为荣	yi re ai zu guo wei rong	1
 以人为本的理念	yi ren wei ben de li nian	1
 以人为本的设计	yi ren wei ben de she ji	1
@@ -346738,7 +346617,6 @@ sort: by_weight
 自古及今皆若斯	zi gu ji jin jie ruo si	1
 自古穷通皆有定	zi gu qiong tong jie you ding	1
 自古深情留不住	zi gu shen qing liu bu zhu	1
-自古圣贤多寂寞	zi gu sheng xian duo ji mo	1
 自古圣贤皆寂寞	zi gu sheng xian jie ji mo	1
 自古圣贤尽贫贱	zi gu sheng xian jin pin jian	1
 自古套路得人心	zi gu tao lu de ren xin	1
@@ -346921,7 +346799,7 @@ sort: by_weight
 做人不要太嚣张	zuo ren bu yao tai xiao zhang	1
 作为新能源汽车	zuo wei xin neng yuan qi che	1
 左旋甲基苯丙胺	zuo xuan jia ji ben bing an	1
-左旋甲基炔诺酮	zuo xuan jia ji gui nuo tong	1
+左旋甲基炔诺酮	zuo xuan jia ji que nuo tong	1
 左旋甲状腺素钠	zuo xuan jia zhuang xian su na	1
 左旋甲状腺素片	zuo xuan jia zhuang xian su pian	1
 左旋葡萄糖烯酮	zuo xuan pu tao tang xi tong	1

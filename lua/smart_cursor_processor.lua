@@ -343,9 +343,9 @@ function smart_cursor_processor.init(env)
     -- end)
 
     env.unhandled_key_notifier = context.unhandled_key_notifier:connect(function(context)
-        logger.debug("unhandled_key_notifier触发： sync_with_server和服务端同步信息")
+        logger.debug("unhandled_key_notifier触发: sync_with_server和服务端同步信息")
         -- tcp_zmq.sync_with_server("unhandled_key_notifier", env, true)
-        tcp_zmq.sync_with_server(env, true)
+        -- tcp_zmq.sync_with_server(env, true)
         -- 首先判断输入的字符是不是符号要求的字符
         local char
         if env.key_repr then
@@ -664,20 +664,6 @@ function smart_cursor_processor.move_by_spans_manager(env, direction)
     end
 end
 
-local function apply_global_options_to_context(context)
-    if not context then
-        return 0, context
-    end
-    local applied = 0
-    for name, val in pairs(tcp_zmq.global_option_state) do
-        if context:get_option(name) ~= val then
-            context:set_option(name, val)
-            applied = applied + 1
-            logger.debug(string.format("应用全局开关到context: %s = %s", name, tostring(val)))
-        end
-    end
-    return applied
-end
 
 function smart_cursor_processor.func(key, env)
     local engine = env.engine
@@ -752,7 +738,7 @@ function smart_cursor_processor.func(key, env)
     if tcp_zmq and tcp_zmq.update_global_option_state then
         logger.info("update_global_option_state")
         tcp_zmq.update_global_option_state = false
-        local applied = apply_global_options_to_context(context)
+        local applied = tcp_zmq.apply_global_options_to_context(context)
         if applied > 0 then
             logger.info("切换应用全局开关数量: " .. tostring(applied))
         end

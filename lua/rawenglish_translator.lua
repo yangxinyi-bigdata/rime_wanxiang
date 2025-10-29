@@ -280,12 +280,17 @@ function rawenglish_translator.func(input, seg, env)
     if #input == 1 then
         if input == "`" then
             local markdown_code_symbol = "```\n\n```"
-            local candidate1 = Candidate("punct", seg.start, seg._end, markdown_code_symbol, "")
-            candidate1.preedit = "`" 
+            local candidate2 = Candidate("punct", seg.start, seg._end, markdown_code_symbol, "")
+            
             -- logger.debug("英文模式符号上屏: " .. input)
-            local candidate2 = Candidate("punct", seg.start, seg._end, "`", "")
+            local candidate1 = Candidate("punct", seg.start, seg._end, "`", "")
+            local candidate3 = Candidate("punct", seg.start, seg._end, "```", "")
+            candidate1.preedit = "`" 
+            candidate2.preedit = "`" 
+            candidate3.preedit = "```" 
             yield(candidate1)
             yield(candidate2)
+            yield(candidate3)
             return
         else
 

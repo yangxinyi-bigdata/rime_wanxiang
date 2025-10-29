@@ -15,14 +15,52 @@
 - read_latest_from_ai_socket 聚合最新一条消息
 - parse_socket_data/handle_socket_command 上层协议解析与命令处理
 --]] -- 添加 ARM64 Homebrew 的 Lua 路径和项目lua目录
-local function setup_lua_paths()
-    -- 添加 ARM64 Homebrew 路径
-    package.path = package.path .. ";/opt/homebrew/share/lua/5.4/?.lua;/opt/homebrew/share/lua/5.4/?/init.lua"
-    package.cpath = package.cpath .. ";/opt/homebrew/lib/lua/5.4/?.so;/opt/homebrew/lib/lua/5.4/?/core.so"
+-- local function setup_lua_paths()
+--     -- 添加 ARM64 Homebrew 路径
+--     package.path = package.path .. ";/opt/homebrew/share/lua/5.4/?.lua;/opt/homebrew/share/lua/5.4/?/init.lua"
+--     package.cpath = package.cpath .. ";/opt/homebrew/lib/lua/5.4/?.so;/opt/homebrew/lib/lua/5.4/?/core.so"
 
-    -- 添加项目lua目录到搜索路径（使用绝对路径）
-    package.path = package.path ..
-                       ";/Users/yangxinyi/Library/Rime/lua/?.lua;/Users/yangxinyi/Library/Rime/lua/?/init.lua"
+--     -- 添加项目lua目录到搜索路径（使用绝对路径）
+--     package.path = package.path ..
+--                        ";/Users/yangxinyi/Library/Rime/lua/?.lua;/Users/yangxinyi/Library/Rime/lua/?/init.lua"
+-- end
+
+
+local function append_paths(current, entries)
+  for _, entry in ipairs(entries) do
+    if not current:find(entry, 1, true) then
+      current = current .. ";" .. entry
+    end
+  end
+  return current
+end
+
+local function setup_lua_paths()
+  -- Homebrew 安装目录
+  package.path  = append_paths(package.path, {
+    "/opt/homebrew/share/lua/5.4/?.lua",
+    "/opt/homebrew/share/lua/5.4/?/init.lua",
+  })
+  package.cpath = append_paths(package.cpath, {
+    "/opt/homebrew/lib/lua/5.4/?.so",
+    "/opt/homebrew/lib/lua/5.4/?/core.so",
+  })
+
+  -- 安装在 /opt/lzmq 的模块（含 lzmq.so、lzmq/timer.so 等）
+  package.path  = append_paths(package.path, {
+    "/opt/lzmq/lib/lua/?.lua",
+    "/opt/lzmq/lib/lua/?/init.lua",
+  })
+  package.cpath = append_paths(package.cpath, {
+    "/opt/lzmq/lib/lua/?.so",
+    "/opt/lzmq/lib/lua/?/?.so",
+  })
+
+  -- 项目自身 Lua 脚本
+  package.path  = append_paths(package.path, {
+    "/Users/yangxinyi/Library/Rime/lua/?.lua",
+    "/Users/yangxinyi/Library/Rime/lua/?/init.lua",
+  })
 end
 
 setup_lua_paths()
